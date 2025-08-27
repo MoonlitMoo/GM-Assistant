@@ -66,3 +66,9 @@ class MainWindow(QMainWindow):
         if self.playerWindow is not None:
             self.playerWindow = self.playerWindow.close()
             self.playerWindow = None
+
+    def closeEvent(self, event, /):
+        """ Make sure the player window closes too. """
+        if self.playerWindow is not None:
+            self.close_player_window()
+        super().closeEvent(event)
