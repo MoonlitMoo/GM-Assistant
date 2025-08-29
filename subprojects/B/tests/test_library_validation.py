@@ -1,7 +1,6 @@
 import json
 
 import pytest
-from jsonschema.exceptions import ValidationError
 
 from ui.library_widget import LibraryWidget
 
