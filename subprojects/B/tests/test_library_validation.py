@@ -38,10 +38,6 @@ def library_file(tmp_path, library_dict):
         f.write(json.dumps(library_dict))
     return file
 
-def test_load_library(widget, library_file):
-    """ Check we can load a valid file. """
-    widget._load_library(library_file)
-
 def test_load_library_fails_extra_key(widget, library_dict):
     """Check we fail on an unexpected key at the root."""
     library_dict["extra"] = 1

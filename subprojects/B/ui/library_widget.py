@@ -11,14 +11,19 @@ from schema import TREE_SCHEMA
 
 
 def _default_library() -> Dict:
-    return {}
+    return {
+        "version": "v1",
+        "tree": {
+            "New Folder": {}
+        }
+    }
 
 
 class LibraryWidget(QWidget):
     """
     Virtual library: Groups (folders) contain Groups/Collections; Collections contain image items.
     Features:
-    - Create Folder / Create Collection
+    - Create Folder / Create Album
     - Drag to reorder/move groups/collections (collections remain leaves)
     - Accept drops of images (from right pane) onto a Collection to move/add
     - Context menu: Rename / Delete on groups & collections

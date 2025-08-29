@@ -20,16 +20,16 @@ TREE_SCHEMA = {
     "$defs": {
         "node": {
             "anyOf": [
-                { "$ref": "#/$defs/collection" },
-                { "$ref": "#/$defs/group" }
+                { "$ref": "#/$defs/folder" },
+                { "$ref": "#/$defs/album" }
             ]
         },
-        "group": {
+        "folder": {
             "type": "object",
-            "description": "A group (folder) mapping names → nodes",
+            "description": "A folder mapping names → nodes",
             "additionalProperties": { "$ref": "#/$defs/node" }
         },
-        "collection": {
+        "album": {
             "type": "object",
             "description": "A leaf that contains images",
             "properties": {
