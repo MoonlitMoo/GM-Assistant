@@ -4,7 +4,8 @@ import json
 from pathlib import Path
 from typing import Dict
 
-from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem
 from jsonschema.validators import Draft202012Validator
 
 from schema import TREE_SCHEMA
@@ -38,31 +39,31 @@ class LibraryWidget(QWidget):
         self._library: Dict = self._load_library(self.LIBRARY_FILENAME)
 
         # UI
-        # root = QVBoxLayout(self)
-        # actions = QHBoxLayout()
-        # btn_new_folder = QPushButton("New Folder")
-        # btn_new_collection = QPushButton("New Collection")
+        root = QVBoxLayout(self)
+        actions = QHBoxLayout()
+        btn_new_folder = QPushButton("New Folder")
+        btn_new_collection = QPushButton("New Album")
         # btn_new_folder.clicked.connect(self._create_folder)
         # btn_new_collection.clicked.connect(self._create_collection)
-        # actions.addWidget(btn_new_folder)
-        # actions.addWidget(btn_new_collection)
-        # actions.addStretch(1)
-        # root.addLayout(actions)
-        #
-        # self.tree = QTreeWidget()
-        # self.tree.setHeaderHidden(True)
+        actions.addWidget(btn_new_folder)
+        actions.addWidget(btn_new_collection)
+        actions.addStretch(1)
+        root.addLayout(actions)
+
+        self.tree = QTreeWidget()
+        self.tree.setHeaderHidden(True)
         # self.tree.setDragEnabled(True)
         # self.tree.setAcceptDrops(True)
         # self.tree.setDropIndicatorShown(True)
         # self.tree.setDefaultDropAction(Qt.MoveAction)
         # self.tree.setDragDropMode(QTreeWidget.DragDrop)
-        # root.addWidget(self.tree, 1)
+        root.addWidget(self.tree, 1)
         #
         # # Context menu for rename/delete
         # self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         # self.tree.customContextMenuRequested.connect(self._on_tree_context_menu)
         #
-        # self._rebuild_tree()
+        self._rebuild_tree()
         # self.tree.currentItemChanged.connect(self._on_current_changed)
 
     # --------- Persistence ---------
@@ -118,3 +119,49 @@ class LibraryWidget(QWidget):
         self._validate_library(data)
         Path(self.LIBRARY_FILENAME).write_text(data, encoding="utf-8")
 
+    # --------- Tree build helpers ---------
+    def _rebuild_tree(self) -> None:
+        """ Refresh the tree layout. """
+        self.tree.clear()
+        for top_name, top_node in self._library["tree"].items():
+            self._add_tree_node(None, top_name, top_node)
+
+    def _add_tree_node(self, parent: QTreeWidgetItem | None, name: str, node: dict) -> QTreeWidgetItem:
+        """ Adds a node to the tree.
+        If it is a folder, recurse for children. If album, add images as the leaves.
+
+        Parameters
+        ----------
+        parent : QTreeWidgetItem or None
+            The parent node to add to, None means it will be added to the root.
+        name : str
+            The name to use for the node.
+        node : dict
+            The node data for recursion and testing collection/group.
+        """
+        # Album: object with 'images' array
+        if isinstance(node, dict) and "images" in node and isinstance(node["images"], list):
+            item = QTreeWidgetItem([name, "Collection", f"{len(node['images'])} images"])
+            if parent:
+                parent.addChild(item)
+            else:
+                self.tree.addTopLevelItem(item)
+
+            # Add images as children
+            for img in node["images"]:
+                img_label = img.get("label", "")
+                QTreeWidgetItem(item, [img_label])
+            return item
+
+        # Folder: object mapping names → nodes
+        if isinstance(node, dict):
+            item = QTreeWidgetItem([name])
+            if parent:
+                parent.addChild(item)
+            else:
+                self.tree.addTopLevelItem(item)
+            for child_name, child_node in node.items():
+                self._add_tree_node(item, child_name, child_node)
+            return item
+
+        return parent
