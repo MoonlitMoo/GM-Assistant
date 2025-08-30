@@ -33,11 +33,11 @@ class LibraryWidget(QWidget):
         root = QVBoxLayout(self)
         actions = QHBoxLayout()
         btn_new_folder = QPushButton("New Folder")
-        btn_new_collection = QPushButton("New Album")
-        btn_new_folder.clicked.connect(self._create_folder)
-        # btn_new_collection.clicked.connect(self._create_collection)
+        btn_bew_album = QPushButton("New Album")
+        btn_new_folder.clicked.connect(lambda: self._create_node(make_album=False))
+        btn_bew_album.clicked.connect(lambda: self._create_node(make_album=True))
         actions.addWidget(btn_new_folder)
-        actions.addWidget(btn_new_collection)
+        actions.addWidget(btn_bew_album)
         actions.addStretch(1)
         root.addLayout(actions)
 
@@ -85,11 +85,14 @@ class LibraryWidget(QWidget):
     def save_library(self) -> None:
         """ Save the current library to disk. """
         data = export_tree_to_dict(self._library)
-        Path(self.LIBRARY_FILENAME).write_text(data, encoding="utf-8")
+        Path(self.LIBRARY_FILENAME).write_text(json.dumps(data), encoding="utf-8")
 
     # --------- Tree build helpers ---------
     def _rebuild_tree(self) -> None:
-        """ Refresh the tree layout. """
+        """ Refresh the tree layout.
+        We use a visible root, which we prevent collapses to allow new folders to be created at root level.
+        Then add all the nodes from the library into the tree.
+        """
         self.tree.clear()
         self.tree.setHeaderLabels(["name"])
 
@@ -108,6 +111,7 @@ class LibraryWidget(QWidget):
         def prevent_collapse(item):
             if item is visible_root:
                 self.tree.expandItem(visible_root)
+
         self.tree.itemCollapsed.connect(prevent_collapse)
 
         for child in self._library:
@@ -115,7 +119,7 @@ class LibraryWidget(QWidget):
 
     def _add_tree_node(self, parent: QTreeWidgetItem | None, node: Node | Leaf) -> QTreeWidgetItem:
         """ Adds a node to the tree.
-        If it is a folder, recurse for children. If album, add images as the leaves.
+        If it is a folder, recurse for children. If album stop recursion, add images.
 
         Parameters
         ----------
@@ -148,8 +152,15 @@ class LibraryWidget(QWidget):
 
         return parent
     # --------- Creation ---------
-    def _create_folder(self) -> None:
-        """Create a new Folder under the currently selected Folder (or the root)."""
+    def _create_node(self, make_album: bool = False) -> None:
+        """Create a new node under the currently selected Folder (or the root).
+        Makes a folder by default, but can create album on toggle.
+
+        Parameters
+        ----------
+        make_album : bool, default=False
+            Whether new folder is album or folder
+        """
         item = self.tree.currentItem() or self.tree.topLevelItem(0).child(0)
         if not item:
             return
@@ -170,9 +181,15 @@ class LibraryWidget(QWidget):
         parent_node = node
 
         # Ask for a name
-        name, ok = QInputDialog.getText(
-            self, "New Folder", "Folder name:", QLineEdit.Normal, "New Folder"
-        )
+        if not make_album:
+            name, ok = QInputDialog.getText(
+                self, "New Folder", "Folder name:", QLineEdit.Normal, "New Folder"
+            )
+        else:
+            name, ok = QInputDialog.getText(
+                self, "New Album", "Album name:", QLineEdit.Normal, "New Album"
+            )
+
         if not ok:
             return
         name = name.strip()
@@ -186,9 +203,13 @@ class LibraryWidget(QWidget):
             return
 
         # Create new node
-        node = Node(label=name, parent=parent_node)
+        if not make_album:
+            node = Node(label=name, parent=parent_node)
+        else:
+            node = Leaf(label=name, parent=parent_node)
         parent_node.add_child(node)
 
         # Add UI node
         self._add_tree_node(parent_item, node)
         parent_item.setExpanded(True)
+        self.save_library()
