@@ -2,22 +2,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem
-from jsonschema.validators import Draft202012Validator
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem, \
+    QInputDialog, QLineEdit, QMessageBox
 
-from schema import TREE_SCHEMA
-
-
-def _default_library() -> Dict:
-    return {
-        "version": "v1",
-        "tree": {
-            "New Folder": {}
-        }
-    }
+from ui.library_items import create_tree_from_dict, export_tree_to_dict, Node, Leaf
 
 
 class LibraryWidget(QWidget):
@@ -35,8 +25,8 @@ class LibraryWidget(QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self.LIBRARY_FILENAME = None
-        self._library: Dict = self._load_library(self.LIBRARY_FILENAME)
+        self.LIBRARY_FILENAME = "library.json"
+        self._library: Node = self._load_library(self.LIBRARY_FILENAME)
 
         # UI
         root = QVBoxLayout(self)
@@ -67,29 +57,7 @@ class LibraryWidget(QWidget):
         # self.tree.currentItemChanged.connect(self._on_current_changed)
 
     # --------- Persistence ---------
-    def _validate_library(self, data : str):
-        """ Validates the given text to follow the library tree schema.
-
-        Parameters
-        ----------
-        data : str
-            The json text of the library.
-
-        Raises
-        ------
-        ValueError
-            if invalid schema detected.
-        """
-        validator = Draft202012Validator(TREE_SCHEMA)
-        errors = sorted(validator.iter_errors(data), key=lambda e: e.path)
-        if errors:
-            lines = []
-            for e in errors:
-                loc = "/".join(map(str, e.path)) or "<root>"
-                lines.append(f"- at {loc}: {e.message}")
-            raise ValueError("Invalid image tree:\n" + "\n".join(lines))
-
-    def _load_library(self, json_path: str | None) -> Dict:
+    def _load_library(self, json_path: str | None) -> Node:
         """ Loads a library from the given path. If no path given, returns a default setup.
 
         Parameters
@@ -99,34 +67,38 @@ class LibraryWidget(QWidget):
 
         Returns
         -------
-        data : dict
+        data : Node
             The loaded library data.
         """
         if json_path is None:
-            return _default_library()
+            return Node("root")
 
         p = Path(json_path)
         if not p.exists():
             raise FileNotFoundError(f"File {p} doesn't exist")
 
         data = json.loads(p.read_text(encoding="utf-8"))
-        self._validate_library(data)
-        return data
+        root_node = create_tree_from_dict(data)
+        return root_node
 
     def save_library(self) -> None:
         """ Save the current library to disk. """
-        data = json.dumps(self._library, indent=2)
-        self._validate_library(data)
+        data = export_tree_to_dict(self._library)
         Path(self.LIBRARY_FILENAME).write_text(data, encoding="utf-8")
 
     # --------- Tree build helpers ---------
     def _rebuild_tree(self) -> None:
         """ Refresh the tree layout. """
         self.tree.clear()
-        for top_name, top_node in self._library["tree"].items():
-            self._add_tree_node(None, top_name, top_node)
+        self.tree.setHeaderLabels(["name", "type"])
 
-    def _add_tree_node(self, parent: QTreeWidgetItem | None, name: str, node: dict) -> QTreeWidgetItem:
+        root_item = self.tree.invisibleRootItem()
+        root_item.setData(0, Qt.UserRole, {"type": "Folder", "ref": self._library})
+
+        for child in self._library:
+            self._add_tree_node(root_item, child)
+
+    def _add_tree_node(self, parent: QTreeWidgetItem | None, node: Node | Leaf) -> QTreeWidgetItem:
         """ Adds a node to the tree.
         If it is a folder, recurse for children. If album, add images as the leaves.
 
@@ -140,28 +112,25 @@ class LibraryWidget(QWidget):
             The node data for recursion and testing collection/group.
         """
         # Album: object with 'images' array
-        if isinstance(node, dict) and "images" in node and isinstance(node["images"], list):
-            item = QTreeWidgetItem([name, "Collection", f"{len(node['images'])} images"])
-            if parent:
-                parent.addChild(item)
-            else:
-                self.tree.addTopLevelItem(item)
+        if isinstance(node, Leaf):
+            item = QTreeWidgetItem([node.label, "Album"])
+            item.setData(0, Qt.UserRole, {"type": "Album", "ref": node})
+            parent.addChild(item)
 
             # Add images as children
-            for img in node["images"]:
-                img_label = img.get("label", "")
-                QTreeWidgetItem(item, [img_label])
+            for img in node:
+                img_item = QTreeWidgetItem(item, [img.label, "Image"])
+                img_item.setData(0, Qt.UserRole, {"type": "Album", "ref": img})
+
             return item
 
         # Folder: object mapping names → nodes
-        if isinstance(node, dict):
-            item = QTreeWidgetItem([name])
-            if parent:
-                parent.addChild(item)
-            else:
-                self.tree.addTopLevelItem(item)
-            for child_name, child_node in node.items():
-                self._add_tree_node(item, child_name, child_node)
+        if isinstance(node, Node):
+            item = QTreeWidgetItem([node.label, "Folder"])
+            item.setData(0, Qt.UserRole, {"type": "Folder", "ref": node})
+            parent.addChild(item)
+            for child_node in node:
+                self._add_tree_node(item, child_node)
             return item
 
         return parent
