@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -33,7 +34,7 @@ class LibraryWidget(QWidget):
         actions = QHBoxLayout()
         btn_new_folder = QPushButton("New Folder")
         btn_new_collection = QPushButton("New Album")
-        # btn_new_folder.clicked.connect(self._create_folder)
+        btn_new_folder.clicked.connect(self._create_folder)
         # btn_new_collection.clicked.connect(self._create_collection)
         actions.addWidget(btn_new_folder)
         actions.addWidget(btn_new_collection)
@@ -90,13 +91,27 @@ class LibraryWidget(QWidget):
     def _rebuild_tree(self) -> None:
         """ Refresh the tree layout. """
         self.tree.clear()
-        self.tree.setHeaderLabels(["name", "type"])
+        self.tree.setHeaderLabels(["name"])
 
         root_item = self.tree.invisibleRootItem()
-        root_item.setData(0, Qt.UserRole, {"type": "Folder", "ref": self._library})
+        root_item.setData(0, Qt.UserRole, {"type": "Library"})
+
+        # Create the visible root item to allow top level folder creation
+        visible_root = QTreeWidgetItem([os.path.splitext(self.LIBRARY_FILENAME)[0], "Folder"])
+        visible_root.setData(0, Qt.UserRole, {"type": "Folder", "ref": self._library})
+        self.tree.addTopLevelItem(visible_root)
+        visible_root.setChildIndicatorPolicy(QTreeWidgetItem.DontShowIndicatorWhenChildless)
+        visible_root.setExpanded(True)
+        self.tree.expandItem(visible_root)
+
+        # Prevent collapse of the visible root item.
+        def prevent_collapse(item):
+            if item is visible_root:
+                self.tree.expandItem(visible_root)
+        self.tree.itemCollapsed.connect(prevent_collapse)
 
         for child in self._library:
-            self._add_tree_node(root_item, child)
+            self._add_tree_node(visible_root, child)
 
     def _add_tree_node(self, parent: QTreeWidgetItem | None, node: Node | Leaf) -> QTreeWidgetItem:
         """ Adds a node to the tree.
@@ -106,10 +121,8 @@ class LibraryWidget(QWidget):
         ----------
         parent : QTreeWidgetItem or None
             The parent node to add to, None means it will be added to the root.
-        name : str
-            The name to use for the node.
-        node : dict
-            The node data for recursion and testing collection/group.
+        node : Node or Leaf
+            The node to add to the library.
         """
         # Album: object with 'images' array
         if isinstance(node, Leaf):
@@ -134,3 +147,48 @@ class LibraryWidget(QWidget):
             return item
 
         return parent
+    # --------- Creation ---------
+    def _create_folder(self) -> None:
+        """Create a new Folder under the currently selected Folder (or the root)."""
+        item = self.tree.currentItem() or self.tree.topLevelItem(0).child(0)
+        if not item:
+            return
+
+        data = item.data(0, Qt.UserRole) or {}
+        node = data.get("ref")
+
+        # If an Album is selected, create alongside it (in its parent Folder).
+        if isinstance(node, Leaf):
+            item = item.parent() or self.tree.topLevelItem(0)
+            data = item.data(0, Qt.UserRole) or {}
+            node = data.get("ref")
+
+        if not isinstance(node, Node):
+            return  # Only allow creating inside a node
+
+        parent_item = item
+        parent_node = node
+
+        # Ask for a name
+        name, ok = QInputDialog.getText(
+            self, "New Folder", "Folder name:", QLineEdit.Normal, "New Folder"
+        )
+        if not ok:
+            return
+        name = name.strip()
+        if not name:
+            return
+
+        # Ensure unique within this folder
+        if name in [c.label for c in parent_node]:
+            QMessageBox.warning(self, "Name in use",
+                                f'A node named "{name}" already exists in this folder.')
+            return
+
+        # Create new node
+        node = Node(label=name, parent=parent_node)
+        parent_node.add_child(node)
+
+        # Add UI node
+        self._add_tree_node(parent_item, node)
+        parent_item.setExpanded(True)
