@@ -24,9 +24,9 @@ class LibraryWidget(QWidget):
     - imagesDropped(paths: List[str], target_collection_id: str)
     """
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, parent=None, filename: str = "library.json") -> None:
         super().__init__(parent)
-        self.LIBRARY_FILENAME = "library.json"
+        self.LIBRARY_FILENAME = filename
         self._library: Node = self._load_library(self.LIBRARY_FILENAME)
 
         # UI
@@ -85,7 +85,7 @@ class LibraryWidget(QWidget):
     def save_library(self) -> None:
         """ Save the current library to disk. """
         data = export_tree_to_dict(self._library)
-        Path(self.LIBRARY_FILENAME).write_text(json.dumps(data), encoding="utf-8")
+        Path(self.LIBRARY_FILENAME).write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     # --------- Tree build helpers ---------
     def _rebuild_tree(self) -> None:
