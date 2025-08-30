@@ -4,11 +4,11 @@ import json
 import os
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QPoint
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTreeWidget, QTreeWidgetItem, \
-    QInputDialog, QLineEdit, QMessageBox
+    QInputDialog, QLineEdit, QMessageBox, QMenu
 
-from ui.library_items import create_tree_from_dict, export_tree_to_dict, Node, Leaf
+from ui.library_items import create_tree_from_dict, export_tree_to_dict, Node, Leaf, Image
 
 
 class LibraryWidget(QWidget):
@@ -49,10 +49,10 @@ class LibraryWidget(QWidget):
         # self.tree.setDefaultDropAction(Qt.MoveAction)
         # self.tree.setDragDropMode(QTreeWidget.DragDrop)
         root.addWidget(self.tree, 1)
-        #
-        # # Context menu for rename/delete
-        # self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
-        # self.tree.customContextMenuRequested.connect(self._on_tree_context_menu)
+
+        # Context menu for rename/delete
+        self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree.customContextMenuRequested.connect(self._on_tree_context_menu)
         #
         self._rebuild_tree()
         # self.tree.currentItemChanged.connect(self._on_current_changed)
@@ -213,3 +213,53 @@ class LibraryWidget(QWidget):
         self._add_tree_node(parent_item, node)
         parent_item.setExpanded(True)
         self.save_library()
+
+    # --------- Context menu (Rename/Delete) ---------
+    def _on_tree_context_menu(self, pos: QPoint) -> None:
+        """ Add the context menu for renaming and deleting folders/albums.
+        Ignore if the item is an Image or the visible root.
+        """
+        item = self.tree.itemAt(pos)
+        if not item:
+            return
+        node = item.data(0, Qt.UserRole).get("ref")
+        is_root = (item == self.tree.topLevelItem(0))
+        if isinstance(node, Image) or is_root:
+            return
+
+        menu = QMenu(self)
+        act_rename = menu.addAction("Rename")
+        act_delete = menu.addAction("Delete")
+        chosen = menu.exec(self.tree.viewport().mapToGlobal(pos))
+        if not chosen:
+            return
+
+        if chosen == act_rename:
+            current_name = node.label
+            new_name, ok = QInputDialog.getText(self, "Rename", "New name:", text=current_name)
+            if ok and new_name and new_name != current_name:
+                node.label = new_name
+                item.setText(0, new_name)
+                self.save_library()
+        elif chosen == act_delete:
+            if isinstance(node, Node):
+                confirm = QMessageBox.question(
+                    self, "Delete folder?",
+                    "This folder contains subfolders/collections. Delete it and everything inside?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                )
+                if confirm != QMessageBox.Yes:
+                    return
+            elif isinstance(node, Leaf):
+                confirm = QMessageBox.question(
+                    self, "Delete album?",
+                    "Delete this album?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                )
+                if confirm != QMessageBox.Yes:
+                    return
+            # Remove from data model
+            node.parent.remove_child(node)
+            # Update the ui
+            item.parent().removeChild(item)
+            self.save_library()
