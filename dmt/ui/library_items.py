@@ -3,7 +3,7 @@ from typing import List
 from jsonschema.validators import Draft202012Validator
 from pydantic import BaseModel
 
-from schema import TREE_SCHEMA
+from .tree_schema import TREE_SCHEMA
 
 
 class Image(BaseModel):

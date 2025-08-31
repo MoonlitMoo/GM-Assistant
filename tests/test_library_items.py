@@ -1,7 +1,7 @@
 import json
 import pytest
 
-from ui.library_items import (
+from dmt.ui.library_items import (
     Image,
     Node,
     Leaf,
