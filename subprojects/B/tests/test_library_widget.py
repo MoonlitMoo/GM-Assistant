@@ -85,6 +85,22 @@ def _find_item_by_text(tree, text):
     return walk(top)
 
 
+def _find_item_by_path(tree, labels):
+    """Find item by a path of labels starting under the visible root."""
+    item = tree.topLevelItem(0)  # visible root
+    for label in labels:
+        found = None
+        for i in range(item.childCount()):
+            ch = item.child(i)
+            if ch.text(0) == label:
+                found = ch
+                break
+        if not found:
+            return None
+        item = found
+    return item
+
+
 # ---- Tests ----
 def test_add_folder_and_album(widget, monkeypatch):
     # Names to return for folder/album creation
@@ -228,3 +244,97 @@ def test_rename_folder_and_album(widget, monkeypatch):
         text = " ".join(s.strip() for s in f.readlines())
         assert "Renamed Folder" in text
         assert "Renamed Album" in text
+
+
+def test_move_folder_to_folder_updates_model_and_ui(widget):
+    # Add subfolder
+    widget._create_node(make_album=False)
+    subfolder = _find_item_by_text(widget.tree, "Session 1")
+    widget.tree.setCurrentItem(subfolder)
+    widget._create_node(make_album=False)
+
+    src_item = _find_item_by_path(widget.tree, ["Session 1", "SubFolder"])
+    dst_item = _find_item_by_path(widget.tree, ["Dest"])
+    assert src_item and dst_item
+
+    # preconditions
+    assert src_item.parent().text(0) == "Session 1"
+    src_ref = src_item.data(0, Qt.UserRole)["ref"]
+    old_parent_ref = src_item.parent().data(0, Qt.UserRole)["ref"]
+    new_parent_ref = dst_item.data(0, Qt.UserRole)["ref"]
+    assert src_ref in list(old_parent_ref)
+
+    # move
+    assert widget._is_valid_drop(src_item, dst_item)
+    widget._handle_internal_move(src_item, dst_item)
+
+    # UI parent changed
+    assert src_item.parent() is dst_item
+    # model parents changed
+    assert src_ref not in list(old_parent_ref)
+    assert src_ref in list(new_parent_ref)
+    # save called
+    assert widget._save_calls, "save_library should be called at least once"
+
+
+def test_move_album_to_folder(widget):
+    src_item = _find_item_by_path(widget.tree, ["Session 1", "NPCs"])
+    dst_item = _find_item_by_path(widget.tree, ["Dest"])
+    assert src_item and dst_item
+
+    src_ref = src_item.data(0, Qt.UserRole)["ref"]
+    old_parent_ref = src_item.parent().data(0, Qt.UserRole)["ref"]
+    new_parent_ref = dst_item.data(0, Qt.UserRole)["ref"]
+
+    assert widget._is_valid_drop(src_item, dst_item)
+    widget._handle_internal_move(src_item, dst_item)
+
+    assert src_item.parent() is dst_item
+    assert src_ref not in list(old_parent_ref)
+    assert src_ref in list(new_parent_ref)
+
+
+def test_move_image_to_album(widget):
+    src_item = _find_item_by_path(widget.tree, ["Session 1", "NPCs", "Guard"])
+    dst_item = _find_item_by_path(widget.tree, ["Session 1", "Locations"])
+    assert src_item and dst_item
+
+    src_img = src_item.data(0, Qt.UserRole)["ref"]
+    old_album = _find_item_by_path(widget.tree, ["Session 1", "NPCs"]).data(0, Qt.UserRole)["ref"]
+    new_album = dst_item.data(0, Qt.UserRole)["ref"]
+
+    # pre: image is in old album
+    assert src_img in old_album.images
+    assert src_img not in new_album.images
+
+    assert widget._is_valid_drop(src_item, dst_item)
+    widget._handle_internal_move(src_item, dst_item)
+
+    # UI parent changed
+    assert src_item.parent() is dst_item
+    # model lists updated
+    assert src_img not in old_album.images
+    assert src_img in new_album.images
+
+
+def test_invalid_drops_disallowed(widget):
+    folder = _find_item_by_path(widget.tree, ["Session 1"])
+    subfolder = _find_item_by_path(widget.tree, ["Session 1", "SubFolder"])
+    album = _find_item_by_path(widget.tree, ["Session 1", "NPCs"])
+    image = _find_item_by_path(widget.tree, ["Session 1", "NPCs", "Guard"])
+    assert folder and subfolder and album and image
+
+    # Cannot drop folder/album onto album
+    assert not widget._is_valid_drop(subfolder, album)
+    assert not widget._is_valid_drop(album, album)
+
+    # Image cannot drop onto folder
+    assert not widget._is_valid_drop(image, folder)
+
+    # Cannot drop onto self
+    assert not widget._is_valid_drop(folder, folder)
+    assert not widget._is_valid_drop(album, album)
+    assert not widget._is_valid_drop(image, image)
+
+    # No cycles: cannot move ancestor under its descendant
+    assert not widget._is_valid_drop(folder, subfolder)

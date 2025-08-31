@@ -29,7 +29,8 @@ def library_dict():
                         {"path": "images/town.png", "label": "Town Square"}
                     ]
                 },
-            }
+            },
+            "Session 2": {}
         },
     }
 

@@ -24,10 +24,12 @@ class Node:
 
     def add_child(self, child):
         if child not in self.children:
+            child.parent = self
             self.children.append(child)
 
     def remove_child(self, child):
         if child in self.children:
+            child.parent = None
             self.children.remove(child)
 
     def __iter__(self):

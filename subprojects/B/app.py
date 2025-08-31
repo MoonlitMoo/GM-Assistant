@@ -14,6 +14,7 @@ class MainWindow(QMainWindow):
         self.library = LibraryWidget()
         self.setCentralWidget(self.library)
 
+
 app = QApplication(sys.argv)
 window = MainWindow()
 window.show()
