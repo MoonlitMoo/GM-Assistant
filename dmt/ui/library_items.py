@@ -331,11 +331,11 @@ class LibraryTree(QTreeWidget):
             old_parent.removeChild(src)
             # Insert at end of dst
             dst.addChild(src)
+        self.setCurrentItem(src)
         dst.setExpanded(True)
 
         # Then emit the tree changed signal
         self.structureChanged.emit()
-
         # We implemented the move ourselves so end the event with no further actions
         event.accept()
         event.setDropAction(Qt.IgnoreAction)

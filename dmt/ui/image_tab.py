@@ -10,7 +10,8 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QTextEdit, QFileDialog, QMessageBox, QMenu, QInputDialog
 )
 
-from ..core.config import Config
+from dmt.core.config import Config
+from .library_items import ImageItem
 from .library_widget import LibraryWidget
 
 
@@ -61,7 +62,7 @@ class ThumbnailList(QListWidget):
             return
         menu = QMenu(self)
         act_rename = menu.addAction("Rename caption…")
-        act_remove = menu.addAction("Remove from collection")
+        act_remove = menu.addAction("Remove from album")
         chosen = menu.exec(self.viewport().mapToGlobal(pos))
         if not chosen:
             return
@@ -83,7 +84,8 @@ class ImagesTab(QWidget):
         super().__init__()
         self._cfg = cfg
 
-        self._current_collection: Optional[Dict] = None
+        self._current_album_name: Optional[str] = None
+        self._current_album_images: list[ImageItem] = []
         self._preview_pixmap: Optional[QPixmap] = None
         self._selected_path: Optional[str] = None
 
@@ -91,12 +93,12 @@ class ImagesTab(QWidget):
 
         # Left: Library
         self.library = LibraryWidget()
-        self.library.collectionSelected.connect(self._on_collection_selected)
-        self.library.imagesDropped.connect(self._on_images_dropped_to_tree)
+        self.library.albumSelected.connect(self._on_album_selected)
+        # self.library.imagesDropped.connect(self._on_images_dropped_to_tree)
         splitter.addWidget(self.library)
 
         # Right: thumbnails + preview/controls
-        self._path_label = QLabel("No collection selected")
+        self._path_label = QLabel("No album selected")
         self._path_label.setStyleSheet("color: #888; font-style: italic; padding: 4px;")
 
         right = QSplitter(Qt.Vertical)
@@ -155,55 +157,69 @@ class ImagesTab(QWidget):
         lay.addWidget(splitter)
 
     # ----------------------- Library interactions -----------------------
-    def _on_collection_selected(self, coll: Dict) -> None:
-        self._current_collection = coll
+    def _on_album_selected(self, album_name: str, image_list: List[ImageItem]) -> None:
+        """ Updates the UI when an album is selected.
+
+        Parameters
+        ----------
+        album_name : str
+            Name of the album
+        image_list : list of ImageItems
+            The images contained in the item, given as QTreeWidgetItems
+        """
+        self._current_album_name = album_name
+        self._current_images = image_list
+
         # Build breadcrumb path from the tree
         item = self.library.tree.currentItem()
         if item:
             parts = []
             while item is not None:
-                parts.insert(0, item.text(0))
+                parts.insert(0, item.label)
                 item = item.parent()
             self._path_label.setText(" > ".join(parts))
         else:
-            self._path_label.setText("No collection selected")
+            self._path_label.setText("No album selected")
 
         self._reload_thumbs()
 
-    def _on_images_dropped_to_tree(self, paths: List[str], target_collection_id: str) -> None:
-        if not self._current_collection:
-            self.library.add_images_to_collection(target_collection_id, paths)
-            return
-        self.library.move_images_between_collections(
-            self._current_collection.get("id", ""),
-            target_collection_id,
-            paths
-        )
-        if self._current_collection.get("id") != target_collection_id:
-            self._reload_thumbs()
+    # def _on_images_dropped_to_tree(self, paths: List[str], target_collection_id: str) -> None:
+    #     if not self._current_album:
+    #         self.library.add_images_to_collection(target_collection_id, paths)
+    #         return
+    #     self.library.move_images_between_collections(
+    #         self._current_album.get("id", ""),
+    #         target_collection_id,
+    #         paths
+    #     )
+    #     if self._current_album.get("id") != target_collection_id:
+    #         self._reload_thumbs()
 
     # ----------------------- Thumbnails grid ----------------------------
     def _reload_thumbs(self) -> None:
+        """ Formats the thumbnail images to use in the previews. """
         self._thumbs.clear()
         self._preview.clear()
         self._preview.setText("No image selected")
         self._btn_send.setEnabled(False)
-        if not self._current_collection:
+        if not self._current_album_name:
             return
-        for it in self._current_collection.get("items", []):
-            path = it.get("path", "")
+        for img in self._current_images:
+            path = img.path
             icon = self._make_icon(path)
             name = Path(path).name or "(unnamed)"
             li = QListWidgetItem(icon, name)
             li.setData(Qt.UserRole, path)
-            li.setData(Qt.UserRole + 1, it.get("caption", ""))
+            li.setData(Qt.UserRole + 1, img.label)
             self._thumbs.addItem(li)
 
-    def _on_reordered(self, new_items: List[Dict]) -> None:
-        if not self._current_collection:
-            return
-        self.library.update_collection_items(self._current_collection["id"], new_items)
-        self._current_collection["items"] = new_items
+    def _make_icon(self, path: str) -> QIcon:
+        """ Makes the thumnail icon from the given image path. """
+        pm = QPixmap(path)
+        if not pm.isNull():
+            pm = pm.scaled(128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            return QIcon(pm)
+        return QIcon()
 
     def _on_thumb_clicked(self, item: QListWidgetItem) -> None:
         path = item.data(Qt.UserRole)
@@ -217,11 +233,6 @@ class ImagesTab(QWidget):
             self._update_preview_scaled()
         self._btn_send.setEnabled(True)
 
-    def resizeEvent(self, ev):
-        super().resizeEvent(ev)
-        if self._preview_pixmap is not None and not self._preview_pixmap.isNull():
-            self._update_preview_scaled()
-
     def _update_preview_scaled(self) -> None:
         if not self._preview_pixmap:
             return
@@ -231,17 +242,22 @@ class ImagesTab(QWidget):
         )
         self._preview.setPixmap(scaled)
 
-    def _make_icon(self, path: str) -> QIcon:
-        pm = QPixmap(path)
-        if not pm.isNull():
-            pm = pm.scaled(128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            return QIcon(pm)
-        return QIcon()
+    def resizeEvent(self, ev):
+        super().resizeEvent(ev)
+        if self._preview_pixmap is not None and not self._preview_pixmap.isNull():
+            self._update_preview_scaled()
+
+    def _on_reordered(self, new_items: List[Dict]) -> None:
+        if not new_items:
+            return
+        new_paths = [it["path"] for it in new_items]
+        self.library.reorder_current_album_images(new_paths)
+        self._current_images = self.library.get_current_album_images()
 
     # ----------------------- Buttons: add/remove -------------------------
     def _add_images(self) -> None:
-        if not self._current_collection:
-            QMessageBox.information(self, "Select collection", "Select a collection to add images.")
+        if not self._current_album_name:
+            QMessageBox.information(self, "Select album", "Select a album to add images.")
             return
         files, _ = QFileDialog.getOpenFileNames(
             self, "Add Images",
@@ -249,12 +265,13 @@ class ImagesTab(QWidget):
         )
         if not files:
             return
-        self.library.add_images_to_collection(self._current_collection["id"], files)
-        self._current_collection = self.library._find_collection(self.library._library, self._current_collection["id"])
+        self.library.add_images_to_current_album(files)
+        self._current_images = self.library.get_current_album_images()
         self._reload_thumbs()
 
     def _remove_selected(self) -> None:
-        if not self._current_collection:
+        """ Remove the selected images from the album. """
+        if not self._current_images:
             return
         selected = self._thumbs.selectedItems()
         if not selected:
@@ -263,32 +280,15 @@ class ImagesTab(QWidget):
 
     # ----- Context menu handlers for thumbnails -----
     def _rename_caption(self, item: QListWidgetItem) -> None:
-        if not self._current_collection:
-            return
-        current_caption = item.data(Qt.UserRole + 1) or ""
-        new_caption, ok = QInputDialog.getText(self, "Rename caption", "Caption:", text=current_caption)
-        if not ok:
-            return
-        # Update model
-        path = item.data(Qt.UserRole)
-        new_items: List[Dict] = []
-        for it in self._current_collection.get("items", []):
-            if it.get("path") == path:
-                new_items.append({"path": path, "caption": new_caption})
-            else:
-                new_items.append(it)
-        self.library.update_collection_items(self._current_collection["id"], new_items)
-        self._current_collection["items"] = new_items
-        # Keep UI item's data in sync
-        item.setData(Qt.UserRole + 1, new_caption)
+        pass
 
     def _remove_items_explicit(self, items: List[QListWidgetItem]) -> None:
-        if not self._current_collection or not items:
+        """ Removes item from the album. """
+        if not items:
             return
-        remove_paths = {it.data(Qt.UserRole) for it in items}
-        keep = [it for it in self._current_collection.get("items", []) if it.get("path") not in remove_paths]
-        self.library.update_collection_items(self._current_collection["id"], keep)
-        self._current_collection["items"] = keep
+        remove_paths = [it.data(Qt.UserRole) for it in items]
+        self.library.remove_images_from_current_album(remove_paths)
+        self._current_images = self.library.get_current_album_images()
         self._reload_thumbs()
 
     # ----------------------- Player controls -----------------------------

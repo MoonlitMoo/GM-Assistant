@@ -187,69 +187,6 @@ class LibraryWidget(QWidget):
             parent.removeChild(item)
             self.save_library()
 
-    # # --------- Public API for image moves ---------
-    # def add_images_to_collection(self, coll_id: str, paths: List[str]) -> None:
-    #     coll = self._find_collection(self._library, coll_id)
-    #     if not coll:
-    #         return
-    #     for p in paths:
-    #         coll.setdefault("items", []).append({"path": p, "caption": ""})
-    #     self.save_library()
-    #     self._reselect_id(coll_id)
-    #
-    # def move_images_between_collections(self, src_id: str, dst_id: str, paths: List[str]) -> None:
-    #     if src_id == dst_id:
-    #         return
-    #     src = self._find_collection(self._library, src_id)
-    #     dst = self._find_collection(self._library, dst_id)
-    #     if not src or not dst:
-    #         return
-    #     keep = []
-    #     moving = set(paths)
-    #     for it in src.get("items", []):
-    #         if it.get("path") in moving:
-    #             continue
-    #         keep.append(it)
-    #     src["items"] = keep
-    #     for p in paths:
-    #         dst.setdefault("items", []).append({"path": p, "caption": ""})
-    #     self.save_library()
-    #     self._reselect_id(dst_id)
-    #
-    # def update_collection_items(self, coll_id: str, new_items: List[Dict]) -> None:
-    #     coll = self._find_collection(self._library, coll_id)
-    #     if not coll:
-    #         return
-    #     coll["items"] = new_items
-    #     self.save_library()
-    #     self._reselect_id(coll_id)
-    #
-    # def _find_collection(self, node: Dict, coll_id: str) -> Optional[Dict]:
-    #     if node.get("type") == "collection" and node.get("id") == coll_id:
-    #         return node
-    #     for ch in node.get("children", []):
-    #         found = self._find_collection(ch, coll_id)
-    #         if found:
-    #             return found
-    #     return None
-    #
-    # def _reselect_id(self, coll_id: str) -> None:
-    #     def _walk(item: QTreeWidgetItem) -> Optional[QTreeWidgetItem]:
-    #         node = item.data(0, Qt.UserRole)
-    #         if node.get("type") == "collection" and node.get("id") == coll_id:
-    #             return item
-    #         for i in range(item.childCount()):
-    #             got = _walk(item.child(i))
-    #             if got:
-    #                 return got
-    #         return None
-    #
-    #     top = self.tree.topLevelItem(0)
-    #     if not top:
-    #         return
-    #     found = _walk(top)
-    #     if found:
-    #         self.tree.setCurrentItem(found)
     def _on_current_changed(self, cur: Optional[QTreeWidgetItem], prev: Optional[QTreeWidgetItem]) -> None:
         """ Emits a signal for the selected album. """
         if not cur:
@@ -258,3 +195,78 @@ class LibraryWidget(QWidget):
         if isinstance(cur, AlbumItem):
             # Emit the album's dict — could also emit the AlbumItem itself if you prefer
             self.albumSelected.emit(cur.label, [cur.child(i) for i in range(cur.childCount())])
+
+    # --- Album helpers to utilise in the image tab (operate on the *currently selected* album) ---
+    def _current_album_item(self) -> AlbumItem | None:
+        """ Return the selected QTreeWidgetItem if it is an Album, else None. """
+        item = self.tree.currentItem()
+        if not item:
+            return None
+        return item if isinstance(item, AlbumItem) else None
+
+    def get_current_album_images(self) -> list[ImageItem]:
+        """ Return the ImageItem list for the selected album (model objects). """
+        item = self._current_album_item()
+        if not item:
+            return []
+        return list([item.child(i) for i in range(item.childCount())])
+
+    def add_images_to_current_album(self, paths: list[str]) -> None:
+        """ Append paths as ImageItem(s) to the selected album. """
+        album = self._current_album_item()
+        if not album or not paths:
+            return
+
+        for p in paths:
+            img = ImageItem(label=Path(p).stem, path=p)
+            album.addChild(img)
+
+        album.setExpanded(True)
+        self.save_library()
+
+    def remove_images_from_current_album(self, paths: list[str]) -> None:
+        """ Remove any ImageItem whose .path is in `paths` from selected album. """
+        album = self._current_album_item()
+        if not album or not paths:
+            return
+
+        for i in range(album.childCount()):
+            image: ImageItem = album.child(i)
+            if image.path in paths:
+                album.removeChild(image)
+
+        self.save_library()
+
+    def reorder_current_album_images(self, new_paths_in_order: list[str]) -> None:
+        """Reorder the selected album’s images to match `new_paths_in_order`."""
+        item = self._current_album_item()
+        if not item:
+            return
+        album: AlbumItem = item.data(0, Qt.UserRole)["ref"]
+        # remap model
+        path_to_img = {img.path: img for img in album}
+        album._items = [path_to_img[p] for p in new_paths_in_order if p in path_to_img]
+
+        # rebuild UI children in the same order
+        # collect existing children
+        rows = []
+        for i in range(item.childCount()):
+            rows.append(item.child(i))
+        # drop all
+        for ch in rows:
+            item.removeChild(ch)
+        # re-add in order (images first, any stray non-images later)
+        for p in new_paths_in_order:
+            # find original UI item for this path
+            for ch in rows:
+                ch_ref = (ch.data(0, Qt.UserRole) or {}).get("ref")
+                if isinstance(ch_ref, ImageItem) and ch_ref.path == p:
+                    item.addChild(ch)
+                    break
+        # append any non-image children back (shouldn't exist under album)
+        for ch in rows:
+            if ch.parent() is None:
+                item.addChild(ch)
+
+        item.setExpanded(True)
+        self.save_library()
