@@ -44,7 +44,7 @@ class FolderItem(QTreeWidgetItem):
     def __init__(self, label: str):
         super().__init__([label])
         self.setData(COL_LABEL, ROLE_KIND, "Folder")
-        self.setFlags(self.flags() | Qt.ItemIsDropEnabled | Qt.ItemIsDragEnabled | Qt.ItemIsEditable)
+        self.setFlags(self.flags() | Qt.ItemIsDropEnabled | Qt.ItemIsDragEnabled)
 
     @property
     def label(self) -> str:
@@ -61,7 +61,7 @@ class AlbumItem(QTreeWidgetItem):
     def __init__(self, label: str):
         super().__init__([label])
         self.setData(COL_LABEL, ROLE_KIND, "Album")
-        self.setFlags(self.flags() | Qt.ItemIsDropEnabled | Qt.ItemIsDragEnabled | Qt.ItemIsEditable)
+        self.setFlags(self.flags() | Qt.ItemIsDropEnabled | Qt.ItemIsDragEnabled)
 
     @property
     def label(self) -> str:
@@ -80,7 +80,7 @@ class ImageItem(QTreeWidgetItem):
         self.setData(COL_LABEL, ROLE_KIND, "Image")
         self.setData(COL_LABEL, ROLE_PAYLOAD, {"label": label, "path": path})
         self.setFlags(
-            (self.flags() | Qt.ItemIsDragEnabled | Qt.ItemIsEditable) & ~Qt.ItemIsDropEnabled
+            (self.flags() | Qt.ItemIsDragEnabled) & ~Qt.ItemIsDropEnabled
         )
 
     @property
@@ -155,7 +155,7 @@ class LibraryTree(QTreeWidget):
                 parent_item.addChild(folder_item)
                 for child_name, child_node in node.items():
                     add_node(folder_item, child_name, child_node)
-                folder_item.setExpanded(True)
+                folder_item.setExpanded(False)
                 return folder_item
 
             # Unknown/invalid types are ignored (schema validation should prevent this)
