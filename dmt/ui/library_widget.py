@@ -3,10 +3,11 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+from typing import Optional
 
 from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, \
-    QInputDialog, QLineEdit, QMessageBox, QMenu
+    QInputDialog, QLineEdit, QMessageBox, QMenu, QTreeWidgetItem
 
 from .library_items import LibraryTree, FolderItem, AlbumItem, ImageItem
 
@@ -24,7 +25,7 @@ class LibraryWidget(QWidget):
     - imagesDropped(paths: List[str], target_collection_id: str)
     """
 
-    collectionSelected = Signal(dict)
+    albumSelected = Signal(str, list)
     imagesDropped = Signal(list, str)
 
     def __init__(self, parent=None, filename: str = "library.json") -> None:
@@ -47,6 +48,9 @@ class LibraryWidget(QWidget):
         data = self._load_library(self.LIBRARY_FILENAME)
         self.tree = LibraryTree.create_tree_from_dict(data)
         self.tree.setHeaderHidden(True)
+        self.tree.structureChanged.connect(lambda: self.save_library())
+        self.tree.currentItemChanged.connect(self._on_current_changed)
+
         root.addWidget(self.tree, 1)
 
         # Context menu for rename/delete
@@ -246,3 +250,11 @@ class LibraryWidget(QWidget):
     #     found = _walk(top)
     #     if found:
     #         self.tree.setCurrentItem(found)
+    def _on_current_changed(self, cur: Optional[QTreeWidgetItem], prev: Optional[QTreeWidgetItem]) -> None:
+        """ Emits a signal for the selected album. """
+        if not cur:
+            return
+        # Only trigger signal when an AlbumItem is selected
+        if isinstance(cur, AlbumItem):
+            # Emit the album's dict — could also emit the AlbumItem itself if you prefer
+            self.albumSelected.emit(cur.label, [cur.child(i) for i in range(cur.childCount())])

@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Dict, Any, Iterable
 
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QAbstractItemView
 
 from jsonschema.validators import Draft202012Validator
@@ -108,6 +108,7 @@ class LibraryTree(QTreeWidget):
     """ The library tree widget. Shows the tree layout and implements all required logic for this.
     Can load and save directly to file.
     """
+    structureChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -311,7 +312,7 @@ class LibraryTree(QTreeWidget):
             event.ignore()
 
     def dropEvent(self, event):
-        """ Perform the movement action. """
+        """ Perform the gated movement action. """
         pos: QPoint = event.position().toPoint()
         dst = self.itemAt(pos) or self.visible_root()
         srcs = self.selectedItems()
@@ -332,6 +333,9 @@ class LibraryTree(QTreeWidget):
             dst.addChild(src)
         dst.setExpanded(True)
 
-        # We implement ourselves so end the event
+        # Then emit the tree changed signal
+        self.structureChanged.emit()
+
+        # We implemented the move ourselves so end the event with no further actions
         event.accept()
         event.setDropAction(Qt.IgnoreAction)
