@@ -330,5 +330,8 @@ class LibraryTree(QTreeWidget):
             old_parent.removeChild(src)
             # Insert at end of dst
             dst.addChild(src)
+        dst.setExpanded(True)
 
-        event.acceptProposedAction()
+        # We implement ourselves so end the event
+        event.accept()
+        event.setDropAction(Qt.IgnoreAction)
