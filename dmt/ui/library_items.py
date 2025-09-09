@@ -294,6 +294,10 @@ class LibraryTree(QTreeWidget):
         if not self._allowed_parent(src_kind, dst_kind):
             return False
 
+        # If moving between folders, don't allow if contains an item with the same name
+        if dst != src.parent() and src.label in [dst.child(i).label for i in range(dst.childCount())]:
+            return False
+
         return True
 
     # --- Qt event overrides ---------------------------------------------------

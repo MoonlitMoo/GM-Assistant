@@ -191,9 +191,11 @@ class LibraryWidget(QWidget):
         """ Emits a signal for the selected album. """
         if not cur:
             return
-        # Only trigger signal when an AlbumItem is selected
+        # Trigger signal for album or image.
         if isinstance(cur, AlbumItem):
-            # Emit the album's dict — could also emit the AlbumItem itself if you prefer
+            self.albumSelected.emit(cur.label, [cur.child(i) for i in range(cur.childCount())])
+        if isinstance(cur, ImageItem):
+            cur = cur.parent()
             self.albumSelected.emit(cur.label, [cur.child(i) for i in range(cur.childCount())])
 
     # --- Album helpers to utilise in the image tab (operate on the *currently selected* album) ---
