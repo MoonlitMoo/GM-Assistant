@@ -301,41 +301,110 @@ class LibraryTree(QTreeWidget):
         event.acceptProposedAction()
 
     def dragMoveEvent(self, event):
-        """ Test validity of the drag event. """
+        """ Validate drag with awareness of the drop indicator (on/above/below).
+        Calls super move to update the dropIndicatorPosition, then we check if the move action is valid failing if not.
+        """
+        QTreeWidget.dragMoveEvent(self, event)
         pos = event.position().toPoint()
-        dst = self.itemAt(pos) or self.visible_root()
+        anchor = self.itemAt(pos) or self.visible_root()
+        indicator = self.dropIndicatorPosition()
+
+        # Resolve effective parent container for validation
+        def effective_parent(anchor_item):
+            kind = self._kind(anchor_item)
+            if indicator == QAbstractItemView.OnItem:
+                # Drop INTO the anchor: images aren't containers → use their parent
+                return anchor_item if kind in ("Folder", "Album") else (anchor_item.parent() or self.visible_root())
+            elif indicator in (QAbstractItemView.AboveItem, QAbstractItemView.BelowItem):
+                # Drop BETWEEN siblings → parent is the anchor's parent (or visible root)
+                return anchor_item.parent() or self.visible_root()
+            else:  # OnViewport / unknown → default to visible root
+                return self.visible_root()
+
+        target_parent = effective_parent(anchor)
         srcs = self.selectedItems()
-        ok = bool(dst and srcs and all(self._is_valid_drop(s, dst) for s in srcs))
+
+        ok = bool(target_parent and srcs and all(self._is_valid_drop(s, target_parent) for s in srcs))
         if ok:
             event.acceptProposedAction()
         else:
             event.ignore()
 
     def dropEvent(self, event):
-        """ Perform the gated movement action. """
+        """ Perform move/reorder with exact insertion index based on drop indicator.
+        We check for valid target and then grab the position to insert. Then we yoink the sources and add to destination
+        and remove from the original parent. Some selection clean up then we accept the action as finished, ignoring
+        any future actions.
+        """
         pos: QPoint = event.position().toPoint()
-        dst = self.itemAt(pos) or self.visible_root()
+        anchor = self.itemAt(pos) or self.visible_root()
+        indicator = self.dropIndicatorPosition()
         srcs = self.selectedItems()
-        if not (dst and srcs and all(self._is_valid_drop(s, dst) for s in srcs)):
+
+        # Helper to resolve (parent, insert_row) given anchor & indicator
+        def resolve_target_and_row(anchor_item):
+            # Normalise when dropping ON: images aren't containers → use their parent
+            if indicator == QAbstractItemView.OnItem:
+                parent = anchor_item if self._kind(anchor_item) in ("Folder", "Album") else (
+                            anchor_item.parent() or self.visible_root())
+                row = parent.childCount()  # append
+                return parent, row
+
+            # Between siblings → parent is the anchor's parent; compute index above/below
+            if indicator in (QAbstractItemView.AboveItem, QAbstractItemView.BelowItem):
+                parent = anchor_item.parent() or self.visible_root()
+                idx = parent.indexOfChild(anchor_item)
+                if idx < 0:
+                    idx = parent.childCount()
+                row = idx + (1 if indicator == QAbstractItemView.BelowItem else 0)
+                return parent, row
+
+            # On viewport or unknown → append to visible root
+            parent = self.visible_root()
+            return parent, parent.childCount()
+
+        target_parent, insert_row = resolve_target_and_row(anchor)
+
+        # Validate against the effective parent container
+        if not (target_parent and srcs and all(self._is_valid_drop(s, target_parent) for s in srcs)):
             event.ignore()
             return
 
-        # Normalize target: if pointing at Image, use its parent container
-        if self._kind(dst) == "Image":
-            dst = dst.parent() or self.visible_root()
+        # Sort sources by their visual order to keep a stable sequence while inserting
+        def item_row(it):
+            p = it.parent() or self.invisibleRootItem()
+            return p.indexOfChild(it)
 
-        # Perform the move(s)
-        for src in srcs:
-            # Remove from old parent
+        srcs_sorted = sorted(srcs, key=item_row)
+
+        # For moves within the same parent, inserting below a position after removing earlier rows
+        # requires compensating the target index when the source was above the insertion point.
+        last_moved = None
+        for src in srcs_sorted:
             old_parent = src.parent() or self.invisibleRootItem()
-            old_parent.removeChild(src)
-            # Insert at end of dst
-            dst.addChild(src)
-        self.setCurrentItem(src)
-        dst.setExpanded(True)
+            old_row = old_parent.indexOfChild(src)
 
-        # Then emit the tree changed signal
+            # Compute compensation for same-parent moves
+            target_row = insert_row
+            if old_parent is target_parent and old_row < insert_row:
+                target_row -= 1  # removing an earlier row shifts the target left by one
+
+            # Detach & insert at the computed position
+            old_parent.removeChild(src)
+            target_parent.insertChild(max(0, min(target_row, target_parent.childCount())), src)
+
+            # If we are inserting "below", and have multiple items, advance insertion point
+            if target_parent is not None and indicator == QAbstractItemView.BelowItem:
+                insert_row = target_row + 1
+            last_moved = src
+
+        # Selection/focus and UX niceties
+        if last_moved is not None:
+            self.setCurrentItem(last_moved)
+        if target_parent is not None:
+            target_parent.setExpanded(True)
+
+        # Notify & accept as a move
         self.structureChanged.emit()
-        # We implemented the move ourselves so end the event with no further actions
-        event.accept()
         event.setDropAction(Qt.IgnoreAction)
+        event.accept()
