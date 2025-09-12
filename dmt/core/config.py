@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel, Field
+from PySide6.QtCore import QSettings
 
-# Cross-platform config dir: ~/.config/dmt/config.json (Linux), %APPDATA%/dmt/config.json (Windows)
-CONFIG_DIR = Path.home() / ("AppData/Roaming" if (Path.home() / "AppData/Roaming").exists() else ".config") / "dmt"
-CONFIG_PATH = CONFIG_DIR / "config.json"
+# QSettings scope
+ORG = "None"
+APP = "GM Assistant"
 
 
 class Hotkeys(BaseModel):
@@ -31,18 +31,88 @@ class Config(BaseModel):
     playerWindowed: bool = True
 
 
+def _s() -> QSettings:
+    # Organization/Application should be set once in app.py before first use,
+    # but we also pass them here to be explicit.
+    return QSettings(ORG, APP)
+
+
+def _read_json(s: QSettings, key: str, default: dict) -> dict:
+    raw = s.value(key, "")
+    if isinstance(raw, (dict, list)):
+        # Some backends may round-trip as native
+        return raw  # type: ignore[return-value]
+    if not raw:
+        return default
+    try:
+        return json.loads(raw)
+    except Exception:
+        return default
+
+
+def _write_json(s: QSettings, key: str, obj: dict | list) -> None:
+    s.setValue(key, json.dumps(obj, ensure_ascii=False))
+
+
 def load_config() -> Config:
-    if CONFIG_PATH.exists():
-        try:
-            data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-            return Config.model_validate(data)
-        except Exception:
-            # Fallback to defaults if config corrupt
-            return Config()
-    else:
-        return Config()
+    s = _s()
+
+    # --- General ---
+    s.beginGroup("general")
+    image_roots = s.value("imageRoots", [], list)
+    player_display = s.value("playerDisplay", 0, int)
+    fit_mode = s.value("fitMode", "fit", str)
+    watch_folders = s.value("watchFolders", False, bool)
+    player_windowed = s.value("playerWindowed", True, bool)
+    s.endGroup()
+
+    # --- Hotkeys ---
+    s.beginGroup("hotkeys")
+    hk = Hotkeys(
+        enabled=s.value("enabled", False, bool),
+        fade=s.value("fade", "F", str),
+        open=s.value("open", "O", str),
+    )
+    s.endGroup()
+
+    # --- UI ---
+    s.beginGroup("ui")
+    geometry = _read_json(s, "geometry", {})
+    splitter_sizes = _read_json(s, "splitterSizes", {})
+    s.endGroup()
+
+    return Config(
+        imageRoots=image_roots,
+        playerDisplay=player_display,
+        fitMode=fit_mode,
+        watchFolders=watch_folders,
+        hotkeys=hk,
+        ui=UIState(geometry=geometry, splitterSizes=splitter_sizes),
+        playerWindowed=player_windowed,
+    )
 
 
 def save_config(cfg: Config) -> None:
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    CONFIG_PATH.write_text(cfg.model_dump_json(indent=2), encoding="utf-8")
+    s = _s()
+
+    # --- General ---
+    s.beginGroup("general")
+    s.setValue("imageRoots", list(cfg.imageRoots))
+    s.setValue("playerDisplay", int(cfg.playerDisplay))
+    s.setValue("fitMode", str(cfg.fitMode))
+    s.setValue("watchFolders", bool(cfg.watchFolders))
+    s.setValue("playerWindowed", bool(cfg.playerWindowed))
+    s.endGroup()
+
+    # --- Hotkeys ---
+    s.beginGroup("hotkeys")
+    s.setValue("enabled", bool(cfg.hotkeys.enabled))
+    s.setValue("fade", str(cfg.hotkeys.fade))
+    s.setValue("open", str(cfg.hotkeys.open))
+    s.endGroup()
+
+    # --- UI ---
+    s.beginGroup("ui")
+    _write_json(s, "geometry", dict(cfg.ui.geometry))
+    _write_json(s, "splitterSizes", dict(cfg.ui.splitterSizes))
+    s.endGroup()

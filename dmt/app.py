@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import sys
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QCoreApplication
 
-from .core.config import load_config, save_config, CONFIG_PATH
+from .core.config import load_config, save_config, ORG, APP
 from .ui.main_window import MainWindow
 
 
@@ -15,15 +15,18 @@ def main() -> None:
 
     app = QApplication(sys.argv)
 
-    # Ensure config directory exists and load config
-    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    # Make sure QSettings knows our identity BEFORE first access
+    QCoreApplication.setOrganizationName(ORG)
+    QCoreApplication.setApplicationName(APP)
+
+    # Load settings-backed config
     cfg = load_config()
 
     # Create and show main window
     win = MainWindow(cfg)
     win.show()
 
-    # Persist config on close
+    # Persist config on close (QSettings backend)
     def persist():
         save_config(win.config)
 
