@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
 )
 
 from dmt.core.config import Config
+from db.manager import DatabaseManager
+
 from .player_window import PlayerWindow
 from .image_tab import ImagesTab
 from .initiative_tab import InitiativeTab
@@ -18,12 +20,13 @@ from .settings_tab import SettingsTab
 class MainWindow(QMainWindow):
     """ The main window for the GM to use the tools from. """
 
-    def __init__(self, cfg: Config) -> None:
+    def __init__(self, cfg: Config, dbm: DatabaseManager) -> None:
         super().__init__()
         self.setWindowTitle("DM Assistant (v1.0 skeleton)")
         self.resize(1200, 800)
 
         self.config = cfg
+        self.database = dbm
         self.playerWindow: PlayerWindow | None = None
 
         self._tabs = QTabWidget()

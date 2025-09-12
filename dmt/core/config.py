@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import List
 from pydantic import BaseModel, Field
 from PySide6.QtCore import QSettings
@@ -32,16 +33,14 @@ class Config(BaseModel):
 
 
 def _s() -> QSettings:
-    # Organization/Application should be set once in app.py before first use,
-    # but we also pass them here to be explicit.
+    # QCoreApplication.setOrganizationName/ApplicationName should be called in app.py first.
     return QSettings(ORG, APP)
 
 
 def _read_json(s: QSettings, key: str, default: dict) -> dict:
     raw = s.value(key, "")
     if isinstance(raw, (dict, list)):
-        # Some backends may round-trip as native
-        return raw  # type: ignore[return-value]
+        return raw  # some backends can store native types
     if not raw:
         return default
     try:
@@ -115,4 +114,22 @@ def save_config(cfg: Config) -> None:
     s.beginGroup("ui")
     _write_json(s, "geometry", dict(cfg.ui.geometry))
     _write_json(s, "splitterSizes", dict(cfg.ui.splitterSizes))
+    s.endGroup()
+
+
+# --------------------------
+# Database path helpers
+# --------------------------
+def get_last_db_path() -> Path | None:
+    s = _s()
+    s.beginGroup("db")
+    v = s.value("last_path", "", str)
+    s.endGroup()
+    return Path(v) if v else None
+
+
+def set_last_db_path(path: Path) -> None:
+    s = _s()
+    s.beginGroup("db")
+    s.setValue("last_path", str(path))
     s.endGroup()
