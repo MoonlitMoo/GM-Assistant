@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QToolBar
 )
 
+from db.services.library_service import LibraryService
 from dmt.core.config import Config
 from db.manager import DatabaseManager
 
@@ -26,14 +27,14 @@ class MainWindow(QMainWindow):
         self.resize(1200, 800)
 
         self.config = cfg
-        self.database = dbm
+        self.dbm = dbm
         self.playerWindow: PlayerWindow | None = None
 
         self._tabs = QTabWidget()
         self.setCentralWidget(self._tabs)
 
         # Tabs
-        self.images_tab = ImagesTab(self.config)
+        self.images_tab = ImagesTab(self.config, LibraryService(self.dbm))
         self.initiative_tab = InitiativeTab(self.config)
         self.settings_tab = SettingsTab(self.config, on_config_changed=self._apply_settings)
 

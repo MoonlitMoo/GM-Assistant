@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QTextEdit, QFileDialog, QMessageBox, QMenu, QInputDialog
 )
 
+from db.services.library_service import LibraryService
 from dmt.core.config import Config
 from .library_items import ImageItem
 from .library_widget import LibraryWidget
@@ -80,9 +81,10 @@ class ImagesTab(QWidget):
       - Library: rename/delete on groups & collections
       - Thumbnails: rename caption / remove from collection
     """
-    def __init__(self, cfg: Config) -> None:
+    def __init__(self, cfg: Config, service: LibraryService) -> None:
         super().__init__()
         self._cfg = cfg
+        self._service = service
 
         self._current_album_name: Optional[str] = None
         self._current_album_images: list[ImageItem] = []
@@ -92,7 +94,7 @@ class ImagesTab(QWidget):
         splitter = QSplitter(Qt.Horizontal, self)
 
         # Left: Library
-        self.library = LibraryWidget()
+        self.library = LibraryWidget(service=self._service)
         self.library.albumSelected.connect(self._on_album_selected)
         # self.library.imagesDropped.connect(self._on_images_dropped_to_tree)
         splitter.addWidget(self.library)
