@@ -29,10 +29,10 @@ class Folder(TimestampMixin, SoftDeleteMixin, Base):
         cascade="all, delete-orphan",
         order_by="Folder.position",
     )
-    subcollections: Mapped[List["Collection"]] = relationship(
+    albums: Mapped[List["Album"]] = relationship(
         back_populates="folder",
         cascade="all, delete-orphan",
-        order_by="Collection.position",
+        order_by="Album.position",
     )
 
     __table_args__ = (
@@ -45,10 +45,10 @@ class Folder(TimestampMixin, SoftDeleteMixin, Base):
     def get_children(self):
         """
         Return a merged, stably-sorted list of (kind, obj, position) for UI.
-        kind is 'folder' or 'collection'.
+        kind is 'folder' or 'album'.
         """
         items = [("folder", f, f.position) for f in self.subfolders] + \
-                [("collection", c, c.position) for c in self.subcollections]
+                [("album", c, c.position) for c in self.albums]
         # tie-break by kind then id for stability
         items.sort(key=lambda t: (t[2], 0 if t[0] == "folder" else 1, getattr(t[1], "id", 0)))
         return items

@@ -43,7 +43,7 @@ def main() -> None:
     set_last_db_path(db_path)
 
     # Construct and show the main window (pass db so widgets can use it)
-    win = MainWindow(cfg, db=db)
+    win = MainWindow(cfg, dbｍ=db)
     win.show()
 
     # Persist settings on quit

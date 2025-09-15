@@ -1,21 +1,16 @@
-# tests/test_models.py
-import os
-import io
-import hashlib
 import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 
-# ⬇️ Import your models (fix path/module name as needed)
 from db.models import (
     Base,
     Folder,
-    Collection,
+    Album,
     Image,
     ImageData,
-    CollectionImage,
+    AlbumImage,
 )
 
 
@@ -55,9 +50,9 @@ def make_folder(session):
 
 
 @pytest.fixture()
-def make_collection(session):
-    def _mk(folder: Folder, name: str, position: int = 0) -> Collection:
-        c = Collection(folder=folder, name=name, position=position)
+def make_album(session):
+    def _mk(folder: Folder, name: str, position: int = 0) -> Album:
+        c = Album(folder=folder, name=name, position=position)
         session.add(c)
         session.flush()
         return c
@@ -76,7 +71,7 @@ def make_image(session):
             mime_type: str | None = "image/png",
             width_px: int | None = 64,
             height_px: int | None = 64,
-            position_in: Collection | None = None,
+            position_in: Album | None = None,
             position_index: int = 0,
     ) -> Image:
         img = Image(
@@ -105,11 +100,11 @@ def make_image(session):
                 )
             )
 
-        # Optionally add to a collection with an explicit position
+        # Optionally add to a album with an explicit position
         if position_in is not None:
             session.add(
-                CollectionImage(
-                    collection_id=position_in.id,
+                AlbumImage(
+                    album_id=position_in.id,
                     image_id=img.id,
                     position=position_index,
                 )
@@ -143,21 +138,21 @@ def test_add_folders_and_uniqueness(session, make_folder):
         session.commit()
 
 
-def test_add_collections_and_uniqueness(session, make_folder, make_collection):
+def test_add_albums_and_uniqueness(session, make_folder, make_album):
     root = make_folder("root")
     f1 = make_folder("Session 1", parent=root)
     f2 = make_folder("Session 2", parent=root)
 
-    c1 = make_collection(f1, "NPCs", position=0)
+    c1 = make_album(f1, "NPCs", position=0)
 
     # Same name in different folder -> OK
-    c2 = make_collection(f2, "NPCs", position=5)
+    c2 = make_album(f2, "NPCs", position=5)
     session.commit()
     assert c1.folder_id != c2.folder_id
 
     # Same name in same folder -> UNIQUE(folder_id, name) violation
     with pytest.raises(IntegrityError):
-        make_collection(f1, "NPCs", position=1)
+        make_album(f1, "NPCs", position=1)
         session.commit()
 
 
@@ -189,45 +184,45 @@ def test_add_image_with_blob_data(session, make_image):
 
 # --- Tests: ordering of children ---------------------------------------------
 
-def test_folder_display_children_order(session, make_folder, make_collection):
+def test_folder_display_children_order(session, make_folder, make_album):
     """
-    Folder.display_children should merge subfolders + subcollections and sort by:
-    position, then kind ('folder' before 'collection'), then id (stable).
+    Folder.display_children should merge subfolders + subalbums and sort by:
+    position, then kind ('folder' before 'album'), then id (stable).
     """
     root = make_folder("root")
     # positions interleaved on purpose
     f_sub1 = make_folder("A_subfolder", parent=root, position=1)
-    c1 = make_collection(root, "A_collection", position=0)
+    c1 = make_album(root, "A_album", position=0)
     f_sub2 = make_folder("B_subfolder", parent=root, position=2)
-    c2 = make_collection(root, "B_collection", position=2)  # same pos as f_sub2
+    c2 = make_album(root, "B_album", position=2)  # same pos as f_sub2
 
     session.commit()
 
     order = [(kind, obj.name, pos) for kind, obj, pos in root.get_children]
     # Expected:
-    # pos 0 -> collection 'A_collection'
+    # pos 0 -> album 'A_album'
     # pos 1 -> folder    'A_subfolder'
-    # pos 2 -> folder 'B_subfolder' (folder before collection at same position)
-    # pos 2 -> collection 'B_collection'
-    assert order[0] == ("collection", "A_collection", 0)
+    # pos 2 -> folder 'B_subfolder' (folder before album at same position)
+    # pos 2 -> album 'B_album'
+    assert order[0] == ("album", "A_album", 0)
     assert order[1] == ("folder", "A_subfolder", 1)
     assert order[2][0] == "folder" and order[2][2] == 2
-    assert order[3][0] == "collection" and order[3][2] == 2
+    assert order[3][0] == "album" and order[3][2] == 2
 
 
-def test_collection_images_order(session, make_folder, make_collection, make_image):
+def test_album_images_order(session, make_folder, make_album, make_image):
     root = make_folder("root")
-    coll = make_collection(root, "NPCs", position=0)
+    coll = make_album(root, "NPCs", position=0)
 
-    # Add images with scrambled CollectionImage.position
+    # Add images with scrambled AlbumImage.position
     i2 = make_image(caption="img2", full_bytes=b"2", position_in=coll, position_index=2)
     i0 = make_image(caption="img0", full_bytes=b"0", position_in=coll, position_index=0)
     i1 = make_image(caption="img1", full_bytes=b"1", position_in=coll, position_index=1)
     session.commit()
 
-    # Relationship .collection_images should be ordered by position: 0,1,2
-    positions = [ci.position for ci in coll.collection_images]
-    captions = [ci.image.caption for ci in coll.collection_images]
+    # Relationship .album_images should be ordered by position: 0,1,2
+    positions = [ci.position for ci in coll.album_images]
+    captions = [ci.image.caption for ci in coll.album_images]
     assert positions == [0, 1, 2]
     assert captions == ["img0", "img1", "img2"]
 

@@ -28,7 +28,7 @@ class Image(TimestampMixin, SoftDeleteMixin, Base):
     meta_json: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     has_data: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 0/1
 
-    collection_links: Mapped[List["CollectionImage"]] = relationship(
+    album_links: Mapped[List["AlbumImage"]] = relationship(
         back_populates="image", cascade="all, delete-orphan"
     )
 
@@ -43,14 +43,14 @@ class Image(TimestampMixin, SoftDeleteMixin, Base):
         return f"<Image id={self.id} uri='{self.uri}' has_data={self.has_data}>"
 
 
-class CollectionImage(Base):
+class AlbumImage(Base):
     """
-    Association object for ordered membership of images in a collection.
+    Association object for ordered membership of images within an album.
     """
-    __tablename__ = "collection_image"
+    __tablename__ = "album_image"
 
-    collection_id: Mapped[int] = mapped_column(
-        ForeignKey("collection.id", ondelete="CASCADE"), primary_key=True
+    album_id: Mapped[int] = mapped_column(
+        ForeignKey("album.id", ondelete="CASCADE"), primary_key=True
     )
     image_id: Mapped[int] = mapped_column(
         ForeignKey("image.id", ondelete="CASCADE"), primary_key=True
@@ -60,16 +60,16 @@ class CollectionImage(Base):
         String, server_default=func.current_timestamp(), nullable=False
     )
 
-    collection: Mapped["Collection"] = relationship(back_populates="collection_images")
-    image: Mapped[Image] = relationship(back_populates="collection_links")
+    album: Mapped["Album"] = relationship(back_populates="album_images")
+    image: Mapped[Image] = relationship(back_populates="album_links")
 
     __table_args__ = (
-        Index("idx_collimg_collection_pos", "collection_id", "position"),
+        Index("idx_collimg_album_pos", "album_id", "position"),
         Index("idx_collimg_image", "image_id"),
     )
 
     def __repr__(self) -> str:
-        return f"<CollectionImage coll={self.collection_id} img={self.image_id} pos={self.position}>"
+        return f"<AlbumImage coll={self.album_id} img={self.image_id} pos={self.position}>"
 
 
 class ImageData(Base):

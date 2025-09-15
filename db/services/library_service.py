@@ -5,7 +5,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from db.manager import DatabaseManager
-from db.models import Folder, Collection, Image, ImageData, CollectionImage
+from db.models import Folder, Album, Image, ImageData, AlbumImage
 
 Kind = Literal["folder", "collection"]
 
@@ -38,7 +38,7 @@ class LibraryService:
                 return []
             # thanks to order_by on relationships, these come sorted by position
             subfolders = [ChildRow("folder", sf.id, sf.name, sf.position) for sf in f.subfolders]
-            subcols = [ChildRow("collection", c.id, c.name, c.position) for c in f.subcollections]
+            subcols = [ChildRow("collection", c.id, c.name, c.position) for c in f.albums]
             items = subfolders + subcols
             items.sort(key=lambda t: (t.position, 0 if t.kind == "folder" else 1, t.id))
             return items
@@ -46,10 +46,10 @@ class LibraryService:
     def get_album_images(self, collection_id: int) -> list[tuple[int, str, int]]:
         """Return [(image_id, caption, position)] in UI order."""
         with self.db.session() as s:
-            c = s.get(Collection, collection_id)
+            c = s.get(Album, collection_id)
             if not c:
                 return []
-            return [(ci.image_id, ci.image.caption or "", ci.position) for ci in c.collection_images]
+            return [(ci.image_id, ci.image.caption or "", ci.position) for ci in c.album_images]
 
     def breadcrumb(self, folder_id: int) -> list[str]:
         """Return ['root', 'Session 1', 'NPCs'] style breadcrumb."""
@@ -71,7 +71,7 @@ class LibraryService:
     def is_album(self, album_id: int):
         """ Returns if folder exists """
         with self.db.session() as s:
-            return s.get(Collection, album_id)
+            return s.get(Album, album_id)
 
     # ---------- Create ----------
     def create_folder(self, parent_id: Optional[int], name: str) -> int:
@@ -85,7 +85,7 @@ class LibraryService:
     def create_album(self, folder_id: int, name: str) -> int:
         with self.db.session() as s:
             pos = self._next_collection_position(s, folder_id)
-            c = Collection(folder_id=folder_id, name=name, position=pos)
+            c = Album(folder_id=folder_id, name=name, position=pos)
             s.add(c)
             s.flush()
             return c.id
@@ -124,7 +124,7 @@ class LibraryService:
             ))
 
             pos = self._next_collection_image_position(s, collection_id)
-            s.add(CollectionImage(collection_id=collection_id, image_id=img.id, position=pos))
+            s.add(AlbumImage(collection_id=collection_id, image_id=img.id, position=pos))
             return img.id
 
     # ---------- Update / Move / Reorder ----------
@@ -137,7 +137,7 @@ class LibraryService:
 
     def rename_album(self, collection_id: int, new_name: str) -> None:
         with self.db.session() as s:
-            c = s.get(Collection, collection_id)
+            c = s.get(Album, collection_id)
             if not c:
                 return
             c.name = new_name
@@ -152,7 +152,7 @@ class LibraryService:
 
     def move_collection(self, collection_id: int, new_folder_id: int) -> None:
         with self.db.session() as s:
-            c = s.get(Collection, collection_id)
+            c = s.get(Album, collection_id)
             if not c:
                 return
             c.folder_id = new_folder_id
@@ -160,8 +160,8 @@ class LibraryService:
 
     def reorder_collection_images(self, collection_id: int, ordered_image_ids: Sequence[int]) -> None:
         with self.db.session() as s:
-            rows = s.execute(select(CollectionImage)
-                             .where(CollectionImage.collection_id == collection_id)).scalars().all()
+            rows = s.execute(select(AlbumImage)
+                             .where(AlbumImage.album_id == collection_id)).scalars().all()
             by_img = {r.image_id: r for r in rows}
             for idx, img_id in enumerate(ordered_image_ids):
                 if img_id in by_img:
@@ -180,7 +180,7 @@ class LibraryService:
 
     def delete_album(self, collection_id: int, hard: bool = False) -> None:
         with self.db.session() as s:
-            c = s.get(Collection, collection_id)
+            c = s.get(Album, collection_id)
             if not c:
                 return
             if hard:
@@ -194,11 +194,11 @@ class LibraryService:
         return s.execute(q).scalar_one() + 1
 
     def _next_collection_position(self, s: Session, folder_id: int) -> int:
-        q = select(func.coalesce(func.max(Collection.position), -1)).where(Collection.folder_id == folder_id)
+        q = select(func.coalesce(func.max(Album.position), -1)).where(Album.folder_id == folder_id)
         return s.execute(q).scalar_one() + 1
 
     def _next_collection_image_position(self, s: Session, collection_id: int) -> int:
-        q = select(func.coalesce(func.max(CollectionImage.position), -1)).where(
-            CollectionImage.collection_id == collection_id
+        q = select(func.coalesce(func.max(AlbumImage.position), -1)).where(
+            AlbumImage.album_id == collection_id
         )
         return s.execute(q).scalar_one() + 1
