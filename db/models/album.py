@@ -41,7 +41,7 @@ class Album(TimestampMixin, SoftDeleteMixin, Base):
         return [ci.image for ci in self.album_images]
 
     __table_args__ = (
-        UniqueConstraint("parent_id", "name", name="uq_album_folder_name"),
+        UniqueConstraint("parent_id", "name", name="uq_album_parent_id_name"),
         Index("idx_album_folder", "parent_id"),
         Index("idx_album_folder_pos", "parent_id", "position"),
     )
