@@ -9,7 +9,8 @@ from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, \
     QInputDialog, QLineEdit, QMessageBox, QMenu, QTreeWidgetItem
 
-from .library_items import LibraryTree, FolderItem, AlbumItem, ImageItem
+from db.services.library_service import LibraryService
+from .library_items import LibraryTree, FolderItem, AlbumItem, ImageItem, COL_LABEL
 
 
 class LibraryWidget(QWidget):
@@ -28,9 +29,10 @@ class LibraryWidget(QWidget):
     albumSelected = Signal(str, list)
     imagesDropped = Signal(list, str)
 
-    def __init__(self, parent=None, filename: str = "library.json") -> None:
+    def __init__(self, service: LibraryService, parent=None) -> None:
         super().__init__(parent)
-        self.LIBRARY_FILENAME = filename
+        self.LIBRARY_FILENAME = None
+        self.service = service
 
         # UI
         root = QVBoxLayout(self)
@@ -45,48 +47,50 @@ class LibraryWidget(QWidget):
         root.addLayout(actions)
 
         # Set up the tree
-        data = self._load_library(self.LIBRARY_FILENAME)
-        self.tree = LibraryTree.create_tree_from_dict(data)
+        self.tree = LibraryTree(self)
         self.tree.setHeaderHidden(True)
-        self.tree.structureChanged.connect(lambda: self.save_library())
-        self.tree.currentItemChanged.connect(self._on_current_changed)
-
+        # self.tree.currentItemChanged.connect(self._on_current_changed)
+        # self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        # self.tree.customContextMenuRequested.connect(self._on_tree_context_menu)
         root.addWidget(self.tree, 1)
 
-        # Context menu for rename/delete
-        self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.tree.customContextMenuRequested.connect(self._on_tree_context_menu)
+        self._populate_roots()
 
-        # Name tree from filename
-        base = os.path.splitext(self.LIBRARY_FILENAME)[0]
-        if base:
-            self.tree.visible_root().label = base
+    # --------- DB → UI population ---------
+    def _populate_roots(self) -> None:
+        """Set up the root structure of the tree, then populate children."""
+        self.tree.clear()
+        root = self.tree.visible_root()
+        root.setText(COL_LABEL, "root")
 
-    # --------- Persistence ---------
-    def _load_library(self, json_path: str | None) -> dict:
-        """ Loads a library from the given path. If no path given, returns a default setup.
+        for row in self.service.get_root_items():
+            if row.kind == "folder":
+                it = FolderItem(row.id, row.name, row.position)
+                root.addChild(it)
+                self._populate_children(it, row.id)
+            else:  # album
+                it = AlbumItem(row.id, row.name, row.position)
+                root.addChild(it)
+                self._populate_album_images(it, row.id)
 
-        Parameters
-        ----------
-        json_path : str or None
-            The path to load, or None to use default library.
+        root.setExpanded(True)
 
-        Returns
-        -------
-        data : dict
-            The loaded library data.
-        """
-        if json_path is None:
-            return {"version": "v1", "tree": {}}
-        p = Path(json_path)
-        if not p.exists():
-            raise FileNotFoundError(f"File {p} doesn't exist")
-        return json.loads(p.read_text(encoding="utf-8"))
+    def _populate_children(self, parent_item: QTreeWidgetItem, folder_id: int) -> None:
+        """Rebuild the children from the database for a folder."""
+        parent_item.takeChildren()
+        for row in self.service.get_folder_children(folder_id):
+            if row.kind == "folder":
+                it = FolderItem(row.id, row.name, row.position)
+                parent_item.addChild(it)
+            else:  # album
+                it = AlbumItem(row.id, row.name, row.position)
+                parent_item.addChild(it)
+                self._populate_album_images(it, row.id)
 
-    def save_library(self) -> None:
-        """ Save the current library to disk. """
-        data = self.tree.export_tree_to_dict(self.tree)
-        Path(self.LIBRARY_FILENAME).write_text(json.dumps(data, indent=2), encoding="utf-8")
+    def _populate_album_images(self, album_item: AlbumItem, album_id: int) -> None:
+        album_item.takeChildren()
+        for img_id, caption, pos in self.service.get_album_images(album_id):
+            album_item.addChild(ImageItem(img_id, caption, pos))
 
     def _create_node(self, make_album: bool = False) -> None:
         """ Adds a new node into the LibraryTree.
@@ -120,12 +124,23 @@ class LibraryWidget(QWidget):
             QMessageBox.warning(self, "Name in use", f'A node named "{name}" already exists here.')
             return
 
-        # Create & attach the new item
-        new_item = AlbumItem(name) if make_album else FolderItem(name)
-        item.addChild(new_item)
-        item.setExpanded(True)
+        # Get parameters for new item, create in the DB, then add to the tree
+        if item == self.tree.visible_root():
+            parent_id = None
+            index = self.tree.visible_root().childCount()
+        else:
+            parent_id = item.id
+            index = item.childCount()
 
-        self.save_library()
+        if make_album:
+            new_id = self.service.create_album(folder_id=parent_id, name=name, position=index)
+            it = AlbumItem(new_id, name, index)
+        else:
+            new_id = self.service.create_folder(parent_id=parent_id, name=name, position=index)
+            it = FolderItem(new_id, name, index)
+
+        item.addChild(it)
+        item.setExpanded(True)
 
     def _on_tree_context_menu(self, pos: QPoint) -> None:
         """ Context menu when right-clicking library item.
