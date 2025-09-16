@@ -165,47 +165,54 @@ def test_remove_folder_and_album(widget, monkeypatch):
     monkeypatch.setattr(FakeContextMenu, "decision", "Delete")
     monkeypatch.setattr(lw, "QMenu", FakeContextMenu)
 
+    # Add the test nodes at root
+    _select_by_path(widget.tree, [])
     widget._create_node(make_album=False)
+    _select_by_path(widget.tree, [])
     widget._create_node(make_album=True)
 
-    folder_item = _find_item_by_text(widget.tree, "Temp Folder")
-    album_item = _find_item_by_text(widget.tree, "Temp Album")
+    folder_item = _find_item_by_path(widget.tree, ["Temp Folder"])
+    album_item = _find_item_by_path(widget.tree, ["Temp Album"])
     assert folder_item is not None and album_item is not None
 
     # Delete temp folder
     pos_folder = widget.tree.visualItemRect(folder_item).center()
     widget._on_tree_context_menu(pos_folder)
-    assert _find_item_by_text(widget.tree, "Temp Folder") is None
+    assert _find_item_by_path(widget.tree, ["Temp Folder"]) is None
+    assert widget.service.get_folder(folder_item.id).is_deleted
 
     # Delete temp album
     pos_album = widget.tree.visualItemRect(album_item).center()
     widget._on_tree_context_menu(pos_album)
-    assert _find_item_by_text(widget.tree, "Temp Album") is None
+    assert _find_item_by_path(widget.tree, ["Temp Album"]) is None
+    assert widget.service.get_album(album_item.id).is_deleted
 
     # Select subfolder and create temp files
-    subfolder = _find_item_by_text(widget.tree, "Session 1")
-    widget.tree.setCurrentItem(subfolder)
+    _select_by_path(widget.tree, ["Session 1"])
     widget._create_node(make_album=False)
+    _select_by_path(widget.tree, ["Session 1"])
     widget._create_node(make_album=True)
 
-    folder_item = _find_item_by_text(widget.tree, "Temp Subfolder")
-    album_item = _find_item_by_text(widget.tree, "Temp Subalbum")
+    folder_item = _find_item_by_path(widget.tree, ["Session 1", "Temp Subfolder"])
+    album_item = _find_item_by_path(widget.tree, ["Session 1", "Temp Subalbum"])
 
     # Delete temp subfolder
     pos_folder = widget.tree.visualItemRect(folder_item).center()
     widget._on_tree_context_menu(pos_folder)
-    assert _find_item_by_text(widget.tree, "Temp Subfolder") is None
+    assert _find_item_by_path(widget.tree, ["Session 1", "Temp Subfolder"]) is None
+    assert widget.service.get_folder(folder_item.id).is_deleted
 
     # Delete temp subalbum
     pos_album = widget.tree.visualItemRect(album_item).center()
     widget._on_tree_context_menu(pos_album)
-    assert _find_item_by_text(widget.tree, "Temp Subalbum") is None
+    assert _find_item_by_path(widget.tree, ["Session 1", "Temp Subalbum"]) is None
+    assert widget.service.get_album(album_item.id).is_deleted
 
 
 def test_rename_folder_and_album(widget, monkeypatch):
     # Not testing rename of subfolder, since delete covers that.
     # Create one folder + one album first (names fixed via monkeypatched getText)
-    names = iter(["Temp Folder", "Temp Album", "Renamed Folder", "Renamed Album"])
+    names = iter(["Renamed Folder", "Renamed Album"])
 
     def get_text_cycle(*args, **kwargs):
         return next(names), True
@@ -216,30 +223,23 @@ def test_rename_folder_and_album(widget, monkeypatch):
     monkeypatch.setattr(FakeContextMenu, "decision", "Rename")
     monkeypatch.setattr(lw, "QMenu", FakeContextMenu)
 
-    # Add test nodes
-    widget._create_node(make_album=False)
-    widget._create_node(make_album=True)
-
-    folder_item = _find_item_by_text(widget.tree, "Temp Folder")
-    album_item = _find_item_by_text(widget.tree, "Temp Album")
+    folder_item = _find_item_by_path(widget.tree, ["Session 1"])
+    f2 = _find_item_by_path(widget.tree, ["Session 2"])
+    widget.tree.expandItem(f2)
+    album_item = _find_item_by_path(widget.tree, ["Session 2", "NPCs2"])
     assert folder_item is not None and album_item is not None
 
     # Right-click position for folder
     pos_folder = widget.tree.visualItemRect(folder_item).center()
     widget._on_tree_context_menu(pos_folder)
-    assert _find_item_by_text(widget.tree, "Renamed Folder") is not None
+    assert _find_item_by_path(widget.tree, ["Renamed Folder"]) is not None
+    assert widget.service.get_folder(folder_item.id).name == "Renamed Folder"
 
     # Right-click position for album
     pos_album = widget.tree.visualItemRect(album_item).center()
     widget._on_tree_context_menu(pos_album)
-    assert _find_item_by_text(widget.tree, "Renamed Album") is not None
-
-    # Assert that it's reflected in saved file
-    with open(widget.LIBRARY_FILENAME, "r") as f:
-        text = " ".join(s.strip() for s in f.readlines())
-        assert "Renamed Folder" in text
-        assert "Renamed Album" in text
-
+    assert _find_item_by_path(widget.tree, ["Session 2", "Renamed Album"]) is not None
+    assert widget.service.get_album(album_item.id).name == "Renamed Album"
 
 # def test_move_folder_to_folder_updates_model_and_ui(widget):
 #     # Add subfolder

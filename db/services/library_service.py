@@ -58,7 +58,7 @@ class LibraryService:
             return [(ci.image_id, ci.image.caption or "", ci.position) for ci in c.album_images]
 
     def breadcrumb(self, folder_id: int) -> list[str]:
-        """Return ['root', 'Session 1', 'NPCs'] style breadcrumb."""
+        """ Return ['root', 'Session 1', 'NPCs'] style breadcrumb. """
         with self.db.session() as s:
             names: list[str] = []
             cur = s.get(Folder, folder_id)
@@ -67,6 +67,14 @@ class LibraryService:
                 cur = cur.parent
             names.reverse()
             return names
+
+    def get_folder(self, folder_id: int):
+        with self.db.session() as s:
+            return s.get(Folder, folder_id)
+
+    def get_album(self, album_id: int):
+        with self.db.session() as s:
+            return s.get(Album, album_id)
 
     # ---------- Check -----------
     def is_folder(self, folder_id: int):

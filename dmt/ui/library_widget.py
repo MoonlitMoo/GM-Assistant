@@ -47,11 +47,11 @@ class LibraryWidget(QWidget):
         root.addLayout(actions)
 
         # Set up the tree
-        self.tree = LibraryTree(self)
+        self.tree = LibraryTree(parent=self, service=self.service)
         self.tree.setHeaderHidden(True)
         # self.tree.currentItemChanged.connect(self._on_current_changed)
-        # self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
-        # self.tree.customContextMenuRequested.connect(self._on_tree_context_menu)
+        self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree.customContextMenuRequested.connect(self._on_tree_context_menu)
         root.addWidget(self.tree, 1)
 
         self._populate_roots()
@@ -163,6 +163,7 @@ class LibraryWidget(QWidget):
         if isinstance(item, ImageItem):
             return
 
+        # Validation passed, create the menu
         menu = QMenu(self)
         act_rename = menu.addAction("Rename")
         act_delete = menu.addAction("Delete")
@@ -170,37 +171,44 @@ class LibraryWidget(QWidget):
         if not chosen:
             return
 
-        # Rename action
+        # Execute the action
         if chosen == act_rename:
-            current_name = item.text(0)
-            new_name, ok = QInputDialog.getText(self, "Rename", "New name:", text=current_name)
-            if ok and new_name and new_name != current_name:
-                item.label = new_name  # Label property updates text.
-                self.save_library()
-        # Delete action
+            self._on_rename(item)
         elif chosen == act_delete:
-            if item.childCount() == 0:
-                # In the case that the item has no children, just delete it.
-                pass
-            elif isinstance(item, FolderItem):
-                confirm = QMessageBox.question(
-                    self, "Delete folder?",
-                    "This folder contains subfolders/albums. Delete it and everything inside?",
-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-                )
-                if confirm != QMessageBox.Yes:
-                    return
-            elif isinstance(item, AlbumItem):
-                confirm = QMessageBox.question(
-                    self, "Delete album?", "Delete this album?",
-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-                )
-                if confirm != QMessageBox.Yes:
-                    return
+            self._on_delete(item)
 
-            parent = item.parent() or self.tree.invisibleRootItem()
-            parent.removeChild(item)
-            self.save_library()
+    def _on_rename(self, item: QTreeWidgetItem):
+        """Rename in DB then update the tree item text."""
+        current_name = item.text(COL_LABEL)
+        new_name, ok = QInputDialog.getText(self, "Rename", "New name:", text=current_name)
+        if not (ok and new_name and new_name != current_name):
+            return
+
+        # Update DB based on item type
+        if isinstance(item, FolderItem):
+            self.service.rename_folder(item.id, new_name)
+        elif isinstance(item, AlbumItem):
+            self.service.rename_album(item.id, new_name)
+        elif isinstance(item, ImageItem):
+            raise NotImplementedError("Haven't yet implemented rename image function.")
+
+        # Update UI text
+        item.setText(COL_LABEL, new_name)
+
+    def _on_delete(self, item: QTreeWidgetItem):
+        """Delete in DB then remove from the tree."""
+        if isinstance(item, FolderItem):
+            self.service.delete_folder(item.id, hard=False)
+
+        elif isinstance(item, AlbumItem):
+            self.service.delete_album(item.id, hard=False)
+
+        elif isinstance(item, ImageItem):
+            raise NotImplementedError("Haven't implemented delete for images.")
+
+        # Finally, remove from UI
+        parent = item.parent() or self.tree.invisibleRootItem()
+        parent.removeChild(item)
 
     def _on_current_changed(self, cur: Optional[QTreeWidgetItem], prev: Optional[QTreeWidgetItem]) -> None:
         """ Emits a signal for the selected album. """
