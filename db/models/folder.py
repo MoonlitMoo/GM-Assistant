@@ -42,7 +42,7 @@ class Folder(TimestampMixin, SoftDeleteMixin, Base):
     )
 
     @property
-    def get_children(self):
+    def children(self):
         """
         Return a merged, stably-sorted list of (kind, obj, position) for UI.
         kind is 'folder' or 'album'.
