@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 
 import pytest
-from PySide6.QtWidgets import QInputDialog, QMessageBox
+from PySide6.QtWidgets import QInputDialog, QMessageBox, QAbstractItemView
 
 from db.manager import DatabaseManager
 from db.services.library_service import LibraryService
@@ -241,35 +241,42 @@ def test_rename_folder_and_album(widget, monkeypatch):
     assert _find_item_by_path(widget.tree, ["Session 2", "Renamed Album"]) is not None
     assert widget.service.get_album(album_item.id).name == "Renamed Album"
 
-# def test_move_folder_to_folder_updates_model_and_ui(widget):
-#     # Add subfolder
-#     widget._create_node(make_album=False)
-#     subfolder = _find_item_by_text(widget.tree, "Session 1")
-#     widget.tree.setCurrentItem(subfolder)
-#     widget._create_node(make_album=False)
-#
-#     src_item = _find_item_by_path(widget.tree, ["Session 1", "SubFolder"])
-#     dst_item = _find_item_by_path(widget.tree, ["Dest"])
-#     assert src_item and dst_item
-#
-#     # preconditions
-#     assert src_item.parent().text(0) == "Session 1"
-#     src_ref = src_item.data(0, Qt.UserRole)["ref"]
-#     old_parent_ref = src_item.parent().data(0, Qt.UserRole)["ref"]
-#     new_parent_ref = dst_item.data(0, Qt.UserRole)["ref"]
-#     assert src_ref in list(old_parent_ref)
-#
-#     # move
-#     assert widget._is_valid_drop(src_item, dst_item)
-#     widget._handle_internal_move(src_item, dst_item)
-#
-#     # UI parent changed
-#     assert src_item.parent() is dst_item
-#     # model parents changed
-#     assert src_ref not in list(old_parent_ref)
-#     assert src_ref in list(new_parent_ref)
-#     # save called
-#     assert widget._save_calls, "save_library should be called at least once"
+@pytest.mark.parametrize("src_path, dst_path", [
+    (["Session 1", "Locations"], ["Session 2"]),  # Subfolder -> Folder
+    (["Session 1", "Locations"], []),  # Subfolder -> Root
+    (["Session 1", "NPCs"], ["Session 2"]),  # Subalbum -> Folder
+    (["Session 1", "NPCs"], [])  # Subalbum -> Root
+])
+def test_move_node_on_item(widget, monkeypatch, src_path, dst_path):
+    """ Check we can move folders and albums into new folders via OnItem drop. """
+    src_parent = _find_item_by_path(widget.tree, src_path[:-1])
+    src_item = _find_item_by_path(widget.tree, src_path)
+    dst_item = _find_item_by_path(widget.tree, dst_path)
+    assert src_parent and src_item and dst_item
+
+    # Test move action
+    widget.tree._handle_item_movement([src_item], dst_item, QAbstractItemView.OnItem)
+
+   # UI. Parent no longer has as child, destination does.
+    assert _find_item_by_path(widget.tree, dst_path + [src_path[-1]])
+    assert src_item.id not in [src_parent.child(i).id for i in range(src_parent.childCount())]
+    assert src_item.id in [dst_item.child(i).id for i in range(dst_item.childCount())]
+    assert src_item.parent() is dst_item
+
+    # DB. Check that the source is listed in children and position is at the end.
+    if isinstance(src_item, FolderItem):
+        db_item = widget.service.get_folder(src_item.id)
+    else:
+        db_item = widget.service.get_album(src_item.id)
+
+    if dst_item.id is None:  # If the dst is root then don't check for it in the DB.
+        assert db_item.parent_id is None
+    else:
+        db_dst = widget.service.get_folder(dst_item.id)
+        assert db_item.parent_id == db_dst.id
+        assert db_item in db_dst.subfolders + db_dst.albums
+    assert db_item.position == dst_item.childCount() - 1
+
 #
 #
 # def test_move_album_to_folder(widget):
