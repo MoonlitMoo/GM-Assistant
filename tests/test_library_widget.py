@@ -1,10 +1,14 @@
-import pytest
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QInputDialog, QMessageBox, QMenu, QTreeWidget
+from contextlib import contextmanager
 
-from dmt.ui.library_items import Node, Leaf
+import pytest
+from PySide6.QtWidgets import QInputDialog, QMessageBox
+
+from db.manager import DatabaseManager
+from db.services.library_service import LibraryService
+from dmt.ui.library_items import FolderItem, AlbumItem
 from dmt.ui.library_widget import LibraryWidget
-from tests.test_library_items import library_text, library_dict
+
+from tests.test_db import session, make_folder, make_album, make_image
 
 
 class FakeContextMenu:
@@ -34,11 +38,22 @@ class FakeContextMenu:
 
 
 @pytest.fixture()
-def widget(tmp_path, library_text, qtbot, monkeypatch):
-    # Ensure LibraryWidget finds library.json in CWD
-    lib_file = tmp_path / "library.json"
-    lib_file.write_text(library_text, encoding="utf-8")
+def simple_db(session, make_folder, make_album, make_image):
+    # Root folders
+    s1 = make_folder("Session 1", parent=None, position=0)
+    s2 = make_folder("Session 2", parent=None, position=1)
+    # Session 1 folder and album
+    sf1 = make_folder("Locations", parent=s1, position=0)
+    a1 = make_album(folder=s1, name="NPCs", position=0)
+    # Session 2 folder and album
+    sf2 = make_folder("Locations2", parent=s2, position=0)
+    a2 = make_album(folder=s2, name="NPCs2", position=0)
+    session.commit()
+    return session
 
+
+@pytest.fixture()
+def widget(simple_db, qtbot, monkeypatch):
     # Auto-accept dialogs: name prompts + delete confirms
     def fake_get_text(*args, **kwargs):
         default = kwargs.get("text", "") or kwargs.get("default", "") or "New Name"
@@ -47,44 +62,17 @@ def widget(tmp_path, library_text, qtbot, monkeypatch):
     monkeypatch.setattr(QInputDialog, "getText", staticmethod(fake_get_text))
     monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.Yes))
 
-    w = LibraryWidget(filename=lib_file)
+    @contextmanager
+    def fake_session(self):
+        yield simple_db
+
+    dmb = DatabaseManager()
+    monkeypatch.setattr(DatabaseManager, "session", fake_session)
+    w = LibraryWidget(service=LibraryService(dmb))
     qtbot.addWidget(w)
     return w
 
-
-def _find_item_by_text(tree, text):
-    """ Find an item by its text. Only gets first instance.
-
-    Parameters
-    ----------
-    tree : QTreeWidget or QTreeWidgetItem
-        The place to start searching, only recurses down so that you can search a subtree.
-    text : str
-        The label to find.
-
-    Returns
-    -------
-    item : QTreeWidgetItem or None
-        The found item or None if not found
-    """
-
-    def walk(item):
-        if item.text(0) == text:
-            return item
-        for i in range(item.childCount()):
-            found = walk(item.child(i))
-            if found:
-                return found
-        return None
-
-    # Get top level item if it is the full widget.
-    if isinstance(tree, QTreeWidget):
-        top = tree.topLevelItem(0)
-    else:
-        top = tree
-    return walk(top)
-
-
+# ---- Helper functions ----
 def _find_item_by_path(tree, labels):
     """Find item by a path of labels starting under the visible root."""
     item = tree.topLevelItem(0)  # visible root
@@ -100,8 +88,22 @@ def _find_item_by_path(tree, labels):
         item = found
     return item
 
+def _select_by_path(tree, labels):
+    """ Go through the tree and select the item at the end of the path """
+    item = tree.topLevelItem(0)  # visible root
+    if not labels:
+        tree.setCurrentItem(item)
+        return True
+    for label in labels:
+        for i in range(item.childCount()):
+            ch = item.child(i)
+            if ch.text(0) == label:
+                tree.setCurrentItem(ch)
+                return True
+    return False
 
 # ---- Tests ----
+
 def test_add_folder_and_album(widget, monkeypatch):
     # Names to return for folder/album creation
     names = iter(["My Folder", "My Album", "My Subfolder", "My Subalbum"])
@@ -112,49 +114,42 @@ def test_add_folder_and_album(widget, monkeypatch):
     monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text_cycle))
 
     # Add Folder at root
+    _select_by_path(widget.tree, [])
     widget._create_node(make_album=False)
-    folder_item = _find_item_by_text(widget.tree, "My Folder")
-    assert folder_item is not None
-    node = folder_item.data(0, Qt.UserRole).get("ref")
-    assert isinstance(node, Node)
-    assert node.label == "My Folder"
+    folder_item = _find_item_by_path(widget.tree, ["My Folder"])
+    assert folder_item is not None and isinstance(folder_item, FolderItem)
+    assert folder_item.label == "My Folder"
+    assert widget.service.is_folder(folder_item.id)
 
     # Add Album at root
+    _select_by_path(widget.tree, [])
     widget._create_node(make_album=True)
-    album_item = _find_item_by_text(widget.tree, "My Album")
-    assert album_item is not None
-    node = album_item.data(0, Qt.UserRole).get("ref")
-    assert isinstance(node, Leaf)
-    assert node.label == "My Album"
-
-    # Select subfolder
-    subfolder = _find_item_by_text(widget.tree, "Session 1")
-    widget.tree.setCurrentItem(subfolder)
+    album_item = _find_item_by_path(widget.tree, ["My Album"])
+    assert album_item is not None and isinstance(album_item, AlbumItem)
+    assert album_item.label == "My Album"
+    assert widget.service.is_album(album_item.id)
 
     # Add Folder in subfolder
+    _select_by_path(widget.tree, ["Session 1"])
     widget._create_node(make_album=False)
-    folder_item = _find_item_by_text(subfolder, "My Subfolder")
-    assert folder_item is not None
+    folder_item = _find_item_by_path(widget.tree, ["Session 1", "My Subfolder"])
+    assert folder_item is not None and isinstance(folder_item, FolderItem)
+    assert widget.service.is_folder(folder_item.id)
 
     # Add Album in subfolder
+    _select_by_path(widget.tree, ["Session 2"])
     widget._create_node(make_album=True)
-    album_item = _find_item_by_text(subfolder, "My Subalbum")
-    assert album_item is not None
+    album_item = _find_item_by_path(widget.tree, ["Session 2", "My Subalbum"])
+    assert album_item is not None and isinstance(album_item, AlbumItem)
+    assert widget.service.is_album(album_item.id)
 
-    # Assert that it's reflected in saved file
-    with open(widget.LIBRARY_FILENAME, "r") as f:
-        text = " ".join(s.strip() for s in f.readlines())
-        assert "My Folder" in text
-        assert "My Album" in text
-        assert "My Subfolder" in text
-        assert "My Subalbum" in text
 
 
 def test_root_protected_from_delete(widget, monkeypatch):
     root = widget.tree.topLevelItem(0)
     pos_folder = widget.tree.visualItemRect(root).center()
     widget._on_tree_context_menu(pos_folder)
-    assert _find_item_by_text(widget.tree, root.text(0))
+    assert widget.tree.topLevelItem(0)
 
 
 def test_remove_folder_and_album(widget, monkeypatch):

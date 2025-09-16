@@ -198,7 +198,7 @@ def test_folder_display_children_order(session, make_folder, make_album):
 
     session.commit()
 
-    order = [(kind, obj.name, pos) for kind, obj, pos in root.get_children]
+    order = [(kind, obj.name, pos) for kind, obj, pos in root.children]
     # Expected:
     # pos 0 -> album 'A_album'
     # pos 1 -> folder    'A_subfolder'
