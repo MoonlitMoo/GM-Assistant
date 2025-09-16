@@ -148,7 +148,7 @@ def test_add_albums_and_uniqueness(session, make_folder, make_album):
     # Same name in different folder -> OK
     c2 = make_album(f2, "NPCs", position=5)
     session.commit()
-    assert c1.folder_id != c2.folder_id
+    assert c1.parent_id != c2.parent_id
 
     # Same name in same folder -> UNIQUE(folder_id, name) violation
     with pytest.raises(IntegrityError):

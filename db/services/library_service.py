@@ -36,7 +36,7 @@ class LibraryService:
                 select(Folder).where(Folder.parent_id.is_(folder_id))
             ).scalars().all()
             albums = s.execute(
-                select(Album).where(Album.folder_id.is_(folder_id))
+                select(Album).where(Album.parent_id.is_(folder_id))
             ).scalars().all()
 
         rows: list[ChildRow] = [
@@ -156,21 +156,21 @@ class LibraryService:
                 return
             c.name = new_name
 
-    def move_folder(self, folder_id: int, new_parent_id: Optional[int]) -> None:
+    def move_folder(self, folder_id: int, new_parent_id: Optional[int], position: Optional[int]) -> None:
         with self.db.session() as s:
             f = s.get(Folder, folder_id)
             if not f:
                 return
             f.parent_id = new_parent_id
-            f.position = self._next_folder_position(s, new_parent_id)
+            f.position = position if position is not None else self._next_folder_position(s, new_parent_id)
 
-    def move_album(self, album_id: int, new_folder_id: int) -> None:
+    def move_album(self, album_id: int, new_parent_id: Optional[int], position: Optional[int]) -> None:
         with self.db.session() as s:
             c = s.get(Album, album_id)
             if not c:
                 return
-            c.folder_id = new_folder_id
-            c.position = self._next_album_position(s, new_folder_id)
+            c.parent_id = new_parent_id
+            c.position = position if position is not None else self._next_album_position(s, new_parent_id)
 
     def reorder_album_images(self, album_id: int, ordered_image_ids: Sequence[int]) -> None:
         with self.db.session() as s:
@@ -208,7 +208,7 @@ class LibraryService:
         return s.execute(q).scalar_one() + 1
 
     def _next_album_position(self, s: Session, folder_id: int) -> int:
-        q = select(func.coalesce(func.max(Album.position), -1)).where(Album.folder_id == folder_id)
+        q = select(func.coalesce(func.max(Album.position), -1)).where(Album.parent_id == folder_id)
         return s.execute(q).scalar_one() + 1
 
     def _next_album_image_position(self, s: Session, album_id: int) -> int:

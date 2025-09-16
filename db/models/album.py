@@ -16,7 +16,7 @@ class Album(TimestampMixin, SoftDeleteMixin, Base):
     __tablename__ = "album"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    folder_id: Mapped[int] = mapped_column(
+    parent_id: Mapped[int] = mapped_column(
         ForeignKey("folder.id", ondelete="CASCADE"), nullable=True
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
@@ -41,10 +41,10 @@ class Album(TimestampMixin, SoftDeleteMixin, Base):
         return [ci.image for ci in self.album_images]
 
     __table_args__ = (
-        UniqueConstraint("folder_id", "name", name="uq_album_folder_name"),
-        Index("idx_album_folder", "folder_id"),
-        Index("idx_album_folder_pos", "folder_id", "position"),
+        UniqueConstraint("parent_id", "name", name="uq_album_folder_name"),
+        Index("idx_album_folder", "parent_id"),
+        Index("idx_album_folder_pos", "parent_id", "position"),
     )
 
     def __repr__(self) -> str:
-        return f"<Album id={self.id} name='{self.name}' parent={self.folder_id}>"
+        return f"<Album id={self.id} name='{self.name}' parent={self.parent_id}>"
