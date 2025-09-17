@@ -96,10 +96,10 @@ class LibraryService:
             s.flush()
         return f.id
 
-    def create_album(self, folder_id: int, name: str, position: int = None) -> int:
+    def create_album(self, parent_id: int, name: str, position: int = None) -> int:
         with self.db.session() as s:
-            pos = position if position is not None else self._next_album_position(s, folder_id)
-            c = Album(folder_id=folder_id, name=name, position=pos)
+            pos = position if position is not None else self._next_album_position(s, parent_id)
+            c = Album(parent_id=parent_id, name=name, position=pos)
             s.add(c)
             s.flush()
         return c.id

@@ -133,7 +133,7 @@ class LibraryWidget(QWidget):
             index = item.childCount()
 
         if make_album:
-            new_id = self.service.create_album(folder_id=parent_id, name=name, position=index)
+            new_id = self.service.create_album(parent_id=parent_id, name=name, position=index)
             it = AlbumItem(new_id, name, index)
         else:
             new_id = self.service.create_folder(parent_id=parent_id, name=name, position=index)
