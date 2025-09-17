@@ -44,10 +44,10 @@ def simple_db(session, make_folder, make_album, make_image):
     s2 = make_folder("Session 2", parent=None, position=1)
     # Session 1 folder and album
     sf1 = make_folder("Locations", parent=s1, position=0)
-    a1 = make_album(folder=s1, name="NPCs", position=0)
+    a1 = make_album(parent=s1, name="NPCs", position=0)
     # Session 2 folder and album
     sf2 = make_folder("Locations2", parent=s2, position=0)
-    a2 = make_album(folder=s2, name="NPCs2", position=0)
+    a2 = make_album(parent=s2, name="NPCs2", position=0)
     session.commit()
     return session
 
@@ -102,45 +102,55 @@ def _select_by_path(tree, labels):
                 return True
     return False
 
-# ---- Tests ----
+def _create_tree_item(widget, path, item_type):
+    """ Helper for a one-line command to create an item in the tree. """
+    assert item_type in ["folder", "album"]
+    _select_by_path(widget.tree, path[:-1])
+    widget._create_node(make_album=False if item_type == "folder" else True)
+    item = _find_item_by_path(widget.tree, path)
+    assert item is not None
+    return item
 
-def test_add_folder_and_album(widget, monkeypatch):
-    # Names to return for folder/album creation
-    names = iter(["My Folder", "My Album", "My Subfolder", "My Subalbum"])
+def _set_text_cycles(monkeypatch, names):
+    names = iter(names)
 
     def get_text_cycle(*args, **kwargs):
         return next(names), True
 
     monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text_cycle))
 
+def _set_context_menu(monkeypatch, decision):
+    import dmt.ui.library_widget as lw
+    monkeypatch.setattr(FakeContextMenu, "decision", decision)
+    monkeypatch.setattr(lw, "QMenu", FakeContextMenu)
+
+
+# ---- Tests ----
+
+def test_add_folder_and_album(widget, monkeypatch):
+    # Names to return for folder/album creation
+    _set_text_cycles(monkeypatch, ["My Folder", "My Album", "My Subfolder", "My Subalbum"])
+
     # Add Folder at root
-    _select_by_path(widget.tree, [])
-    widget._create_node(make_album=False)
-    folder_item = _find_item_by_path(widget.tree, ["My Folder"])
-    assert folder_item is not None and isinstance(folder_item, FolderItem)
+    folder_item = _create_tree_item(widget, ["My Folder"], "folder")
+    assert isinstance(folder_item, FolderItem)
     assert folder_item.label == "My Folder"
     assert widget.service.is_folder(folder_item.id)
 
     # Add Album at root
-    _select_by_path(widget.tree, [])
-    widget._create_node(make_album=True)
-    album_item = _find_item_by_path(widget.tree, ["My Album"])
-    assert album_item is not None and isinstance(album_item, AlbumItem)
+    album_item = _create_tree_item(widget, ["My Album"], "album")
+    assert isinstance(album_item, AlbumItem)
     assert album_item.label == "My Album"
     assert widget.service.is_album(album_item.id)
 
     # Add Folder in subfolder
-    _select_by_path(widget.tree, ["Session 1"])
-    widget._create_node(make_album=False)
-    folder_item = _find_item_by_path(widget.tree, ["Session 1", "My Subfolder"])
-    assert folder_item is not None and isinstance(folder_item, FolderItem)
+    folder_item = _create_tree_item(widget, ["Session 1", "My Subfolder"], "folder")
+    assert isinstance(folder_item, FolderItem)
     assert widget.service.is_folder(folder_item.id)
 
     # Add Album in subfolder
-    _select_by_path(widget.tree, ["Session 2"])
-    widget._create_node(make_album=True)
-    album_item = _find_item_by_path(widget.tree, ["Session 2", "My Subalbum"])
-    assert album_item is not None and isinstance(album_item, AlbumItem)
+    album_item = _create_tree_item(widget, ["Session 2", "My Subalbum"], "album")
+    assert isinstance(album_item, AlbumItem)
     assert widget.service.is_album(album_item.id)
 
 
@@ -154,26 +164,12 @@ def test_root_protected_from_delete(widget, monkeypatch):
 
 def test_remove_folder_and_album(widget, monkeypatch):
     # Create one folder + one album first (names fixed via monkeypatched getText)
-    names = iter(["Temp Folder", "Temp Album", "Temp Subfolder", "Temp Subalbum"])
-
-    def get_text_cycle(*args, **kwargs):
-        return next(names), True
-
-    monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text_cycle))
-    # Set context menu to return delete
-    import dmt.ui.library_widget as lw
-    monkeypatch.setattr(FakeContextMenu, "decision", "Delete")
-    monkeypatch.setattr(lw, "QMenu", FakeContextMenu)
+    _set_text_cycles(monkeypatch, ["Temp Folder", "Temp Album", "Temp Subfolder", "Temp Subalbum"])
+    _set_context_menu(monkeypatch, "Delete")
 
     # Add the test nodes at root
-    _select_by_path(widget.tree, [])
-    widget._create_node(make_album=False)
-    _select_by_path(widget.tree, [])
-    widget._create_node(make_album=True)
-
-    folder_item = _find_item_by_path(widget.tree, ["Temp Folder"])
-    album_item = _find_item_by_path(widget.tree, ["Temp Album"])
-    assert folder_item is not None and album_item is not None
+    folder_item = _create_tree_item(widget, [], "folder")
+    album_item = _create_tree_item(widget, [], "album")
 
     # Delete temp folder
     pos_folder = widget.tree.visualItemRect(folder_item).center()
@@ -188,13 +184,8 @@ def test_remove_folder_and_album(widget, monkeypatch):
     assert widget.service.get_album(album_item.id).is_deleted
 
     # Select subfolder and create temp files
-    _select_by_path(widget.tree, ["Session 1"])
-    widget._create_node(make_album=False)
-    _select_by_path(widget.tree, ["Session 1"])
-    widget._create_node(make_album=True)
-
-    folder_item = _find_item_by_path(widget.tree, ["Session 1", "Temp Subfolder"])
-    album_item = _find_item_by_path(widget.tree, ["Session 1", "Temp Subalbum"])
+    folder_item = _create_tree_item(widget, ["Session 1"], "folder")
+    album_item = _create_tree_item(widget, ["Session 1"], "album")
 
     # Delete temp subfolder
     pos_folder = widget.tree.visualItemRect(folder_item).center()
@@ -210,32 +201,22 @@ def test_remove_folder_and_album(widget, monkeypatch):
 
 
 def test_rename_folder_and_album(widget, monkeypatch):
-    # Not testing rename of subfolder, since delete covers that.
-    # Create one folder + one album first (names fixed via monkeypatched getText)
-    names = iter(["Renamed Folder", "Renamed Album"])
+    _set_text_cycles(monkeypatch, ["Renamed Folder", "Renamed Album"])
+    _set_context_menu(monkeypatch, "Rename")
 
-    def get_text_cycle(*args, **kwargs):
-        return next(names), True
-
-    monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text_cycle))
-    # Set context menu to return delete
-    import dmt.ui.library_widget as lw
-    monkeypatch.setattr(FakeContextMenu, "decision", "Rename")
-    monkeypatch.setattr(lw, "QMenu", FakeContextMenu)
-
+    # Get the two things to be renamed, expanding top folder to get at subfolder
     folder_item = _find_item_by_path(widget.tree, ["Session 1"])
-    f2 = _find_item_by_path(widget.tree, ["Session 2"])
-    widget.tree.expandItem(f2)
+    widget.tree.expandItem(_find_item_by_path(widget.tree, ["Session 2"]))
     album_item = _find_item_by_path(widget.tree, ["Session 2", "NPCs2"])
     assert folder_item is not None and album_item is not None
 
-    # Right-click position for folder
+    # Rename folder
     pos_folder = widget.tree.visualItemRect(folder_item).center()
     widget._on_tree_context_menu(pos_folder)
     assert _find_item_by_path(widget.tree, ["Renamed Folder"]) is not None
     assert widget.service.get_folder(folder_item.id).name == "Renamed Folder"
 
-    # Right-click position for album
+    # Rename nested album
     pos_album = widget.tree.visualItemRect(album_item).center()
     widget._on_tree_context_menu(pos_album)
     assert _find_item_by_path(widget.tree, ["Session 2", "Renamed Album"]) is not None
@@ -247,7 +228,7 @@ def test_rename_folder_and_album(widget, monkeypatch):
     (["Session 1", "NPCs"], ["Session 2"]),  # Subalbum -> Folder
     (["Session 1", "NPCs"], [])  # Subalbum -> Root
 ])
-def test_move_node_on_item(widget, monkeypatch, src_path, dst_path):
+def test_move_node_on_item(widget, src_path, dst_path):
     """ Check we can move folders and albums into new folders via OnItem drop. """
     src_parent = _find_item_by_path(widget.tree, src_path[:-1])
     src_item = _find_item_by_path(widget.tree, src_path)
@@ -277,25 +258,20 @@ def test_move_node_on_item(widget, monkeypatch, src_path, dst_path):
         assert db_item in db_dst.subfolders + db_dst.albums
     assert db_item.position == dst_item.childCount() - 1
 
-#
-#
-# def test_move_album_to_folder(widget):
-#     src_item = _find_item_by_path(widget.tree, ["Session 1", "NPCs"])
-#     dst_item = _find_item_by_path(widget.tree, ["Dest"])
-#     assert src_item and dst_item
-#
-#     src_ref = src_item.data(0, Qt.UserRole)["ref"]
-#     old_parent_ref = src_item.parent().data(0, Qt.UserRole)["ref"]
-#     new_parent_ref = dst_item.data(0, Qt.UserRole)["ref"]
-#
-#     assert widget._is_valid_drop(src_item, dst_item)
-#     widget._handle_internal_move(src_item, dst_item)
-#
-#     assert src_item.parent() is dst_item
-#     assert src_ref not in list(old_parent_ref)
-#     assert src_ref in list(new_parent_ref)
-#
-#
+@pytest.mark.parametrize("src_path, dst_path", [
+    (["Session 1", "Locations"], ["Session 1", "Locations"]),  # Folder -> self
+    (["Session 1"], ["Session 1", "Locations"]),  # Folder -> Own subfolder
+    (["Session 2"], ["Session 1", "NPCs"]),  # Folder -> Album
+    (["Session 2", "NPCs2"], ["Session 1", "NPCs"]),  # Album -> Album
+    ([], ["Session 1"])  # Root -> anywhere (also is folder -> descendant)
+])
+def test_catch_illegal_move(widget, src_path, dst_path):
+    src_item = _find_item_by_path(widget.tree, src_path)
+    dst_item = _find_item_by_path(widget.tree, dst_path)
+    assert src_item and dst_item
+    assert not widget.tree._handle_item_movement([src_item], dst_item, QAbstractItemView.OnItem)
+
+
 # def test_move_image_to_album(widget):
 #     src_item = _find_item_by_path(widget.tree, ["Session 1", "NPCs", "Guard"])
 #     dst_item = _find_item_by_path(widget.tree, ["Session 1", "Locations"])
@@ -317,26 +293,3 @@ def test_move_node_on_item(widget, monkeypatch, src_path, dst_path):
 #     # model lists updated
 #     assert src_img not in old_album.images
 #     assert src_img in new_album.images
-#
-#
-# def test_invalid_drops_disallowed(widget):
-#     folder = _find_item_by_path(widget.tree, ["Session 1"])
-#     subfolder = _find_item_by_path(widget.tree, ["Session 1", "SubFolder"])
-#     album = _find_item_by_path(widget.tree, ["Session 1", "NPCs"])
-#     image = _find_item_by_path(widget.tree, ["Session 1", "NPCs", "Guard"])
-#     assert folder and subfolder and album and image
-#
-#     # Cannot drop folder/album onto album
-#     assert not widget._is_valid_drop(subfolder, album)
-#     assert not widget._is_valid_drop(album, album)
-#
-#     # Image cannot drop onto folder
-#     assert not widget._is_valid_drop(image, folder)
-#
-#     # Cannot drop onto self
-#     assert not widget._is_valid_drop(folder, folder)
-#     assert not widget._is_valid_drop(album, album)
-#     assert not widget._is_valid_drop(image, image)
-#
-#     # No cycles: cannot move ancestor under its descendant
-#     assert not widget._is_valid_drop(folder, subfolder)
