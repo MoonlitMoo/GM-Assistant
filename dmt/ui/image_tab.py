@@ -175,11 +175,7 @@ class ImagesTab(QWidget):
         # Build breadcrumb path from the tree
         item = self.library.tree.currentItem()
         if item:
-            parts = []
-            while item is not None:
-                parts.insert(0, item.label)
-                item = item.parent()
-            self._path_label.setText(" > ".join(parts))
+            self._path_label.setText(" > ".join(self._service.breadcrumb(item.id)))
         else:
             self._path_label.setText("No album selected")
 

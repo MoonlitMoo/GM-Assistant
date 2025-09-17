@@ -57,11 +57,11 @@ class LibraryService:
                 return []
             return [(ci.image_id, ci.image.caption or "", ci.position) for ci in c.album_images]
 
-    def breadcrumb(self, folder_id: int) -> list[str]:
+    def breadcrumb(self, album_id: int) -> list[str]:
         """ Return ['root', 'Session 1', 'NPCs'] style breadcrumb. """
         with self.db.session() as s:
             names: list[str] = []
-            cur = s.get(Folder, folder_id)
+            cur = s.get(Album, album_id)
             while cur is not None:
                 names.append(cur.name)
                 cur = cur.parent

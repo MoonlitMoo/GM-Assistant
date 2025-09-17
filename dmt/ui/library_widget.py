@@ -49,7 +49,7 @@ class LibraryWidget(QWidget):
         # Set up the tree
         self.tree = LibraryTree(parent=self, service=self.service)
         self.tree.setHeaderHidden(True)
-        # self.tree.currentItemChanged.connect(self._on_current_changed)
+        self.tree.currentItemChanged.connect(self._on_current_changed)
         self.tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self._on_tree_context_menu)
         root.addWidget(self.tree, 1)

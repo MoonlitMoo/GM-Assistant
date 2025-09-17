@@ -30,7 +30,7 @@ class Folder(TimestampMixin, SoftDeleteMixin, Base):
         order_by="Folder.position",
     )
     albums: Mapped[List["Album"]] = relationship(
-        back_populates="folder",
+        back_populates="parent",
         cascade="all, delete-orphan",
         order_by="Album.position",
     )

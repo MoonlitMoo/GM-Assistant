@@ -23,7 +23,7 @@ class Album(TimestampMixin, SoftDeleteMixin, Base):
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     color_hint: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
-    folder: Mapped["Folder"] = relationship(back_populates="albums")
+    parent: Mapped["Folder"] = relationship(back_populates="albums")
 
     # keep only the association object as the primary relationship
     album_images: Mapped[List["AlbumImage"]] = relationship(
