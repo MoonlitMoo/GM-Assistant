@@ -30,6 +30,7 @@ class Album(TimestampMixin, SoftDeleteMixin, Base):
         back_populates="album",
         cascade="all, delete-orphan",
         order_by="AlbumImage.position",
+        passive_deletes=True,
     )
 
     # expose images via an association proxy (unordered in SQL, but preserves python list order from album_images)

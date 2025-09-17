@@ -191,6 +191,7 @@ class LibraryService:
                 s.delete(f)
             else:
                 f.is_deleted = 1
+            s.flush()
 
     def delete_album(self, album_id: int, hard: bool = False) -> None:
         with self.db.session() as s:
@@ -201,6 +202,7 @@ class LibraryService:
                 s.delete(c)
             else:
                 c.is_deleted = 1
+            s.flush()
 
     # ---------- internals ----------
     def _next_folder_position(self, s: Session, parent_id: Optional[int]) -> int:

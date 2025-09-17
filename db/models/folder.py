@@ -28,11 +28,13 @@ class Folder(TimestampMixin, SoftDeleteMixin, Base):
         back_populates="parent",
         cascade="all, delete-orphan",
         order_by="Folder.position",
+        passive_deletes=True,
     )
     albums: Mapped[List["Album"]] = relationship(
         back_populates="parent",
         cascade="all, delete-orphan",
         order_by="Album.position",
+        passive_deletes=True,
     )
 
     __table_args__ = (

@@ -31,7 +31,6 @@ class LibraryWidget(QWidget):
 
     def __init__(self, service: LibraryService, parent=None) -> None:
         super().__init__(parent)
-        self.LIBRARY_FILENAME = None
         self.service = service
 
         # UI
@@ -198,10 +197,10 @@ class LibraryWidget(QWidget):
     def _on_delete(self, item: QTreeWidgetItem):
         """Delete in DB then remove from the tree."""
         if isinstance(item, FolderItem):
-            self.service.delete_folder(item.id, hard=False)
+            self.service.delete_folder(item.id, hard=True)
 
         elif isinstance(item, AlbumItem):
-            self.service.delete_album(item.id, hard=False)
+            self.service.delete_album(item.id, hard=True)
 
         elif isinstance(item, ImageItem):
             raise NotImplementedError("Haven't implemented delete for images.")
