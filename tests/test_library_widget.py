@@ -72,6 +72,38 @@ def widget(simple_db, qtbot, monkeypatch):
     qtbot.addWidget(w)
     return w
 
+@pytest.fixture()
+def set_dialog_text(monkeypatch):
+    """ Set the text for the next item in the dialog entry box. """
+    def set_text(name):
+        def get_text_cycle(*args, **kwargs):
+            return name, True
+        monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text_cycle))
+    return set_text
+
+@pytest.fixture()
+def create_tree_item(monkeypatch, widget, set_dialog_text):
+    """ Function to pass tree path and item type to create an item in the tree via the simulated UI. """
+    def _create_tree_item(path, item_type):
+        set_dialog_text(path[-1])
+        assert item_type in ["folder", "album"]
+        _select_by_path(widget.tree, path[:-1])
+        widget._create_node(make_album=False if item_type == "folder" else True)
+        item = _find_item_by_path(widget.tree, path)
+        assert item is not None
+        return item
+
+    return _create_tree_item
+
+@pytest.fixture()
+def set_context_menu(monkeypatch):
+    """ Sets the context menu option to return the given decision. """
+    import dmt.ui.library_widget as lw
+    def _set_menu(decision):
+        monkeypatch.setattr(FakeContextMenu, "decision", decision)
+        monkeypatch.setattr(lw, "QMenu", FakeContextMenu)
+    return _set_menu
+
 # ---- Helper functions ----
 def _find_item_by_path(tree, labels):
     """Find item by a path of labels starting under the visible root."""
@@ -102,58 +134,30 @@ def _select_by_path(tree, labels):
                 return True
     return False
 
-def _create_tree_item(widget, path, item_type):
-    """ Helper for a one-line command to create an item in the tree. """
-    assert item_type in ["folder", "album"]
-    _select_by_path(widget.tree, path[:-1])
-    widget._create_node(make_album=False if item_type == "folder" else True)
-    item = _find_item_by_path(widget.tree, path)
-    assert item is not None
-    return item
-
-def _set_text_cycles(monkeypatch, names):
-    names = iter(names)
-
-    def get_text_cycle(*args, **kwargs):
-        return next(names), True
-
-    monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text_cycle))
-
-def _set_context_menu(monkeypatch, decision):
-    import dmt.ui.library_widget as lw
-    monkeypatch.setattr(FakeContextMenu, "decision", decision)
-    monkeypatch.setattr(lw, "QMenu", FakeContextMenu)
-
-
 # ---- Tests ----
 
-def test_add_folder_and_album(widget, monkeypatch):
-    # Names to return for folder/album creation
-    _set_text_cycles(monkeypatch, ["My Folder", "My Album", "My Subfolder", "My Subalbum"])
-
+def test_add_folder_and_album(widget, create_tree_item):
     # Add Folder at root
-    folder_item = _create_tree_item(widget, ["My Folder"], "folder")
+    folder_item = create_tree_item(["My Folder"], "folder")
     assert isinstance(folder_item, FolderItem)
     assert folder_item.label == "My Folder"
     assert widget.service.is_folder(folder_item.id)
 
     # Add Album at root
-    album_item = _create_tree_item(widget, ["My Album"], "album")
+    album_item = create_tree_item(["My Album"], "album")
     assert isinstance(album_item, AlbumItem)
     assert album_item.label == "My Album"
     assert widget.service.is_album(album_item.id)
 
     # Add Folder in subfolder
-    folder_item = _create_tree_item(widget, ["Session 1", "My Subfolder"], "folder")
+    folder_item = create_tree_item(["Session 1", "My Subfolder"], "folder")
     assert isinstance(folder_item, FolderItem)
     assert widget.service.is_folder(folder_item.id)
 
     # Add Album in subfolder
-    album_item = _create_tree_item(widget, ["Session 2", "My Subalbum"], "album")
+    album_item = create_tree_item(["Session 2", "My Subalbum"], "album")
     assert isinstance(album_item, AlbumItem)
     assert widget.service.is_album(album_item.id)
-
-
 
 def test_root_protected_from_delete(widget, monkeypatch):
     root = widget.tree.topLevelItem(0)
@@ -162,47 +166,62 @@ def test_root_protected_from_delete(widget, monkeypatch):
     assert widget.tree.topLevelItem(0)
 
 
-def test_remove_folder_and_album(widget, monkeypatch):
-    # Create one folder + one album first (names fixed via monkeypatched getText)
-    _set_text_cycles(monkeypatch, ["Temp Folder", "Temp Album", "Temp Subfolder", "Temp Subalbum"])
-    _set_context_menu(monkeypatch, "Delete")
+def test_remove_folder_and_album(widget, create_tree_item, set_context_menu):
+    set_context_menu("Delete")
 
     # Add the test nodes at root
-    folder_item = _create_tree_item(widget, [], "folder")
-    album_item = _create_tree_item(widget, [], "album")
+    folder_item = create_tree_item(["Temp Folder"], "folder")
+    album_item = create_tree_item(["Temp Album"], "album")
 
     # Delete temp folder
     pos_folder = widget.tree.visualItemRect(folder_item).center()
     widget._on_tree_context_menu(pos_folder)
     assert _find_item_by_path(widget.tree, ["Temp Folder"]) is None
-    assert widget.service.get_folder(folder_item.id).is_deleted
+    assert widget.service.get_folder(folder_item.id) is None
 
     # Delete temp album
     pos_album = widget.tree.visualItemRect(album_item).center()
     widget._on_tree_context_menu(pos_album)
     assert _find_item_by_path(widget.tree, ["Temp Album"]) is None
-    assert widget.service.get_album(album_item.id).is_deleted
+    assert widget.service.get_album(album_item.id) is None
 
     # Select subfolder and create temp files
-    folder_item = _create_tree_item(widget, ["Session 1"], "folder")
-    album_item = _create_tree_item(widget, ["Session 1"], "album")
+    folder_item = create_tree_item(["Session 1", "Temp Subfolder"], "folder")
+    album_item = create_tree_item(["Session 1", "Temp Subalbum"], "album")
 
     # Delete temp subfolder
     pos_folder = widget.tree.visualItemRect(folder_item).center()
     widget._on_tree_context_menu(pos_folder)
     assert _find_item_by_path(widget.tree, ["Session 1", "Temp Subfolder"]) is None
-    assert widget.service.get_folder(folder_item.id).is_deleted
+    assert widget.service.get_folder(folder_item.id) is None
 
     # Delete temp subalbum
     pos_album = widget.tree.visualItemRect(album_item).center()
     widget._on_tree_context_menu(pos_album)
     assert _find_item_by_path(widget.tree, ["Session 1", "Temp Subalbum"]) is None
-    assert widget.service.get_album(album_item.id).is_deleted
+    assert widget.service.get_album(album_item.id) is None
 
 
-def test_rename_folder_and_album(widget, monkeypatch):
-    _set_text_cycles(monkeypatch, ["Renamed Folder", "Renamed Album"])
-    _set_context_menu(monkeypatch, "Rename")
+def test_recreate_item(widget, create_tree_item, set_context_menu):
+    """ Check that we can make, delete, remake without problems. """
+    # Set to delete
+    set_context_menu("Delete")
+
+    # Create
+    item = create_tree_item(["Test"], "folder")
+    assert widget.service.get_folder(item.id)
+    # Delete
+    pos_item = widget.tree.visualItemRect(item).center()
+    widget._on_tree_context_menu(pos_item)
+    assert not _find_item_by_path(widget.tree, ["Test"])
+    assert widget.service.get_folder(item.id) is None
+    # Recreate
+    item = create_tree_item(["Test"], "folder")
+    assert widget.service.get_folder(item.id)
+
+
+def test_rename_folder_and_album(widget, set_context_menu, set_dialog_text):
+    set_context_menu("Rename")
 
     # Get the two things to be renamed, expanding top folder to get at subfolder
     folder_item = _find_item_by_path(widget.tree, ["Session 1"])
@@ -211,12 +230,14 @@ def test_rename_folder_and_album(widget, monkeypatch):
     assert folder_item is not None and album_item is not None
 
     # Rename folder
+    set_dialog_text("Renamed Folder")
     pos_folder = widget.tree.visualItemRect(folder_item).center()
     widget._on_tree_context_menu(pos_folder)
     assert _find_item_by_path(widget.tree, ["Renamed Folder"]) is not None
     assert widget.service.get_folder(folder_item.id).name == "Renamed Folder"
 
     # Rename nested album
+    set_dialog_text("Renamed Album")
     pos_album = widget.tree.visualItemRect(album_item).center()
     widget._on_tree_context_menu(pos_album)
     assert _find_item_by_path(widget.tree, ["Session 2", "Renamed Album"]) is not None

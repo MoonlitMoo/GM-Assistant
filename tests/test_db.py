@@ -51,8 +51,8 @@ def make_folder(session):
 
 @pytest.fixture()
 def make_album(session):
-    def _mk(folder: Folder, name: str, position: int = 0) -> Album:
-        c = Album(folder=folder, name=name, position=position)
+    def _mk(parent: Folder, name: str, position: int = 0) -> Album:
+        c = Album(parent=parent, name=name, position=position)
         session.add(c)
         session.flush()
         return c
