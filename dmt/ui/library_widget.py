@@ -236,17 +236,17 @@ class LibraryWidget(QWidget):
         return list([item.child(i) for i in range(item.childCount())])
 
     def add_images_to_current_album(self, paths: list[str]) -> None:
-        """ Append paths as ImageItem(s) to the selected album. """
-        album = self._current_album_item()
-        if not album or not paths:
+        album_item = self._current_album_item()
+        if not album_item or not paths:
             return
 
-        for p in paths:
-            img = ImageItem(label=Path(p).stem, path=p)
-            album.addChild(img)
+        added = self.service.add_images_from_paths(album_item.id, paths)
 
-        album.setExpanded(True)
-        self.save_library()
+        # Reflect in the tree
+        for img in added:
+            album_item.addChild(ImageItem(*img))
+
+        album_item.setExpanded(True)
 
     def remove_images_from_current_album(self, paths: list[str]) -> None:
         """ Remove any ImageItem whose .path is in `paths` from selected album. """

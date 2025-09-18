@@ -1,8 +1,12 @@
 from __future__ import annotations
+
+import mimetypes
 from dataclasses import dataclass
-from typing import Literal, Sequence, Optional
+from pathlib import Path
+from typing import Literal, Sequence, Optional, Iterable
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
+from PIL import Image as PILImage
 
 from db.manager import DatabaseManager
 from db.models import Folder, Album, Image, ImageData, AlbumImage
@@ -104,42 +108,94 @@ class LibraryService:
             s.flush()
         return c.id
 
-    def create_image_and_add(
-            self,
-            album_id: int,
-            *,
-            caption: str | None,
-            full_bytes: bytes,
-            mime_type: str = "image/png",
-            width_px: int | None = None,
-            height_px: int | None = None,
-            thumb_bytes: bytes | None = None,
-            bytes_format: str | None = None,
-            thumb_format: str | None = None,
-    ) -> int:
+    def _guess_mime(self, path: str, fallback: Optional[str] = None) -> str:
+        mime, _ = mimetypes.guess_type(path)
+        return mime or fallback or "application/octet-stream"
+
+    def _read_image_and_thumb(self, path: str, thumb_px: int = 256):
+        """ Read the image and get the raw data and metadata we need for the DB
+
+        Parameters
+        ----------
+        path : str
+            The filesystem path of the new image
+        thumb_px: int, default 256
+            The maximal size of the thumbnail.
+
+        Returns
+        -------
+        full_bytes : bytearray
+            The raw bytes of the image
+        w, h : int, int
+            The width and height of the image in pixels
+        fmt : str
+            The format of the image
+        thumb_bytes : bytearray
+            The raw bytes of the thumbnail of the image
+        fmt_thumb : str, "PNG"
+            The format of the thumbnail
+        """
+        with PILImage.open(path) as im:
+            w, h = im.size
+            fmt = (im.format or "PNG").upper()
+            # full bytes
+            with open(path, "rb") as f:
+                full_bytes = f.read()
+            # thumb bytes
+            im_copy = im.copy()
+            im_copy.thumbnail((thumb_px, thumb_px))
+            from io import BytesIO
+            buf = BytesIO()
+            im_copy.save(buf, format="PNG")  # store thumbs as PNG (simple & lossless)
+            thumb_bytes = buf.getvalue()
+        return full_bytes, w, h, fmt, thumb_bytes, "PNG"
+
+    def add_images_from_paths(self, album_id: int, paths: Iterable[str]) -> list:
+        """Atomic, batched ingest of images into one album.
+        Gets the position to insert the image to, then creates the DB items and adds them for each image.
+
+        Parameters
+        ----------
+        album_id : int
+            The DB id of the album
+        paths : list of str
+            The filesystem paths of the images to add.
+
+        Returns
+        -------
+        results : list
+            A list of (image_id, caption, album_position)
+        """
+        results = []
         with self.db.session() as s:
-            img = Image(
-                caption=caption,
-                mime_type=mime_type,
-                width_px=width_px,
-                height_px=height_px,
-                bytes_size=len(full_bytes),
-                has_data=1,
-            )
-            s.add(img)
-            s.flush()  # get img.id
+            # prefetch next position once and increment locally for speed
+            base_pos = self._next_album_image_position(s, album_id)
+            next_pos = base_pos
+            for p in paths:
+                p_str = str(p)
+                caption = Path(p_str).stem
+                full_bytes, w, h, fmt, thumb_bytes, thumb_fmt = self._read_image_and_thumb(p_str)
+                mime = self._guess_mime(p_str, f"image/{fmt.lower()}")
 
-            s.add(ImageData(
-                image_id=img.id,
-                bytes=full_bytes,
-                thumb_bytes=thumb_bytes,
-                bytes_format=bytes_format,
-                thumb_format=thumb_format,
-            ))
+                img = Image(
+                    caption=caption, mime_type=mime, width_px=w, height_px=h,
+                    bytes_size=len(full_bytes), has_data=1,
+                )
+                s.add(img)
+                s.flush()
 
-            pos = self._next_album_image_position(s, album_id)
-            s.add(AlbumImage(album_id=album_id, image_id=img.id, position=pos))
-            return img.id
+                s.add(ImageData(
+                    image_id=img.id,
+                    bytes=full_bytes,
+                    thumb_bytes=thumb_bytes,
+                    bytes_format=fmt,
+                    thumb_format=thumb_fmt,
+                ))
+
+                s.add(AlbumImage(album_id=album_id, image_id=img.id, position=next_pos))
+                results.append((img.id, caption, next_pos))
+                next_pos += 1
+        return results
 
     # ---------- Update / Move / Reorder ----------
     def rename_folder(self, folder_id: int, new_name: str) -> None:

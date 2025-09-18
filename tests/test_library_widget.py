@@ -1,6 +1,9 @@
 from contextlib import contextmanager
+from pathlib import Path
 
 import pytest
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QAbstractItemView
 
 from db.manager import DatabaseManager
@@ -80,6 +83,16 @@ def set_dialog_text(monkeypatch):
             return name, True
         monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text_cycle))
     return set_text
+
+@pytest.fixture()
+def make_png(tmp_path):
+    def _make_png(name="im", w=16, h=10):
+        img = QImage(QSize(w, h), QImage.Format.Format_ARGB32)
+        img.fill(Qt.GlobalColor.green)  # any solid color
+        out = Path(tmp_path) / f"{name}.png"
+        img.save(str(out), "PNG")
+        return str(out)
+    return _make_png
 
 @pytest.fixture()
 def create_tree_item(monkeypatch, widget, set_dialog_text):
@@ -298,24 +311,78 @@ def test_catch_illegal_move(widget, src_path, dst_path):
     assert not widget.tree._handle_item_movement([src_item], dst_item, QAbstractItemView.OnItem)
 
 
-# def test_move_image_to_album(widget):
-#     src_item = _find_item_by_path(widget.tree, ["Session 1", "NPCs", "Guard"])
-#     dst_item = _find_item_by_path(widget.tree, ["Session 1", "Locations"])
-#     assert src_item and dst_item
-#
-#     src_img = src_item.data(0, Qt.UserRole)["ref"]
-#     old_album = _find_item_by_path(widget.tree, ["Session 1", "NPCs"]).data(0, Qt.UserRole)["ref"]
-#     new_album = dst_item.data(0, Qt.UserRole)["ref"]
-#
-#     # pre: image is in old album
-#     assert src_img in old_album.images
-#     assert src_img not in new_album.images
-#
-#     assert widget._is_valid_drop(src_item, dst_item)
-#     widget._handle_internal_move(src_item, dst_item)
-#
-#     # UI parent changed
-#     assert src_item.parent() is dst_item
-#     # model lists updated
-#     assert src_img not in old_album.images
-#     assert src_img in new_album.images
+def test_ui_add_single_image_to_album(widget, make_png):
+    """Add one file via the UI call and verify DB rows + UI node."""
+    # Pick the existing album: ["Session 1", "NPCs"] from simple_db
+    album_item = _find_item_by_path(widget.tree, ["Session 1", "NPCs"])
+    assert album_item is not None
+
+    # Select album in the UI, create one PNG, and add
+    assert _select_by_path(widget.tree, ["Session 1", "NPCs"])
+    p = make_png("guard", w=20, h=12)
+    widget.add_images_to_current_album([p])
+
+    # UI: new child exists with caption == stem
+    assert any([album_item.child(i).text(0) == "guard" for i in range(album_item.childCount())])
+
+    # DB: image + data + association rows created; association ordered by position
+    db_album = widget.service.get_album(album_item.id)
+    assert db_album is not None
+    # Album.album_images is ordered in model (order_by=position) → first element is our file
+    assert len(db_album.album_images) == 1
+    ci = db_album.album_images[0]
+    assert ci.position == 0                       # first image at position 0
+    assert ci.image.caption == "guard"
+    assert ci.image.has_data == 1                 # bytes were stored
+    assert ci.image.bytes_size > 0
+    assert ci.image.data is not None              # ImageData row present (relationship)
+
+
+def test_ui_add_two_images_preserves_order_and_positions(widget, make_png):
+    """Adding multiple files yields stable positions 0..N-1 in DB and in the UI."""
+    album_item = _find_item_by_path(widget.tree, ["Session 2", "NPCs2"])
+    assert album_item is not None
+
+    _select_by_path(widget.tree, ["Session 2", "NPCs2"])
+    p0 = make_png("a_first", w=8, h=8)
+    p1 = make_png("b_second", w=9, h=7)
+    widget.add_images_to_current_album([p0, p1])
+
+    # UI order by child index should reflect positions assigned by service
+    ui_labels = [album_item.child(i).text(0) for i in range(album_item.childCount())]
+    assert ui_labels[:2] == ["a_first", "b_second"]
+
+    # DB association objects ordered by position 0,1, ... per Album model. :contentReference[oaicite:4]{index=4}
+    db_album = widget.service.get_album(album_item.id)
+    positions = [ci.position for ci in db_album.album_images]
+    captions  = [ci.image.caption for ci in db_album.album_images]
+    assert positions[:2] == [0, 1]
+    assert captions[:2]  == ["a_first", "b_second"]
+
+
+def test_ui_add_images_appends_after_existing(widget, make_png):
+    """If the album already has images, new ones are appended with the next position."""
+    album_item = _find_item_by_path(widget.tree, ["Session 1", "NPCs"])
+    assert album_item is not None
+
+    # First add one image
+    _select_by_path(widget.tree, ["Session 1", "NPCs"])
+    p0 = make_png("first")
+    widget.add_images_to_current_album([p0])
+
+    # Then add two more
+    p1 = make_png("second")
+    p2 = make_png("third")
+    widget.add_images_to_current_album([p1, p2])
+
+    # DB: positions should be 0,1,2 in order
+    db_album = widget.service.get_album(album_item.id)
+    poses = [ci.position for ci in db_album.album_images]
+    caps  = [ci.image.caption for ci in db_album.album_images]
+    assert poses[:3] == [0, 1, 2]
+    assert caps[:3]  == ["first", "second", "third"]
+
+    # UI: last two labels match and album expanded
+    labels = [album_item.child(i).text(0) for i in range(album_item.childCount())]
+    assert "second" in labels and "third" in labels
+    assert album_item.isExpanded()
