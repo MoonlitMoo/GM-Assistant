@@ -123,16 +123,21 @@ def _find_item_by_path(tree, labels):
 def _select_by_path(tree, labels):
     """ Go through the tree and select the item at the end of the path """
     item = tree.topLevelItem(0)  # visible root
-    if not labels:
-        tree.setCurrentItem(item)
-        return True
-    for label in labels:
+
+    def _get_next_item(item, label):
         for i in range(item.childCount()):
             ch = item.child(i)
             if ch.text(0) == label:
-                tree.setCurrentItem(ch)
-                return True
-    return False
+                return ch
+        return None
+
+    for label in labels:
+        item = _get_next_item(item, label)
+        if not item:
+            return False
+
+    tree.setCurrentItem(item)
+    return True
 
 # ---- Tests ----
 
