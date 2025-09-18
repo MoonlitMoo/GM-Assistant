@@ -324,9 +324,9 @@ class LibraryTree(QTreeWidget):
 
             # Update the DB
             if isinstance(src, FolderItem):
-                self.service.move_folder(src.id, target_parent.id, clipped_target)
+                self.service.move_node(src.id, "folder", target_parent.id, clipped_target)
             elif isinstance(src, AlbumItem):
-                self.service.move_album(src.id, target_parent.id, clipped_target)
+                self.service.move_node(src.id, "album", target_parent.id, clipped_target)
             else:
                 raise NotImplementedError(f"Not implemented {type(src)} drag and drop.")
 

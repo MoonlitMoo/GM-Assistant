@@ -54,6 +54,7 @@ def simple_db(session, make_folder, make_album, make_image):
     session.commit()
     return session
 
+
 @pytest.fixture()
 def widget(simple_db, qtbot, monkeypatch):
     # Auto-accept dialogs: name prompts + delete confirms
@@ -74,14 +75,19 @@ def widget(simple_db, qtbot, monkeypatch):
     qtbot.addWidget(w)
     return w
 
+
 @pytest.fixture()
 def set_dialog_text(monkeypatch):
     """ Set the text for the next item in the dialog entry box. """
+
     def set_text(name):
         def get_text_cycle(*args, **kwargs):
             return name, True
+
         monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text_cycle))
+
     return set_text
+
 
 @pytest.fixture()
 def make_png(tmp_path):
@@ -91,11 +97,14 @@ def make_png(tmp_path):
         out = Path(tmp_path) / f"{name}.png"
         img.save(str(out), "PNG")
         return str(out)
+
     return _make_png
+
 
 @pytest.fixture()
 def create_tree_item(monkeypatch, widget, set_dialog_text):
     """ Function to pass tree path and item type to create an item in the tree via the simulated UI. """
+
     def _create_tree_item(path, item_type):
         set_dialog_text(path[-1])
         assert item_type in ["folder", "album"]
@@ -107,6 +116,7 @@ def create_tree_item(monkeypatch, widget, set_dialog_text):
 
     return _create_tree_item
 
+
 @pytest.fixture()
 def set_context_menu(monkeypatch):
     """ Sets the context menu option to return the given decision. """
@@ -114,7 +124,9 @@ def set_context_menu(monkeypatch):
     def _set_menu(decision):
         monkeypatch.setattr(FakeContextMenu, "decision", decision)
         monkeypatch.setattr(lw, "QMenu", FakeContextMenu)
+
     return _set_menu
+
 
 # ---- Helper functions ----
 def _find_item_by_path(tree, labels):
@@ -131,6 +143,7 @@ def _find_item_by_path(tree, labels):
             return None
         item = found
     return item
+
 
 def _select_by_path(tree, labels):
     """ Go through the tree and select the item at the end of the path """
@@ -151,15 +164,18 @@ def _select_by_path(tree, labels):
     tree.setCurrentItem(item)
     return True
 
+
 def _sibling_positions(service, parent_folder_id):
     """Return [(kind, name, pos)] of all children under a folder, ordered by pos/kind/id like the model property."""
     f = service.get_folder(parent_folder_id)
     assert f is not None
     # Merge subfolders + albums in DB order
     kids = [("folder", sf.name, sf.position) for sf in f.subfolders] + \
-           [("album",  al.name, al.position) for al in f.albums]
+           [("album", al.name, al.position) for al in f.albums]
     kids.sort(key=lambda t: (t[2], 0 if t[0] == "folder" else 1, t[1]))
     return kids
+
+
 # ---- Tests ----
 
 def test_add_folder_and_album(widget, create_tree_item):
@@ -237,6 +253,7 @@ def test_remove_folder_and_album(widget, create_tree_item, set_context_menu):
     assert _find_item_by_path(widget.tree, ["Session 1", "Temp Subalbum"]) is None
     assert widget.service.get_album(album_item.id) is None
 
+
 @pytest.mark.parametrize("parent_path, final_children", [
     ([], ["Session 1", "Zed", "Alpha"]),
     (["Session 2"], ["Locations2", "Zed", "Alpha"])
@@ -266,6 +283,56 @@ def test_delete_updates_sibling_positions(widget, create_tree_item, set_context_
     names_by_pos = [r.name for r in children]
     assert names_by_pos == final_children
     assert [r.position for r in children] == [0, 1, 2]
+
+
+def test_reorder_within_same_parent_updates_positions(widget):
+    """Moving an item within the same parent shifts siblings and normalizes positions."""
+    # In Session 1 we start with: Locations (pos 0, folder), NPCs (pos 1, album) per fixture
+    sess1 = _find_item_by_path(widget.tree, ["Session 1"])
+    assert sess1 is not None
+    sess1_db = widget.service.get_folder(sess1.id)
+    assert [(k, o.name, p) for k, o, p in sess1_db.children] == [
+        ("folder", "Locations", 0),
+        ("album",  "NPCs",      1),
+    ]
+
+    # Move Locations (pos 0) to the end (pos 1) within same parent
+    item = _find_item_by_path(widget.tree, ["Session 1", "Locations"])
+    # Call the service directly to specify the new position in parent
+    widget.service.move_node(item.id, "folder", new_parent_id=sess1.id, position=1)
+
+    sess1_db = widget.service.get_folder(sess1.id)
+    # Expect positions: NPCs -> 0, Locations -> 1
+    ordered = [(k, o.name, p) for k, o, p in sess1_db.children]
+    assert ordered[0] == ("album", "NPCs", 0)
+    assert ordered[1] == ("folder", "Locations", 1)
+
+    # Move back (using move_album)
+    item = _find_item_by_path(widget.tree, ["Session 1", "NPCs"])
+    # Call the service directly to specify the new position in parent
+    widget.service.move_node(item.id, "album", new_parent_id=sess1.id, position=1)
+    # Expect original positions
+    ordered = [(k, o.name, p) for k, o, p in sess1_db.children]
+    assert ordered[0] == ("folder", "Locations", 0)
+    assert ordered[1] == ("album", "NPCs", 1)
+
+
+def test_move_across_parents_inserts_and_shifts(widget):
+    """Moving into another parent inserts at given position and shifts destination siblings up."""
+    # Destination = Session 2 currently has: Locations2(pos 0, folder), NPCs2(pos 1, album)
+    src = _find_item_by_path(widget.tree, ["Session 1", "Locations"])  # a folder
+    dst = _find_item_by_path(widget.tree, ["Session 2"])
+    assert src and dst
+
+    # Insert at position 1 in Session 2 (between Locations2 and NPCs2)
+    widget.service.move_node(src.id, "folder", new_parent_id=dst.id, position=1)
+
+    dst_db = widget.service.get_folder(dst.id)
+    ordered = [(k, o.name, p) for k, o, p in dst_db.children]
+    # Expect: Locations2 @0, Locations @1 (moved), NPCs2 shifted to @2
+    assert ordered[0] == ("folder", "Locations2", 0)
+    assert ordered[1][0] == "folder" and ordered[1][1] == "Locations" and ordered[1][2] == 1
+    assert ordered[2] == ("album", "NPCs2", 2)
 
 
 def test_recreate_item(widget, create_tree_item, set_context_menu):
@@ -309,6 +376,7 @@ def test_rename_folder_and_album(widget, set_context_menu, set_dialog_text):
     assert _find_item_by_path(widget.tree, ["Session 2", "Renamed Album"]) is not None
     assert widget.service.get_album(album_item.id).name == "Renamed Album"
 
+
 @pytest.mark.parametrize("src_path, dst_path", [
     (["Session 1", "Locations"], ["Session 2"]),  # Subfolder -> Folder
     (["Session 1", "Locations"], []),  # Subfolder -> Root
@@ -325,7 +393,7 @@ def test_move_node_on_item(widget, src_path, dst_path):
     # Test move action
     widget.tree._handle_item_movement([src_item], dst_item, QAbstractItemView.OnItem)
 
-   # UI. Parent no longer has as child, destination does.
+    # UI. Parent no longer has as child, destination does.
     assert _find_item_by_path(widget.tree, dst_path + [src_path[-1]])
     assert src_item.id not in [src_parent.child(i).id for i in range(src_parent.childCount())]
     assert src_item.id in [dst_item.child(i).id for i in range(dst_item.childCount())]
@@ -344,6 +412,7 @@ def test_move_node_on_item(widget, src_path, dst_path):
         assert db_item.parent_id == db_dst.id
         assert db_item in db_dst.subfolders + db_dst.albums
     assert db_item.position == dst_item.childCount() - 1
+
 
 @pytest.mark.parametrize("src_path, dst_path", [
     (["Session 1", "Locations"], ["Session 1", "Locations"]),  # Folder -> self
@@ -379,11 +448,11 @@ def test_ui_add_single_image_to_album(widget, make_png):
     # Album.album_images is ordered in model (order_by=position) → first element is our file
     assert len(db_album.album_images) == 1
     ci = db_album.album_images[0]
-    assert ci.position == 0                       # first image at position 0
+    assert ci.position == 0  # first image at position 0
     assert ci.image.caption == "guard"
-    assert ci.image.has_data == 1                 # bytes were stored
+    assert ci.image.has_data == 1  # bytes were stored
     assert ci.image.bytes_size > 0
-    assert ci.image.data is not None              # ImageData row present (relationship)
+    assert ci.image.data is not None  # ImageData row present (relationship)
 
 
 def test_ui_add_two_images_preserves_order_and_positions(widget, make_png):
@@ -403,9 +472,9 @@ def test_ui_add_two_images_preserves_order_and_positions(widget, make_png):
     # DB association objects ordered by position 0,1, ... per Album model. :contentReference[oaicite:4]{index=4}
     db_album = widget.service.get_album(album_item.id)
     positions = [ci.position for ci in db_album.album_images]
-    captions  = [ci.image.caption for ci in db_album.album_images]
+    captions = [ci.image.caption for ci in db_album.album_images]
     assert positions[:2] == [0, 1]
-    assert captions[:2]  == ["a_first", "b_second"]
+    assert captions[:2] == ["a_first", "b_second"]
 
 
 def test_ui_add_images_appends_after_existing(widget, make_png):
@@ -426,9 +495,9 @@ def test_ui_add_images_appends_after_existing(widget, make_png):
     # DB: positions should be 0,1,2 in order
     db_album = widget.service.get_album(album_item.id)
     poses = [ci.position for ci in db_album.album_images]
-    caps  = [ci.image.caption for ci in db_album.album_images]
+    caps = [ci.image.caption for ci in db_album.album_images]
     assert poses[:3] == [0, 1, 2]
-    assert caps[:3]  == ["first", "second", "third"]
+    assert caps[:3] == ["first", "second", "third"]
 
     # UI: last two labels match and album expanded
     labels = [album_item.child(i).text(0) for i in range(album_item.childCount())]

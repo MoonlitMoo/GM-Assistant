@@ -94,7 +94,7 @@ class LibraryService:
     # ---------- Create ----------
     def create_folder(self, parent_id: Optional[int], name: str, position: int = None) -> int:
         with self.db.session() as s:
-            pos = position if position is not None else self._next_child_position(parent_id)
+            pos = position if position is not None else self._next_child_position(s, parent_id)
             f = Folder(parent_id=parent_id, name=name, position=pos)
             s.add(f)
             s.flush()
@@ -102,7 +102,7 @@ class LibraryService:
 
     def create_album(self, parent_id: int, name: str, position: int = None) -> int:
         with self.db.session() as s:
-            pos = position if position is not None else self._next_child_position(parent_id)
+            pos = position if position is not None else self._next_child_position(s, parent_id)
             c = Album(parent_id=parent_id, name=name, position=pos)
             s.add(c)
             s.flush()
@@ -214,21 +214,50 @@ class LibraryService:
                 return
             c.name = new_name
 
-    def move_folder(self, folder_id: int, new_parent_id: Optional[int], position: Optional[int]) -> None:
+    def move_node(self, target_id: int, target_type: str, new_parent_id: int, position: Optional[int]) -> None:
+        """ We shift the target to the new parent and set the position.
+        Also updates position of new siblings, shifting old siblings down, new siblings up.
+
+        Parameters
+        ----------
+        target_id : int
+            The node (Folder/Album) to move
+        target_type : str
+            What type of object to move
+        new_parent_id : int
+            The new parent target
+        position : int, optional
+            The position to insert at.
+        """
         with self.db.session() as s:
-            f = s.get(Folder, folder_id)
+            match target_type:
+                case "folder":
+                    f = s.get(Folder, target_id)
+                case "album":
+                    f = s.get(Album, target_id)
+                case _:
+                    raise ValueError(f"Unknown target_type {target_type}")
+
             if not f:
                 return
-            f.parent_id = new_parent_id
-            f.position = position if position is not None else self._next_child_position(new_parent_id)
 
-    def move_album(self, album_id: int, new_parent_id: Optional[int], position: Optional[int]) -> None:
-        with self.db.session() as s:
-            c = s.get(Album, album_id)
-            if not c:
+            old_parent, old_pos = f.parent_id, f.position
+
+            # Reorder within the same parent
+            if new_parent_id == old_parent:
+                # clamp to valid range [0, child_count-1]
+                max_pos = self._next_child_position(s, new_parent_id)
+                new_pos = max(0, min(position if position is not None else old_pos, max_pos))
+                if new_pos != old_pos:
+                    self._reorder_within_parent(s, old_parent, old_pos, new_pos)
+                    f.position = new_pos
                 return
-            c.parent_id = new_parent_id
-            c.position = position if position is not None else self._next_child_position(new_parent_id)
+
+            self._shift_down_after(s, old_parent, old_pos)
+            insert_pos = position if position is not None else self._next_child_position(s, new_parent_id)
+            self._shift_up_from(s, new_parent_id, insert_pos)
+            f.parent_id = new_parent_id
+            f.position = insert_pos
 
     def reorder_album_images(self, album_id: int, ordered_image_ids: Sequence[int]) -> None:
         with self.db.session() as s:
@@ -267,13 +296,12 @@ class LibraryService:
                 c.is_deleted = 1
 
     # ---------- internals ----------
-    def _next_child_position(self, parent_id: int) -> int:
+    def _next_child_position(self, s: Session, parent_id: int) -> int:
         """ Gets position for a new child item in a folder. """
-        with self.db.session() as s:
-            folder_q = select(Folder.id).where(Folder.parent_id == parent_id)
-            album_q = select(Album.id).where(Album.parent_id == parent_id)
-            union_q = union_all(folder_q, album_q).subquery()
-            return s.execute(select(func.count()).select_from(union_q)).scalar_one()
+        folder_q = select(Folder.id).where(Folder.parent_id == parent_id)
+        album_q = select(Album.id).where(Album.parent_id == parent_id)
+        union_q = union_all(folder_q, album_q).subquery()
+        return s.execute(select(func.count()).select_from(union_q)).scalar_one()
 
     def _shift_up_from(self, s: Session, parent_id: Optional[int], from_pos: int) -> None:
         """Make room at from_pos: positions >= from_pos -> +1 (folders + albums)."""
@@ -289,6 +317,26 @@ class LibraryService:
         s.execute(update(Album).where(Album.parent_id == parent_id, Album.position > from_pos)
                   .values(position=Album.position - 1))
 
+    def _reorder_within_parent(self, s: Session, parent_id: Optional[int], old_pos: int, new_pos: int) -> None:
+        """Shift a contiguous block within the same parent to move one item from old_pos -> new_pos."""
+        if new_pos == old_pos:
+            return
+        if new_pos > old_pos:
+            # moving down: items in (old_pos, new_pos] shift up (-1)
+            s.execute(update(Folder).where(Folder.parent_id == parent_id,
+                                           Folder.position > old_pos, Folder.position <= new_pos)
+                      .values(position=Folder.position - 1))
+            s.execute(update(Album).where(Album.parent_id == parent_id,
+                                          Album.position > old_pos, Album.position <= new_pos)
+                      .values(position=Album.position - 1))
+        else:
+            # moving up: items in [new_pos, old_pos) shift down (+1)
+            s.execute(update(Folder).where(Folder.parent_id == parent_id,
+                                           Folder.position >= new_pos, Folder.position < old_pos)
+                      .values(position=Folder.position + 1))
+            s.execute(update(Album).where(Album.parent_id == parent_id,
+                                          Album.position >= new_pos, Album.position < old_pos)
+                      .values(position=Album.position + 1))
     def _next_album_image_position(self, s: Session, album_id: int) -> int:
         q = select(func.coalesce(func.max(AlbumImage.position), -1)).where(
             AlbumImage.album_id == album_id
