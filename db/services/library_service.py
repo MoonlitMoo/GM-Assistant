@@ -245,22 +245,26 @@ class LibraryService:
             f = s.get(Folder, folder_id)
             if not f:
                 return
+            old_parent, old_pos = f.parent_id, f.position
             if hard:
                 s.delete(f)
+                s.flush()
+                self._shift_down_after(s, old_parent, old_pos)
             else:
                 f.is_deleted = 1
-            s.flush()
 
     def delete_album(self, album_id: int, hard: bool = False) -> None:
         with self.db.session() as s:
             c = s.get(Album, album_id)
             if not c:
                 return
+            old_parent, old_pos = c.parent_id, c.position
             if hard:
                 s.delete(c)
+                s.flush()
+                self._shift_down_after(s, old_parent, old_pos)
             else:
                 c.is_deleted = 1
-            s.flush()
 
     # ---------- internals ----------
     def _next_child_position(self, parent_id: int) -> int:
@@ -271,6 +275,19 @@ class LibraryService:
             union_q = union_all(folder_q, album_q).subquery()
             return s.execute(select(func.count()).select_from(union_q)).scalar_one()
 
+    def _shift_up_from(self, s: Session, parent_id: Optional[int], from_pos: int) -> None:
+        """Make room at from_pos: positions >= from_pos -> +1 (folders + albums)."""
+        s.execute(update(Folder).where(Folder.parent_id == parent_id, Folder.position >= from_pos)
+                  .values(position=Folder.position + 1))
+        s.execute(update(Album).where(Album.parent_id == parent_id, Album.position >= from_pos)
+                  .values(position=Album.position + 1))
+
+    def _shift_down_after(self, s: Session, parent_id: Optional[int], from_pos: int) -> None:
+        """Close gap after from_pos: positions > from_pos -> -1 (folders + albums)."""
+        s.execute(update(Folder).where(Folder.parent_id == parent_id, Folder.position > from_pos)
+                  .values(position=Folder.position - 1))
+        s.execute(update(Album).where(Album.parent_id == parent_id, Album.position > from_pos)
+                  .values(position=Album.position - 1))
 
     def _next_album_image_position(self, s: Session, album_id: int) -> int:
         q = select(func.coalesce(func.max(AlbumImage.position), -1)).where(

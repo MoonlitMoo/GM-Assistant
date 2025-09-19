@@ -151,6 +151,15 @@ def _select_by_path(tree, labels):
     tree.setCurrentItem(item)
     return True
 
+def _sibling_positions(service, parent_folder_id):
+    """Return [(kind, name, pos)] of all children under a folder, ordered by pos/kind/id like the model property."""
+    f = service.get_folder(parent_folder_id)
+    assert f is not None
+    # Merge subfolders + albums in DB order
+    kids = [("folder", sf.name, sf.position) for sf in f.subfolders] + \
+           [("album",  al.name, al.position) for al in f.albums]
+    kids.sort(key=lambda t: (t[2], 0 if t[0] == "folder" else 1, t[1]))
+    return kids
 # ---- Tests ----
 
 def test_add_folder_and_album(widget, create_tree_item):
@@ -227,6 +236,36 @@ def test_remove_folder_and_album(widget, create_tree_item, set_context_menu):
     widget._on_tree_context_menu(pos_album)
     assert _find_item_by_path(widget.tree, ["Session 1", "Temp Subalbum"]) is None
     assert widget.service.get_album(album_item.id) is None
+
+@pytest.mark.parametrize("parent_path, final_children", [
+    ([], ["Session 1", "Zed", "Alpha"]),
+    (["Session 2"], ["Locations2", "Zed", "Alpha"])
+])
+def test_delete_updates_sibling_positions(widget, create_tree_item, set_context_menu, parent_path, final_children):
+    """Deleting an item closes the position gap among remaining siblings."""
+    set_context_menu("Delete")
+
+    # In root we start with: Session 1 (pos 0, folder), Session 2 (pos 1, folder)
+    # Add two more: + Folder "Zed" (pos 2), + Album "Alpha" (pos 3)
+    create_tree_item(parent_path + ["Zed"], "folder")
+    create_tree_item(parent_path + ["Alpha"], "album")
+
+    parent_item = _find_item_by_path(widget.tree, parent_path)
+    children = widget.service.get_root_items() if parent_item is None else \
+        widget.service.get_folder_children(parent_item.id)
+    assert [r.position for r in children] == [0, 1, 2, 3]
+
+    # Delete the second item. This should shift Zed→1, Alpha→2.
+    item2 = _find_item_by_path(widget.tree, parent_path + [children[1].name])
+    pos = widget.tree.visualItemRect(item2).center()
+    widget._on_tree_context_menu(pos)
+
+    # DB: positions close up
+    children = widget.service.get_root_items() if parent_item is None else \
+        widget.service.get_folder_children(parent_item.id)
+    names_by_pos = [r.name for r in children]
+    assert names_by_pos == final_children
+    assert [r.position for r in children] == [0, 1, 2]
 
 
 def test_recreate_item(widget, create_tree_item, set_context_menu):
