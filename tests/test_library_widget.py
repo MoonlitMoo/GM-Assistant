@@ -47,13 +47,12 @@ def simple_db(session, make_folder, make_album, make_image):
     s2 = make_folder("Session 2", parent=None, position=1)
     # Session 1 folder and album
     sf1 = make_folder("Locations", parent=s1, position=0)
-    a1 = make_album(parent=s1, name="NPCs", position=0)
+    a1 = make_album(parent=s1, name="NPCs", position=1)
     # Session 2 folder and album
     sf2 = make_folder("Locations2", parent=s2, position=0)
-    a2 = make_album(parent=s2, name="NPCs2", position=0)
+    a2 = make_album(parent=s2, name="NPCs2", position=1)
     session.commit()
     return session
-
 
 @pytest.fixture()
 def widget(simple_db, qtbot, monkeypatch):
@@ -159,23 +158,33 @@ def test_add_folder_and_album(widget, create_tree_item):
     folder_item = create_tree_item(["My Folder"], "folder")
     assert isinstance(folder_item, FolderItem)
     assert folder_item.label == "My Folder"
-    assert widget.service.is_folder(folder_item.id)
+    folder_db = widget.service.get_folder(folder_item.id)
+    assert folder_db
+    assert folder_db.position == 2
 
     # Add Album at root
     album_item = create_tree_item(["My Album"], "album")
     assert isinstance(album_item, AlbumItem)
     assert album_item.label == "My Album"
     assert widget.service.is_album(album_item.id)
+    album_db = widget.service.get_album(album_item.id)
+    assert album_db
+    assert album_db.position == 3
 
     # Add Folder in subfolder
     folder_item = create_tree_item(["Session 1", "My Subfolder"], "folder")
     assert isinstance(folder_item, FolderItem)
-    assert widget.service.is_folder(folder_item.id)
+    folder_db = widget.service.get_folder(folder_item.id)
+    assert folder_db
+    assert folder_db.position == 2
 
     # Add Album in subfolder
     album_item = create_tree_item(["Session 2", "My Subalbum"], "album")
     assert isinstance(album_item, AlbumItem)
-    assert widget.service.is_album(album_item.id)
+    album_db = widget.service.get_album(album_item.id)
+    assert album_db
+    assert album_db.position == 2
+
 
 def test_root_protected_from_delete(widget, monkeypatch):
     root = widget.tree.topLevelItem(0)
