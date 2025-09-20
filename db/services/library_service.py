@@ -262,7 +262,7 @@ class LibraryService:
             c = s.get(Image, image_id)
             if not c:
                 return
-            c.label = new_name
+            c.caption = new_name
 
     def move_node(self, target_id: int, target_type: str, new_parent_id: int, position: Optional[int]) -> None:
         """ We shift the target to the new parent and set the position.

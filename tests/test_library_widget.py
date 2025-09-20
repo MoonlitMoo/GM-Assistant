@@ -575,17 +575,21 @@ def test_reorder_noop_when_empty(widget, make_album_with_images):
     assert after_order == before_order
 
 
-def test_remove_single_image_repacks_positions(widget, make_album_with_images):
+def test_remove_single_image_repacks_positions(widget, set_context_menu, make_album_with_images):
     """Removing an image from an album drops only the association, repacks positions, and keeps Image/ImageData."""
+    # Get initial album setup
     album = make_album_with_images(["TestAlbum"], n=3)
-    # Sanity: positions 0,1,2
+    album.setExpanded(True)
     img_ids = _image_ordered_ids(widget, album.id)
 
     # Remove the middle image from the album
-    to_remove = img_ids[1]
-    # association-only remove (positions re-packed)
-    widget.service.remove_images_from_album(album.id, [to_remove])
+    set_context_menu("Delete")
+    image_item = _find_item_by_path(widget.tree, ["TestAlbum", "img_1"])
+    pos_folder = widget.tree.visualItemRect(image_item).center()
+    widget._on_tree_context_menu(pos_folder)
 
+    # Image item gone
+    assert _find_item_by_path(widget.tree, ["TestAlbum", "img_1"]) is None
     # Association rows: now 2, positions 0..1
     posmap_after = _image_pos_map(widget, album.id)
     assert len(posmap_after) == 2
@@ -596,21 +600,24 @@ def test_remove_single_image_repacks_positions(widget, make_album_with_images):
     assert list(_image_pos_map(widget, album.id).keys()) == kept
 
 
-
-def test_remove_image_deletes_orphans(widget, make_album_with_images, make_album):
+def test_remove_image_deletes_orphans(widget, set_context_menu, make_album_with_images, make_album):
     # Setup: one album with 2 images
     album = make_album_with_images(["TestAlbum"], n=2)
-    img_orphan, img_keep = _image_ordered_ids(widget, album.id)
+    album.setExpanded(True)
+    img_keep, img_orphan = _image_ordered_ids(widget, album.id)
 
     # Also link img_keep to a second album to ensure it is NOT orphaned
-    album2 = make_album(parent=None, name="TestAlbum2", position=1)
-    with widget.service.db.session() as s:
-        s.add(AlbumImage(album_id=album2.id, image_id=img_keep, position=0))
-        s.flush()
+    album2 = make_album_with_images(["TestAlbum2"], n=1)
 
     # Act: remove both from the first album, with orphan cleanup enabled
-    widget.service.remove_images_from_album(album.id, [img_orphan, img_keep])
+    set_context_menu("Delete")
+    for i in range(album.childCount(), -1, -1):
+        pos_image = widget.tree.visualItemRect(album.child(i)).center()
+        widget._on_tree_context_menu(pos_image)
 
+    # Assert: No album UI elements for first, second still exist
+    assert album.childCount() == 0
+    assert album2.childCount() == 1
     # Assert: orphan image is fully gone; non-orphan remains
     with widget.service.db.session() as s:
         assert s.get(Image, img_orphan) is None
@@ -621,3 +628,17 @@ def test_remove_image_deletes_orphans(widget, make_album_with_images, make_album
     assert _image_ordered_ids(widget, album.id) == []
     # The second album still has img_kept linked
     assert _image_ordered_ids(widget, album2.id) == [img_keep]
+
+
+def test_rename_image(widget, set_context_menu, set_dialog_text, make_album_with_images):
+    album = make_album_with_images(["TestAlbum"], n=1)
+    album.setExpanded(True)
+
+    set_context_menu("Rename")
+    set_dialog_text("Renamed Image")
+    item = _find_item_by_path(widget.tree, ["TestAlbum", "img_0"])
+    pos_image = widget.tree.visualItemRect(item).center()
+    widget._on_tree_context_menu(pos_image)
+
+    assert item.label == "Renamed Image"
+    assert widget.service.get_image(item.id).caption == "Renamed Image"

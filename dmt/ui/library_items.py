@@ -327,8 +327,10 @@ class LibraryTree(QTreeWidget):
                 self.service.move_node(src.id, "folder", target_parent.id, clipped_target)
             elif isinstance(src, AlbumItem):
                 self.service.move_node(src.id, "album", target_parent.id, clipped_target)
+            elif isinstance(src, ImageItem):
+                self.service.move_image(src.id, target_parent.id, clipped_target)
             else:
-                raise NotImplementedError(f"Not implemented {type(src)} drag and drop.")
+                raise ValueError(f"Unknown item {type(src)}")
 
             # If we are inserting "below", and have multiple items, advance insertion point
             if target_parent is not None and indicator == QAbstractItemView.BelowItem:

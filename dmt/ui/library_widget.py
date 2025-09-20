@@ -155,10 +155,6 @@ class LibraryWidget(QWidget):
         if item is self.tree.visible_root():
             return
 
-        # Ignore Image context menu for now
-        if isinstance(item, ImageItem):
-            return
-
         # Validation passed, create the menu
         menu = QMenu(self)
         act_rename = menu.addAction("Rename")
@@ -186,8 +182,10 @@ class LibraryWidget(QWidget):
         elif isinstance(item, AlbumItem):
             self.service.rename_album(item.id, new_name)
         elif isinstance(item, ImageItem):
-            raise NotImplementedError("Haven't yet implemented rename image function.")
-
+            self.service.rename_image(item.id, new_name)
+            self.albumSelected.emit(self._current_album_item())
+        else:
+            raise ValueError(f"Unknown type {type(item)}")
         # Update UI text
         item.setText(COL_LABEL, new_name)
 
@@ -200,8 +198,10 @@ class LibraryWidget(QWidget):
             self.service.delete_album(item.id, hard=True)
 
         elif isinstance(item, ImageItem):
-            raise NotImplementedError("Haven't implemented delete for images.")
-
+            self.service.remove_images_from_album(item.parent().id, [item.id])
+            self.albumSelected.emit(self._current_album_item())
+        else:
+            raise ValueError(f"Unknown type {type(item)}.")
         # Finally, remove from UI
         parent = item.parent() or self.tree.invisibleRootItem()
         parent.removeChild(item)
@@ -244,50 +244,3 @@ class LibraryWidget(QWidget):
             album_item.addChild(ImageItem(*img))
 
         album_item.setExpanded(True)
-
-    def remove_images_from_current_album(self, paths: list[str]) -> None:
-        """ Remove any ImageItem whose .path is in `paths` from selected album. """
-        album = self._current_album_item()
-        if not album or not paths:
-            return
-
-        for i in range(album.childCount()):
-            image: ImageItem = album.child(i)
-            if image.path in paths:
-                album.removeChild(image)
-
-        self.save_library()
-
-    def reorder_current_album_images(self, new_paths_in_order: list[str]) -> None:
-        """Reorder the selected album’s images to match `new_paths_in_order`."""
-        item = self._current_album_item()
-        if not item:
-            return
-        album: AlbumItem = item.data(0, Qt.UserRole)["ref"]
-        # remap model
-        path_to_img = {img.path: img for img in album}
-        album._items = [path_to_img[p] for p in new_paths_in_order if p in path_to_img]
-
-        # rebuild UI children in the same order
-        # collect existing children
-        rows = []
-        for i in range(item.childCount()):
-            rows.append(item.child(i))
-        # drop all
-        for ch in rows:
-            item.removeChild(ch)
-        # re-add in order (images first, any stray non-images later)
-        for p in new_paths_in_order:
-            # find original UI item for this path
-            for ch in rows:
-                ch_ref = (ch.data(0, Qt.UserRole) or {}).get("ref")
-                if isinstance(ch_ref, ImageItem) and ch_ref.path == p:
-                    item.addChild(ch)
-                    break
-        # append any non-image children back (shouldn't exist under album)
-        for ch in rows:
-            if ch.parent() is None:
-                item.addChild(ch)
-
-        item.setExpanded(True)
-        self.save_library()
