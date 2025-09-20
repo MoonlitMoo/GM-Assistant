@@ -80,6 +80,10 @@ class LibraryService:
         with self.db.session() as s:
             return s.get(Album, album_id)
 
+    def get_image(self, image_id: int):
+        with self.db.session() as s:
+            return s.get(Image, image_id)
+
     # ---------- Check -----------
     def is_folder(self, folder_id: int):
         """ Returns if folder exists """
@@ -214,6 +218,13 @@ class LibraryService:
                 return
             c.name = new_name
 
+    def rename_image(self, image_id: int, new_name: str) -> None:
+        with self.db.session() as s:
+            c = s.get(Image, image_id)
+            if not c:
+                return
+            c.caption = new_name
+
     def move_node(self, target_id: int, target_type: str, new_parent_id: int, position: Optional[int]) -> None:
         """ We shift the target to the new parent and set the position.
         Also updates position of new siblings, shifting old siblings down, new siblings up.
@@ -341,6 +352,22 @@ class LibraryService:
             else:
                 c.is_deleted = 1
 
+    def delete_image(self, image_id: int, hard: bool = False) -> None:
+        """
+        Delete or soft-delete a single Image.
+        hard=True: removes Image → cascades to ImageData and all AlbumImage links.
+        hard=False: marks Image as soft-deleted (kept in DB with is_deleted=1).
+        """
+        with self.db.session() as s:
+            img = s.get(Image, image_id)
+            if not img:
+                return
+            if hard:
+                s.delete(img)
+                s.flush()
+            else:
+                img.is_deleted = 1
+
     # ---------- internals ----------
     def _next_child_position(self, s: Session, parent_id: int) -> int:
         """ Gets position for a new child item in a folder. """
@@ -429,13 +456,6 @@ class LibraryService:
         return s.execute(q).scalar_one() + 1
 
     # -------- ImageTab --------
-    # ---- Thumbnails / Image bytes helpers ----
-    from sqlalchemy import select, delete
-    from sqlalchemy.orm import joinedload
-    from typing import Iterable, Optional
-
-    THUMB_PX = 256
-
     def get_image_thumb_bytes(self, image_id: int) -> Optional[bytes]:
         """Return the stored thumbnail bytes for an image; lazily synthesize from full bytes if missing."""
         with self.db.session() as s:
@@ -452,7 +472,7 @@ class LibraryService:
                 from io import BytesIO
                 with PILImage.open(BytesIO(row.bytes)) as im:
                     im = im.copy()
-                    im.thumbnail((THUMB_PX, THUMB_PX))
+                    im.thumbnail((256, 256))
                     buf = BytesIO()
                     im.save(buf, format="PNG")
                     tb = buf.getvalue()
@@ -476,17 +496,33 @@ class LibraryService:
                 return
             img.caption = caption
 
-    def remove_images_from_album(self, album_id: int, image_ids: Iterable[int]) -> None:
-        """Remove specific images from an album (doesn’t delete the images globally)."""
+    def remove_images_from_album(self, album_id: int, image_ids: Iterable[int], delete_orphans: bool = True) -> None:
+        """
+        Remove images from a single album. If hard=True, delete the Image rows entirely
+        (cascading to payload + all memberships). Otherwise, drop only the associations
+        in this album and repack positions to 0..N-1.
+        """
+        ids = list(dict.fromkeys(image_ids))  # de-dupe, keep order
+        if not ids:
+            return
+
+        # Association-only remove
         with self.db.session() as s:
             s.execute(
                 delete(AlbumImage)
-                .where(AlbumImage.album_id == album_id, AlbumImage.image_id.in_(list(image_ids)))
+                .where(AlbumImage.album_id == album_id, AlbumImage.image_id.in_(ids))
             )
-            # re-pack positions to 0..N-1
-            rows = s.execute(
-                select(AlbumImage).where(AlbumImage.album_id == album_id)
-            ).scalars().all()
+            # Repack remaining positions
+            rows = s.execute(select(AlbumImage).where(AlbumImage.album_id == album_id)).scalars().all()
             rows.sort(key=lambda r: r.position)
             for i, r in enumerate(rows):
                 r.position = i
+
+            if delete_orphans:
+                # Find images no longer linked to ANY album and delete them (hard)
+                orphan_ids = [iid for iid in ids
+                              if s.execute(select(AlbumImage).where(AlbumImage.image_id == iid)).first() is None]
+                for iid in orphan_ids:
+                    img = s.get(Image, iid)
+                    if img:
+                        self.delete_image(img.id, hard=True)

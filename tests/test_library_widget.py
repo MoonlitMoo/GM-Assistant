@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QInputDialog, QMessageBox, QAbstractItemView
 from sqlalchemy import select
 
 from db.manager import DatabaseManager
-from db.models import AlbumImage
+from db.models import AlbumImage, Image, ImageData
 from db.services.library_service import LibraryService
 from dmt.ui.library_items import FolderItem, AlbumItem
 from dmt.ui.library_widget import LibraryWidget
@@ -196,6 +196,14 @@ def _sibling_positions(service, parent_folder_id):
            [("album", al.name, al.position) for al in f.albums]
     kids.sort(key=lambda t: (t[2], 0 if t[0] == "folder" else 1, t[1]))
     return kids
+
+
+def _image_pos_map(widget, album_id):
+    return {i[0]: i[2] for i in widget.service.get_album_images(album_id)}
+
+
+def _image_ordered_ids(widget, album_id):
+    return [i[0] for i in widget.service.get_album_images(album_id)]
 
 
 # ---- Tests ----
@@ -533,11 +541,11 @@ def test_reorder_full_permutation_updates_positions(widget, make_album_with_imag
     album = make_album_with_images(["TestAlbum"], n=6)
 
     # Ids are first item in returned tuple
-    new_order = [i[0] for i in widget.service.get_album_images(album.id)]
+    new_order = _image_ordered_ids(widget, album.id)
     random.shuffle(new_order)
     widget.service.reorder_album_images(album.id, new_order)
 
-    posmap = {i[0]: i[2] for i in widget.service.get_album_images(album.id)}
+    posmap = _image_pos_map(widget, album.id)
     # Check that the position values have been assigned to the images
     assert [posmap[i] for i in new_order] == list(range(len(new_order)))
     # Check that the ids are returned in the correct order
@@ -547,16 +555,64 @@ def test_reorder_full_permutation_updates_positions(widget, make_album_with_imag
 def test_reorder_noop_when_same_order(widget, make_album_with_images):
     """Passing current order is a no-op."""
     album = make_album_with_images(["TestAlbum"], n=6)
-    before_order = [i[0] for i in widget.service.get_album_images(album.id)]
+    before_order = _image_ordered_ids(widget, album.id)
     widget.service.reorder_album_images(album.id, before_order)
-    after_order = [i[0] for i in widget.service.get_album_images(album.id)]
+    after_order = _image_ordered_ids(widget, album.id)
     assert after_order == before_order
 
 
 def test_reorder_noop_when_empty(widget, make_album_with_images):
     """Passing current order is a no-op."""
     album = make_album_with_images(["TestAlbum"], n=6)
-    before_order = [i[0] for i in widget.service.get_album_images(album.id)]
+    before_order = _image_ordered_ids(widget, album.id)
     widget.service.reorder_album_images(album.id, [])
-    after_order = [i[0] for i in widget.service.get_album_images(album.id)]
+    after_order = _image_ordered_ids(widget, album.id)
     assert after_order == before_order
+
+
+def test_remove_single_image_repacks_positions(widget, make_album_with_images):
+    """Removing an image from an album drops only the association, repacks positions, and keeps Image/ImageData."""
+    album = make_album_with_images(["TestAlbum"], n=3)
+    # Sanity: positions 0,1,2
+    img_ids = _image_ordered_ids(widget, album.id)
+
+    # Remove the middle image from the album
+    to_remove = img_ids[1]
+    # association-only remove (positions re-packed)
+    widget.service.remove_images_from_album(album.id, [to_remove])
+
+    # Association rows: now 2, positions 0..1
+    posmap_after = _image_pos_map(widget, album.id)
+    assert len(posmap_after) == 2
+    assert sorted(posmap_after.values()) == [0, 1]
+
+    # Ordering by position should equal [first_kept, last_kept]
+    kept = [img_ids[0], img_ids[2]]
+    assert list(_image_pos_map(widget, album.id).keys()) == kept
+
+
+
+def test_remove_image_deletes_orphans(widget, make_album_with_images, make_album):
+    # Setup: one album with 2 images
+    album = make_album_with_images(["TestAlbum"], n=2)
+    img_orphan, img_keep = _image_ordered_ids(widget, album.id)
+
+    # Also link img_keep to a second album to ensure it is NOT orphaned
+    album2 = make_album(parent=None, name="TestAlbum2", position=1)
+    with widget.service.db.session() as s:
+        s.add(AlbumImage(album_id=album2.id, image_id=img_keep, position=0))
+        s.flush()
+
+    # Act: remove both from the first album, with orphan cleanup enabled
+    widget.service.remove_images_from_album(album.id, [img_orphan, img_keep])
+
+    # Assert: orphan image is fully gone; non-orphan remains
+    with widget.service.db.session() as s:
+        assert s.get(Image, img_orphan) is None
+        assert s.get(ImageData, img_orphan) is None
+        assert s.get(Image, img_keep) is not None
+        assert s.get(ImageData, img_keep) is not None
+    # First album is now empty
+    assert _image_ordered_ids(widget, album.id) == []
+    # The second album still has img_kept linked
+    assert _image_ordered_ids(widget, album2.id) == [img_keep]
