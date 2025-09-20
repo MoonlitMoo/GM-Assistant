@@ -23,7 +23,7 @@ class LibraryWidget(QWidget):
     - imagesDropped(paths: List[str], target_collection_id: str)
     """
 
-    albumSelected = Signal(str, list)
+    albumSelected = Signal(AlbumItem)
     imagesDropped = Signal(list, str)
 
     def __init__(self, service: LibraryService, parent=None) -> None:
@@ -212,10 +212,10 @@ class LibraryWidget(QWidget):
             return
         # Trigger signal for album or image.
         if isinstance(cur, AlbumItem):
-            self.albumSelected.emit(cur.label, [cur.child(i) for i in range(cur.childCount())])
+            self.albumSelected.emit(cur)
         if isinstance(cur, ImageItem):
             cur = cur.parent()
-            self.albumSelected.emit(cur.label, [cur.child(i) for i in range(cur.childCount())])
+            self.albumSelected.emit(cur)
 
     # --- Album helpers to utilise in the image tab (operate on the *currently selected* album) ---
     def _current_album_item(self) -> AlbumItem | None:

@@ -4,7 +4,7 @@ import mimetypes
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Sequence, Optional, Iterable
-from sqlalchemy import select, func, update, union_all
+from sqlalchemy import select, func, update, union_all, delete
 from sqlalchemy.orm import Session
 from PIL import Image as PILImage
 
@@ -259,6 +259,52 @@ class LibraryService:
             f.parent_id = new_parent_id
             f.position = insert_pos
 
+    def move_image(self, image_id: int, new_album_id: int, position: Optional[int] = None) -> None:
+        """Move one image to a new album (or reorder within the same album), preserving sibling positions.
+        Same as move_node but shifted since images stored differently.
+
+        Parameters
+        ----------
+        image_id : int
+            The image to shift
+        new_album_id : int
+            Destination album
+        position : int
+            Position in album to put.
+        """
+        with self.db.session() as s:
+            # fetch the association row; image belongs to exactly one album via AlbumImage
+            ai = s.execute(
+                select(AlbumImage).where(AlbumImage.image_id == image_id)
+            ).scalar_one_or_none()
+            if ai is None:
+                return
+
+            old_album_id = ai.album_id
+            old_pos = ai.position
+
+            # normalize target position bounds using current counts
+            def _album_size(album_id: int) -> int:
+                q = select(func.count()).select_from(AlbumImage).where(AlbumImage.album_id == album_id)
+                return s.execute(q).scalar_one()
+
+            if new_album_id == old_album_id:
+                # Reorder within same album
+                size = _album_size(old_album_id)
+                max_pos = max(0, size - 1)
+                new_pos = old_pos if position is None else max(0, min(position, max_pos))
+                if new_pos != old_pos:
+                    self._ai_reorder_within_album(s, old_album_id, old_pos, new_pos)
+                    ai.position = new_pos
+                return
+
+            self._ai_shift_down_after(s, old_album_id, old_pos)
+            size_dest = _album_size(new_album_id)
+            insert_pos = size_dest if position is None else max(0, min(position, size_dest))
+            self._ai_shift_up_from(s, new_album_id, insert_pos)
+            ai.album_id = new_album_id
+            ai.position = insert_pos
+
     def reorder_album_images(self, album_id: int, ordered_image_ids: Sequence[int]) -> None:
         with self.db.session() as s:
             rows = s.execute(select(AlbumImage)
@@ -337,8 +383,110 @@ class LibraryService:
             s.execute(update(Album).where(Album.parent_id == parent_id,
                                           Album.position >= new_pos, Album.position < old_pos)
                       .values(position=Album.position + 1))
+
+    def _ai_shift_up_from(self, s: Session, album_id: int, from_pos: int) -> None:
+        """Make room starting at from_pos in AlbumImage: positions >= from_pos → +1."""
+        s.execute(
+            update(AlbumImage)
+            .where(AlbumImage.album_id == album_id, AlbumImage.position >= from_pos)
+            .values(position=AlbumImage.position + 1)
+        )
+
+    def _ai_shift_down_after(self, s: Session, album_id: int, from_pos: int) -> None:
+        """Close gap after from_pos in AlbumImage: positions > from_pos → -1."""
+        s.execute(
+            update(AlbumImage)
+            .where(AlbumImage.album_id == album_id, AlbumImage.position > from_pos)
+            .values(position=AlbumImage.position - 1)
+        )
+
+    def _ai_reorder_within_album(self, s: Session, album_id: int, old_pos: int, new_pos: int) -> None:
+        """Shift a contiguous block within the same album to move one item old_pos → new_pos."""
+        if new_pos == old_pos:
+            return
+        if new_pos > old_pos:
+            # moving down: items in (old_pos, new_pos] shift up (-1)
+            s.execute(
+                update(AlbumImage)
+                .where(AlbumImage.album_id == album_id,
+                       AlbumImage.position > old_pos,
+                       AlbumImage.position <= new_pos)
+                .values(position=AlbumImage.position - 1)
+            )
+        else:
+            # moving up: items in [new_pos, old_pos) shift down (+1)
+            s.execute(
+                update(AlbumImage)
+                .where(AlbumImage.album_id == album_id,
+                       AlbumImage.position >= new_pos,
+                       AlbumImage.position < old_pos)
+                .values(position=AlbumImage.position + 1)
+            )
     def _next_album_image_position(self, s: Session, album_id: int) -> int:
         q = select(func.coalesce(func.max(AlbumImage.position), -1)).where(
             AlbumImage.album_id == album_id
         )
         return s.execute(q).scalar_one() + 1
+
+    # -------- ImageTab --------
+    # ---- Thumbnails / Image bytes helpers ----
+    from sqlalchemy import select, delete
+    from sqlalchemy.orm import joinedload
+    from typing import Iterable, Optional
+
+    THUMB_PX = 256
+
+    def get_image_thumb_bytes(self, image_id: int) -> Optional[bytes]:
+        """Return the stored thumbnail bytes for an image; lazily synthesize from full bytes if missing."""
+        with self.db.session() as s:
+            row = s.execute(
+                select(ImageData)
+                .where(ImageData.image_id == image_id)
+            ).scalar_one_or_none()
+            if row is None:
+                return None
+            if row.thumb_bytes:
+                return row.thumb_bytes
+            # Fallback: build a small PNG thumb from full bytes (stored back for next time)
+            if row.bytes:
+                from io import BytesIO
+                with PILImage.open(BytesIO(row.bytes)) as im:
+                    im = im.copy()
+                    im.thumbnail((THUMB_PX, THUMB_PX))
+                    buf = BytesIO()
+                    im.save(buf, format="PNG")
+                    tb = buf.getvalue()
+                row.thumb_bytes = tb
+                return tb
+            return None
+
+    def get_image_full_bytes(self, image_id: int) -> Optional[bytes]:
+        """Return original bytes if present."""
+        with self.db.session() as s:
+            row = s.execute(
+                select(ImageData.bytes)
+                .where(ImageData.image_id == image_id)
+            ).scalar_one_or_none()
+            return row
+
+    def set_image_caption(self, image_id: int, caption: str) -> None:
+        with self.db.session() as s:
+            img = s.get(Image, image_id)
+            if not img:
+                return
+            img.caption = caption
+
+    def remove_images_from_album(self, album_id: int, image_ids: Iterable[int]) -> None:
+        """Remove specific images from an album (doesn’t delete the images globally)."""
+        with self.db.session() as s:
+            s.execute(
+                delete(AlbumImage)
+                .where(AlbumImage.album_id == album_id, AlbumImage.image_id.in_(list(image_ids)))
+            )
+            # re-pack positions to 0..N-1
+            rows = s.execute(
+                select(AlbumImage).where(AlbumImage.album_id == album_id)
+            ).scalars().all()
+            rows.sort(key=lambda r: r.position)
+            for i, r in enumerate(rows):
+                r.position = i

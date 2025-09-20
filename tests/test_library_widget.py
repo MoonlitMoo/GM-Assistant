@@ -1,3 +1,4 @@
+import random
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -5,8 +6,10 @@ import pytest
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QAbstractItemView
+from sqlalchemy import select
 
 from db.manager import DatabaseManager
+from db.models import AlbumImage
 from db.services.library_service import LibraryService
 from dmt.ui.library_items import FolderItem, AlbumItem
 from dmt.ui.library_widget import LibraryWidget
@@ -118,6 +121,25 @@ def create_tree_item(monkeypatch, widget, set_dialog_text):
 
 
 @pytest.fixture()
+def make_album_with_images(widget, create_tree_item, make_png):
+    """Create an empty album, add n images via service.add_images_from_paths, return album."""
+    # Create a parent folder+album directly using models to keep this file focused on reordering
+    from db.models import Folder, Album  # lazy import to avoid circulars in test discovery
+    service = widget.service
+
+    def _make_filled_album(path: list, n: int = 5):
+        album = create_tree_item(path, "album")
+
+        created = []
+        for i in range(n):
+            created.append(make_png(f"img_{i}"))
+        service.add_images_from_paths(album.id, created)
+        return album
+
+    return _make_filled_album
+
+
+@pytest.fixture()
 def set_context_menu(monkeypatch):
     """ Sets the context menu option to return the given decision. """
     import dmt.ui.library_widget as lw
@@ -177,7 +199,6 @@ def _sibling_positions(service, parent_folder_id):
 
 
 # ---- Tests ----
-
 def test_add_folder_and_album(widget, create_tree_item):
     # Add Folder at root
     folder_item = create_tree_item(["My Folder"], "folder")
@@ -293,7 +314,7 @@ def test_reorder_within_same_parent_updates_positions(widget):
     sess1_db = widget.service.get_folder(sess1.id)
     assert [(k, o.name, p) for k, o, p in sess1_db.children] == [
         ("folder", "Locations", 0),
-        ("album",  "NPCs",      1),
+        ("album", "NPCs", 1),
     ]
 
     # Move Locations (pos 0) to the end (pos 1) within same parent
@@ -428,6 +449,7 @@ def test_catch_illegal_move(widget, src_path, dst_path):
     assert not widget.tree._handle_item_movement([src_item], dst_item, QAbstractItemView.OnItem)
 
 
+# --------- Image tests ---------
 def test_ui_add_single_image_to_album(widget, make_png):
     """Add one file via the UI call and verify DB rows + UI node."""
     # Pick the existing album: ["Session 1", "NPCs"] from simple_db
@@ -503,3 +525,38 @@ def test_ui_add_images_appends_after_existing(widget, make_png):
     labels = [album_item.child(i).text(0) for i in range(album_item.childCount())]
     assert "second" in labels and "third" in labels
     assert album_item.isExpanded()
+
+
+def test_reorder_full_permutation_updates_positions(widget, make_album_with_images):
+    """A full permutation sets positions to contiguous 0..N-1 in the given order."""
+    # Set up album with images at positions 0..N-1
+    album = make_album_with_images(["TestAlbum"], n=6)
+
+    # Ids are first item in returned tuple
+    new_order = [i[0] for i in widget.service.get_album_images(album.id)]
+    random.shuffle(new_order)
+    widget.service.reorder_album_images(album.id, new_order)
+
+    posmap = {i[0]: i[2] for i in widget.service.get_album_images(album.id)}
+    # Check that the position values have been assigned to the images
+    assert [posmap[i] for i in new_order] == list(range(len(new_order)))
+    # Check that the ids are returned in the correct order
+    assert [i for i in posmap.keys()] == new_order
+
+
+def test_reorder_noop_when_same_order(widget, make_album_with_images):
+    """Passing current order is a no-op."""
+    album = make_album_with_images(["TestAlbum"], n=6)
+    before_order = [i[0] for i in widget.service.get_album_images(album.id)]
+    widget.service.reorder_album_images(album.id, before_order)
+    after_order = [i[0] for i in widget.service.get_album_images(album.id)]
+    assert after_order == before_order
+
+
+def test_reorder_noop_when_empty(widget, make_album_with_images):
+    """Passing current order is a no-op."""
+    album = make_album_with_images(["TestAlbum"], n=6)
+    before_order = [i[0] for i in widget.service.get_album_images(album.id)]
+    widget.service.reorder_album_images(album.id, [])
+    after_order = [i[0] for i in widget.service.get_album_images(album.id)]
+    assert after_order == before_order
