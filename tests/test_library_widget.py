@@ -1,10 +1,11 @@
+import hashlib
 import random
 from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QImage
+from PySide6.QtGui import QImage, QColor
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QAbstractItemView
 from sqlalchemy import select
 
@@ -96,7 +97,11 @@ def set_dialog_text(monkeypatch):
 def make_png(tmp_path):
     def _make_png(name="im", w=16, h=10):
         img = QImage(QSize(w, h), QImage.Format.Format_ARGB32)
-        img.fill(Qt.GlobalColor.green)  # any solid color
+        # Stable colour derived from name to make unique.
+        hval = hashlib.sha256(name.encode("utf-8")).digest()
+        r, g, b = hval[0], hval[1], hval[2]
+        color = QColor(r, g, b)
+        img.fill(color)
         out = Path(tmp_path) / f"{name}.png"
         img.save(str(out), "PNG")
         return str(out)
@@ -129,11 +134,11 @@ def make_album_with_images(widget, create_tree_item, make_png):
 
     def _make_filled_album(path: list, n: int = 5):
         album = create_tree_item(path, "album")
-
+        assert _select_by_path(widget.tree, path)
         created = []
         for i in range(n):
             created.append(make_png(f"img_{i}"))
-        service.add_images_from_paths(album.id, created)
+        widget.add_images_to_current_album(created)
         return album
 
     return _make_filled_album

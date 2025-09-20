@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import mimetypes
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 from typing import Literal, Sequence, Optional, Iterable
 from sqlalchemy import select, func, update, union_all, delete
@@ -174,21 +176,57 @@ class LibraryService:
         """
         results = []
         with self.db.session() as s:
-            # prefetch next position once and increment locally for speed
-            base_pos = self._next_album_image_position(s, album_id)
-            next_pos = base_pos
+            # Prefetch base position once; we’ll append sequentially.
+            next_pos = self._next_album_image_position(s, album_id)
+
             for p in paths:
                 p_str = str(p)
-                caption = Path(p_str).stem
-                full_bytes, w, h, fmt, thumb_bytes, thumb_fmt = self._read_image_and_thumb(p_str)
+                caption_from_path = Path(p_str).stem
+
+                # Read raw bytes once; hash immediately (cheap) before any decoding.
+                with open(p_str, "rb") as fh:
+                    full_bytes = fh.read()
+                sha = hashlib.sha256(full_bytes).hexdigest()
+
+                # Try to reuse existing image by content hash
+                existing = s.execute(
+                    select(Image).where(Image.hash_sha256 == sha)
+                ).scalar_one_or_none()
+
+                if existing is not None:
+                    # Avoid duplicate association in the same album
+                    already_linked = s.execute(
+                        select(AlbumImage)
+                        .where(AlbumImage.album_id == album_id,
+                               AlbumImage.image_id == existing.id)
+                    ).first() is not None
+
+                    if not already_linked:
+                        s.add(AlbumImage(album_id=album_id, image_id=existing.id, position=next_pos))
+                        results.append((existing.id, existing.caption or caption_from_path, next_pos))
+                        next_pos += 1
+                    continue
+
+                # New image → decode once to get dims + make thumbnail
+                with PILImage.open(p_str) as im:
+                    w, h = im.size
+                    fmt = (im.format or "PNG").upper()
+                    # Build thumbnail bytes (PNG)
+                    im_copy = im.copy()
+                    im_copy.thumbnail((256, 256))
+                    buf = BytesIO()
+                    im_copy.save(buf, format="PNG")
+                    thumb_bytes = buf.getvalue()
+                    thumb_fmt = "PNG"
+
                 mime = self._guess_mime(p_str, f"image/{fmt.lower()}")
 
                 img = Image(
-                    caption=caption, mime_type=mime, width_px=w, height_px=h,
-                    bytes_size=len(full_bytes), has_data=1,
+                    caption=caption_from_path, mime_type=mime, width_px=w, height_px=h,
+                    bytes_size=len(full_bytes), has_data=1, hash_sha256=sha,
                 )
                 s.add(img)
-                s.flush()
+                s.flush()  # need img.id
 
                 s.add(ImageData(
                     image_id=img.id,
@@ -199,8 +237,9 @@ class LibraryService:
                 ))
 
                 s.add(AlbumImage(album_id=album_id, image_id=img.id, position=next_pos))
-                results.append((img.id, caption, next_pos))
+                results.append((img.id, caption_from_path, next_pos))
                 next_pos += 1
+
         return results
 
     # ---------- Update / Move / Reorder ----------
@@ -223,7 +262,7 @@ class LibraryService:
             c = s.get(Image, image_id)
             if not c:
                 return
-            c.caption = new_name
+            c.label = new_name
 
     def move_node(self, target_id: int, target_type: str, new_parent_id: int, position: Optional[int]) -> None:
         """ We shift the target to the new parent and set the position.
