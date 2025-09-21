@@ -134,18 +134,6 @@ class ImagesTab(QWidget):
 
         self._reload_thumbs()
 
-    # def _on_images_dropped_to_tree(self, paths: List[str], target_collection_id: str) -> None:
-    #     if not self._current_album:
-    #         self.library.add_images_to_collection(target_collection_id, paths)
-    #         return
-    #     self.library.move_images_between_collections(
-    #         self._current_album.get("id", ""),
-    #         target_collection_id,
-    #         paths
-    #     )
-    #     if self._current_album.get("id") != target_collection_id:
-    #         self._reload_thumbs()
-
     # ----------------------- Thumbnails grid ----------------------------
     def _reload_thumbs(self) -> None:
         """ Resets the thumbnails using the currently selected album. """
@@ -230,15 +218,17 @@ class ImagesTab(QWidget):
 
     # ----------------------- Player controls -----------------------------
     def _send_to_player(self):
-        if not self._selected_path:
+        if self._selected_image_id is None:
             return
         mw = self.window()
         if hasattr(mw, "playerWindow"):
             if mw.playerWindow is None:
                 mw.open_player_window()
-            mw.playerWindow.set_image(self._selected_path)
-            mw.playerWindow.raise_()
-            mw.playerWindow.activateWindow()
+            fb = self._service.get_image_full_bytes(self._selected_image_id)
+            if fb:
+                mw.playerWindow.set_image_bytes(fb)
+                mw.playerWindow.raise_()
+                mw.playerWindow.activateWindow()
 
     def _fade_player(self) -> None:
         mw = self.window()
