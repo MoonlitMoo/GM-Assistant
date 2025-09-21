@@ -223,7 +223,11 @@ class LibraryWidget(QWidget):
         item = self.tree.currentItem()
         if not item:
             return None
-        return item if isinstance(item, AlbumItem) else None
+        if isinstance(item, AlbumItem):
+            return item
+        if isinstance(item, ImageItem):
+            return item.parent()
+        return None
 
     def get_current_album_images(self) -> list[ImageItem]:
         """ Return the ImageItem list for the selected album (model objects). """

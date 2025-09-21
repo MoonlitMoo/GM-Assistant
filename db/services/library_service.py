@@ -488,6 +488,7 @@ class LibraryService:
                        AlbumImage.position < old_pos)
                 .values(position=AlbumImage.position + 1)
             )
+
     def _next_album_image_position(self, s: Session, album_id: int) -> int:
         q = select(func.coalesce(func.max(AlbumImage.position), -1)).where(
             AlbumImage.album_id == album_id
@@ -544,7 +545,7 @@ class LibraryService:
         ids = list(dict.fromkeys(image_ids))  # de-dupe, keep order
         if not ids:
             return
-
+        imgs_to_delete = []
         # Association-only remove
         with self.db.session() as s:
             s.execute(
@@ -564,4 +565,7 @@ class LibraryService:
                 for iid in orphan_ids:
                     img = s.get(Image, iid)
                     if img:
-                        self.delete_image(img.id, hard=True)
+                        imgs_to_delete.append(img)
+
+        for img in imgs_to_delete:
+            self.delete_image(img.id, hard=True)
