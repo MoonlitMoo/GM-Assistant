@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from PySide6.QtCore import Qt, QSize, QMimeData, QPoint
-from PySide6.QtGui import QIcon, QPixmap, QDrag
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QWidget, QSplitter, QVBoxLayout, QLabel, QPushButton, QHBoxLayout,
-    QListWidget, QListWidgetItem, QTextEdit, QFileDialog, QMessageBox, QMenu, QInputDialog, QStyle
+    QListWidget, QListWidgetItem, QTextEdit, QFileDialog, QMessageBox, QStyle
 )
 
 from db.services.library_service import LibraryService
@@ -31,57 +31,10 @@ class ThumbnailList(QListWidget):
         self.setViewMode(QListWidget.IconMode)
         self.setIconSize(QSize(128, 128))
         self.setResizeMode(QListWidget.Adjust)
-        self.setDragDropMode(QListWidget.InternalMove)
-        self.setSelectionMode(QListWidget.ExtendedSelection)
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._on_context_menu)
+        self.setDragDropMode(QListWidget.NoDragDrop)
         self._on_reordered = on_reordered
-        # TODO: Wire to the UI
         self._on_rename = None
         self._on_remove = None
-
-    def set_handlers(self, on_rename, on_remove):
-        self._on_rename = on_rename
-        self._on_remove = on_remove
-
-    def dropEvent(self, event):
-        """Internal move → emit new order to parent for DB reorder."""
-        super().dropEvent(event)
-        image_ids_in_order = []
-        for i in range(self.count()):
-            it = self.item(i)
-            image_ids_in_order.append(it.data(Qt.UserRole))
-        self._on_reordered(image_ids_in_order)
-
-    def startDrag(self, supportedActions):
-        """Stub for cross-widget DnD: package selected image IDs."""
-        ids = [it.id for it in self.selectedItems()]
-        if not ids:
-            return
-        drag = QDrag(self)
-        mime = QMimeData()
-        # TODO: Wire LibraryWidget::dragEnterEvent/dropEvent to read MIME_IMAGE_IDS.
-        import json
-        mime.setData(self.MIME_IMAGE_IDS, json.dumps(ids).encode("utf-8"))
-        drag.setMimeData(mime)
-        drag.exec(Qt.MoveAction)
-
-    def _on_context_menu(self, pos: QPoint):
-        if self._on_rename is None or self._on_remove is None:
-            return
-        item = self.itemAt(pos)
-        if item is None:
-            return
-        menu = QMenu(self)
-        act_rename = menu.addAction("Rename caption…")
-        act_remove = menu.addAction("Remove from album")
-        chosen = menu.exec(self.viewport().mapToGlobal(pos))
-        if not chosen:
-            return
-        if chosen == act_rename:
-            self._on_rename(item)
-        elif chosen == act_remove:
-            self._on_remove([item])
 
 
 class ImagesTab(QWidget):
@@ -116,7 +69,6 @@ class ImagesTab(QWidget):
         right.addWidget(self._path_label)
 
         self._thumbs = ThumbnailList(on_reordered=self._on_reordered)
-        self._thumbs.set_handlers(self._rename_caption, self._remove_items_explicit)
         self._thumbs.itemClicked.connect(self._on_thumb_clicked)
         right.addWidget(self._thumbs)
 
@@ -133,10 +85,7 @@ class ImagesTab(QWidget):
         row_top = QHBoxLayout()
         btn_add = QPushButton("Add Images…")
         btn_add.clicked.connect(self._add_images)
-        btn_remove = QPushButton("Remove Selected")
-        btn_remove.clicked.connect(self._remove_selected)
         row_top.addWidget(btn_add)
-        row_top.addWidget(btn_remove)
         row_top.addStretch(1)
         bl.addLayout(row_top)
 
@@ -265,7 +214,6 @@ class ImagesTab(QWidget):
         if self._current_album_id is None or not ordered_image_ids:
             return
         self._service.reorder_album_images(self._current_album_id, ordered_image_ids)
-        # no need to re-query; our UI order is already correct
 
     # ----------------------- Buttons: add/remove -------------------------
     def _add_images(self) -> None:
@@ -277,31 +225,7 @@ class ImagesTab(QWidget):
         )
         if not files:
             return
-        self._service.add_images_from_paths(self._current_album_id, files)
-        self._reload_thumbs()
-
-    def _remove_selected(self) -> None:
-        items = self._thumbs.selectedItems()
-        if not items:
-            return
-        self._remove_items_explicit(items)
-
-    def _rename_caption(self, item: QListWidgetItem) -> None:
-        """Rename the DB image caption."""
-        image_id = item.data(Qt.UserRole)
-        old = item.data(Qt.UserRole + 1) or ""
-        new, ok = QInputDialog.getText(self, "Rename caption", "Caption:", text=old)
-        if not ok:
-            return
-        self._service.set_image_caption(image_id, new)
-        item.setText(new or f"Image {image_id}")
-        item.setData(Qt.UserRole + 1, new or "")
-
-    def _remove_items_explicit(self, items: List[QListWidgetItem]) -> None:
-        if not items or self._current_album_id is None:
-            return
-        image_ids = [it.data(Qt.UserRole) for it in items]
-        self._service.remove_images_from_album(self._current_album_id, image_ids)
+        self.library.add_images_to_current_album(files)
         self._reload_thumbs()
 
     # ----------------------- Player controls -----------------------------
