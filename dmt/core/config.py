@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from PySide6.QtCore import QSettings
 
 # QSettings scope
-ORG = "None"
+ORG = "PersonalApps"
 APP = "GM Assistant"
 
 
@@ -33,7 +33,6 @@ class Config(BaseModel):
 
 
 def _s() -> QSettings:
-    # QCoreApplication.setOrganizationName/ApplicationName should be called in app.py first.
     return QSettings(ORG, APP)
 
 
@@ -57,7 +56,7 @@ def load_config() -> Config:
     s = _s()
 
     # --- General ---
-    s.beginGroup("general")
+    s.beginGroup("General")
     image_roots = s.value("imageRoots", [], list)
     player_display = s.value("playerDisplay", 0, int)
     fit_mode = s.value("fitMode", "fit", str)

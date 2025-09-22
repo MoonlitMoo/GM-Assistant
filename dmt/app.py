@@ -12,6 +12,7 @@ from .ui.main_window import MainWindow
 
 # Your DatabaseManager from earlier (engine + sessions, WAL PRAGMAs)
 from db.manager import DatabaseManager
+from .ui.player_window.display_state import DisplayState, parse_scale_mode
 
 DEFAULT_DB = Path.home() / "GMAssistant" / "library.db"
 
@@ -35,6 +36,18 @@ def main() -> None:
     # Load user prefs (QSettings-backed)
     cfg = load_config()
 
+    # Create necessary states
+    display_state = DisplayState(
+        scale_mode=parse_scale_mode(cfg.fitMode),
+        windowed=cfg.playerWindowed,
+        display_index=cfg.playerDisplay,
+        on_persist=lambda d: (
+            setattr(cfg, "fitMode", d["fitMode"]),
+            setattr(cfg, "playerWindowed", d["playerWindowed"]),
+            setattr(cfg, "playerDisplay", d["playerDisplay"])
+        )
+    )
+
     # Open database (last used or default) and remember it
     db = DatabaseManager()
     db_path = _choose_initial_db_path()
@@ -43,13 +56,16 @@ def main() -> None:
     set_last_db_path(db_path)
 
     # Construct and show the main window (pass db so widgets can use it)
-    win = MainWindow(cfg, dbｍ=db)
+    win = MainWindow(cfg=cfg, dbm=db, display_state=display_state)
     win.show()
 
     # Persist settings on quit
     def persist():
-        save_config(win.config)
-        # Optionally ensure we store whatever DB the app ended with:
+        snap = display_state.snapshot()
+        cfg.fitMode = snap["fitMode"]
+        cfg.playerWindowed = snap["playerWindowed"]
+        cfg.playerDisplay = snap["playerDisplay"]
+        save_config(cfg)
         if db.path:
             set_last_db_path(db.path)
 

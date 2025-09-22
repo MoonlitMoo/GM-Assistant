@@ -15,19 +15,21 @@ from db.manager import DatabaseManager
 from .player_window import PlayerWindow
 from .image_tab import ImagesTab
 from .initiative_tab import InitiativeTab
+from .player_window.display_state import DisplayState
 from .settings_tab import SettingsTab
 
 
 class MainWindow(QMainWindow):
     """ The main window for the GM to use the tools from. """
 
-    def __init__(self, cfg: Config, dbm: DatabaseManager) -> None:
+    def __init__(self, cfg: Config, dbm: DatabaseManager, display_state: DisplayState) -> None:
         super().__init__()
         self.setWindowTitle("DM Assistant (v1.0 skeleton)")
         self.resize(1200, 800)
 
         self.config = cfg
         self.dbm = dbm
+        self.display_state: DisplayState = display_state
         self.playerWindow: PlayerWindow | None = None
 
         self._tabs = QTabWidget()
@@ -36,7 +38,7 @@ class MainWindow(QMainWindow):
         # Tabs
         self.images_tab = ImagesTab(self.config, LibraryService(self.dbm))
         self.initiative_tab = InitiativeTab(self.config)
-        self.settings_tab = SettingsTab(self.config, on_config_changed=self._apply_settings)
+        self.settings_tab = SettingsTab(self.config, self.display_state.set_windowed)
 
         self._tabs.addTab(self.images_tab, "Images")
         self._tabs.addTab(self.initiative_tab, "Initiative")
@@ -55,15 +57,10 @@ class MainWindow(QMainWindow):
         act_close_player.triggered.connect(self.close_player_window)
         tb.addAction(act_close_player)
 
-    def _apply_settings(self) -> None:
-        """ Called when settings change; for now, just ensure player window respects windowed/fullscreen """
-        if self.playerWindow is not None:
-            self.playerWindow.apply_config(self.config)
-
     def open_player_window(self) -> None:
         """ Create the player window. """
         if self.playerWindow is None:
-            self.playerWindow = PlayerWindow(self.config)
+            self.playerWindow = PlayerWindow(self.display_state)
 
     def close_player_window(self) -> None:
         """ Destroy the player window. """

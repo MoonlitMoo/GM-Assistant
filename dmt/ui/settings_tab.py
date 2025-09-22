@@ -17,10 +17,10 @@ from ..core.config import Config
 class SettingsTab(QWidget):
     """ Settings screen for all global options. """
 
-    def __init__(self, cfg: Config, on_config_changed=None) -> None:
+    def __init__(self, cfg: Config, _on_changed=None) -> None:
         super().__init__()
         self._cfg = cfg
-        self._on_changed = on_config_changed or (lambda: None)
+        self._on_changed = _on_changed or (lambda: None)
 
         root = QVBoxLayout(self)
 
@@ -38,5 +38,4 @@ class SettingsTab(QWidget):
         root.addStretch(1)
 
     def _update_player_windowed(self) -> None:
-        self._cfg.playerWindowed = self.chk_windowed.isChecked()
-        self._on_changed()
+        self._on_changed(self.chk_windowed.isChecked())
