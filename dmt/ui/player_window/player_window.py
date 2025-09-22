@@ -1,41 +1,42 @@
 from __future__ import annotations
-from enum import Enum
 
-from PySide6.QtCore import Qt, QTimer, QSize, QPropertyAnimation, QByteArray, Signal, QObject
-from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout, QToolButton, QMenu
-from PySide6.QtGui import QImage, QPixmap, QActionGroup, QAction
+from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QByteArray
+from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout
+from PySide6.QtGui import QImage, QPixmap
 
-from dmt.core.config import Config
-
-
-class ScaleMode(Enum):
-    FIT = "fit"  # letterbox, keep AR
-    FILL = "fill"  # cover, keep AR, crop overflow
-    STRETCH = "stretch"  # fill, ignore AR
-    ACTUAL = "actual"  # 1:1 pixels, centered
+from .display_state import ScaleMode, DisplayState
 
 
 class PlayerWindow(QWidget):
     """ Separate window that contains information for the players. """
 
-    def __init__(self, cfg: Config) -> None:
+    def __init__(self, display_state: DisplayState) -> None:
         super().__init__()
         self.setObjectName("PlayerWindow")
         self.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
-        self._cfg = cfg
 
+        # Rendering widget
         self._raw_backing_store = None
+        self._base_image = None
         self._image_label = QLabel()
         self._image_label.setAlignment(Qt.AlignCenter)
         self._image_label.setStyleSheet("background-color: black;")
         self._image_label.setScaledContents(False)
-
+        # Rendering modifiers
         self._scale_mode = ScaleMode.FIT
         self._base_image: QImage | None = None
         self._transform_mode = Qt.SmoothTransformation
         self._live_resize_timer = QTimer(self)
         self._live_resize_timer.setSingleShot(True)
         self._live_resize_timer.timeout.connect(self._render_scaled)
+
+        # Set up display state
+        self._display_state = display_state
+        self.set_scale_mode(self._display_state.scale_mode())
+        self._apply_window_mode(self._display_state.windowed())
+        # Subscribe to changes
+        self._display_state.scaleModeChanged.connect(self.set_scale_mode)
+        self._display_state.windowedChanged.connect(self._apply_window_mode)
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
@@ -44,22 +45,22 @@ class PlayerWindow(QWidget):
         self._fade = QPropertyAnimation(self._image_label, b"windowOpacity", self)
         self._fade.setDuration(300)
 
-        self.apply_config(cfg)
-
-    def apply_config(self, cfg: Config) -> None:
-        """Apply windowed vs fullscreen preference."""
-        self._cfg = cfg
-        if cfg.playerWindowed:
-            # Restore normal, resizable window
-            self.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.WindowSystemMenuHint |
-                                Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint)
+    # ------ DisplayState functions -------
+    def _apply_window_mode(self, windowed: bool):
+        if windowed:
+            self.setWindowFlags(Qt.Window | Qt.WindowTitleHint |
+                                Qt.WindowSystemMenuHint | Qt.WindowMinMaxButtonsHint |
+                                Qt.WindowCloseButtonHint)
             self.showNormal()
-            self.resize(1024, 768)  # only as a default first size
         else:
-            self.setWindowFlag(Qt.FramelessWindowHint, True)
+            self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
             self.showFullScreen()
 
-    # -------- Rendering --------
+    def set_scale_mode(self, mode: ScaleMode):
+        self._scale_mode = mode
+        self._render_scaled()
+
+    # -------- Rendering functions --------
     def set_image_qimage(self, img: QImage) -> None:
         """Set the base image (already decoded) and render."""
         self._base_image = img
@@ -175,11 +176,6 @@ class PlayerWindow(QWidget):
 
         self.set_image_qimage(img)
         return True
-
-    def set_scale_mode(self, mode: ScaleMode) -> None:
-        """Change scaling behavior and re-render."""
-        self._scale_mode = mode
-        self._render_scaled()
 
     def fade_out_in(self):
         self._fade.stop()
