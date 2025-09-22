@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self._tabs)
 
         # Tabs
-        self.images_tab = ImagesTab(self.config, LibraryService(self.dbm))
+        self.images_tab = ImagesTab(service=LibraryService(self.dbm), display_state=self.display_state)
         self.initiative_tab = InitiativeTab(self.config)
         self.settings_tab = SettingsTab(self.config, self.display_state.set_windowed)
 

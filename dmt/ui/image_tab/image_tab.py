@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from typing import List, Optional
 
 from PySide6.QtCore import Qt, QSize
@@ -11,7 +10,9 @@ from PySide6.QtWidgets import (
 )
 
 from db.services.library_service import LibraryService
-from dmt.core.config import Config
+from dmt.ui.player_window import DisplayState
+
+from .buttons import ScaleModeButton
 from .library_items import AlbumItem
 from .library_widget import LibraryWidget
 
@@ -45,9 +46,8 @@ class ImagesTab(QWidget):
       - Library: rename/delete on groups & collections
       - Thumbnails: rename caption / remove from collection
     """
-    def __init__(self, cfg: Config, service: LibraryService) -> None:
+    def __init__(self, service: LibraryService, display_state: DisplayState) -> None:
         super().__init__()
-        self._cfg = cfg
         self._service = service
 
         self._current_album_id: Optional[int] = None
@@ -86,6 +86,9 @@ class ImagesTab(QWidget):
         btn_add = QPushButton("Add Images…")
         btn_add.clicked.connect(self._add_images)
         row_top.addWidget(btn_add)
+        btn_scale = ScaleModeButton(parent=self)
+        btn_scale.modeChanged.connect(display_state.set_scale_mode)
+        row_top.addWidget(btn_scale)
         row_top.addStretch(1)
         bl.addLayout(row_top)
 
