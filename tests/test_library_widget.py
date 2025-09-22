@@ -4,16 +4,15 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize
 from PySide6.QtGui import QImage, QColor
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QAbstractItemView
-from sqlalchemy import select
 
 from db.manager import DatabaseManager
-from db.models import AlbumImage, Image, ImageData
+from db.models import Image, ImageData
 from db.services.library_service import LibraryService
-from dmt.ui.library_items import FolderItem, AlbumItem
-from dmt.ui.library_widget import LibraryWidget
+from dmt.ui.image_tab.library_items import FolderItem, AlbumItem
+from dmt.ui.image_tab.library_widget import LibraryWidget
 
 from tests.test_db import session, make_folder, make_album, make_image
 
@@ -129,7 +128,6 @@ def create_tree_item(monkeypatch, widget, set_dialog_text):
 def make_album_with_images(widget, create_tree_item, make_png):
     """Create an empty album, add n images via service.add_images_from_paths, return album."""
     # Create a parent folder+album directly using models to keep this file focused on reordering
-    from db.models import Folder, Album  # lazy import to avoid circulars in test discovery
     service = widget.service
 
     def _make_filled_album(path: list, n: int = 5):
@@ -147,7 +145,7 @@ def make_album_with_images(widget, create_tree_item, make_png):
 @pytest.fixture()
 def set_context_menu(monkeypatch):
     """ Sets the context menu option to return the given decision. """
-    import dmt.ui.library_widget as lw
+    import dmt.ui.image_tab.library_widget as lw
     def _set_menu(decision):
         monkeypatch.setattr(FakeContextMenu, "decision", decision)
         monkeypatch.setattr(lw, "QMenu", FakeContextMenu)
