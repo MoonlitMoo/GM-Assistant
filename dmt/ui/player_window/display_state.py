@@ -2,7 +2,6 @@ from enum import Enum
 from typing import Callable
 
 from PySide6.QtCore import QObject, Signal, QTimer
-from dmt.core.config import Config
 
 
 class ScaleMode(Enum):

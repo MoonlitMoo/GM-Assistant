@@ -102,7 +102,6 @@ class ImagesTab(QWidget):
         self._btn_send.clicked.connect(self._send_to_player)
 
         self._btn_fade = QPushButton("Fade")
-        self._btn_fade.clicked.connect(self._fade_player)
 
         self._btn_black = QPushButton("Blackout")
         self._btn_black.setEnabled(False)
@@ -232,8 +231,3 @@ class ImagesTab(QWidget):
                 mw.playerWindow.set_image_bytes(fb)
                 mw.playerWindow.raise_()
                 mw.playerWindow.activateWindow()
-
-    def _fade_player(self) -> None:
-        mw = self.window()
-        if hasattr(mw, "playerWindow") and mw.playerWindow is not None:
-            mw.playerWindow.fade_out_in()
