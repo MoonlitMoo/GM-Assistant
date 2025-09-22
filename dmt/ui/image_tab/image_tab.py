@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 from db.services.library_service import LibraryService
 from dmt.ui.player_window import DisplayState
 
-from .buttons import ScaleModeButton
+from .buttons import ScaleModeButton, BlackoutButton
 from .library_items import AlbumItem
 from .library_widget import LibraryWidget
 
@@ -49,6 +49,7 @@ class ImagesTab(QWidget):
     def __init__(self, service: LibraryService, display_state: DisplayState) -> None:
         super().__init__()
         self._service = service
+        self._display_state = display_state
 
         self._current_album_id: Optional[int] = None
         self._preview_pixmap: Optional[QPixmap] = None
@@ -87,7 +88,7 @@ class ImagesTab(QWidget):
         btn_add.clicked.connect(self._add_images)
         row_top.addWidget(btn_add)
         btn_scale = ScaleModeButton(parent=self)
-        btn_scale.modeChanged.connect(display_state.set_scale_mode)
+        btn_scale.modeChanged.connect(self._display_state.set_scale_mode)
         row_top.addWidget(btn_scale)
         row_top.addStretch(1)
         bl.addLayout(row_top)
@@ -98,13 +99,15 @@ class ImagesTab(QWidget):
 
         row_controls = QHBoxLayout()
         self._btn_send = QPushButton("Send to Player")
-        self._btn_send.setEnabled(False)
         self._btn_send.clicked.connect(self._send_to_player)
+        self._btn_send.setEnabled(False)
 
         self._btn_fade = QPushButton("Fade")
 
-        self._btn_black = QPushButton("Blackout")
-        self._btn_black.setEnabled(False)
+        self._btn_black = BlackoutButton(parent=self)
+        self._btn_black.toggled.connect(self._display_state.set_blackout)
+        self._btn_black.setChecked(True)
+
 
         row_controls.addWidget(self._btn_send)
         row_controls.addWidget(self._btn_fade)
@@ -184,6 +187,7 @@ class ImagesTab(QWidget):
             self._update_preview_scaled()
 
         self._btn_send.setEnabled(True)
+        self._btn_black.setEnabled(True)
 
     def _update_preview_scaled(self) -> None:
         if not self._preview_pixmap:
@@ -228,6 +232,8 @@ class ImagesTab(QWidget):
                 mw.open_player_window()
             fb = self._service.get_image_full_bytes(self._selected_image_id)
             if fb:
-                mw.playerWindow.set_image_bytes(fb)
+                mw.playerWindow.set_image_bytes(fb)\
+                # Remove blackout and update state
+                self._btn_black.setChecked(False)
                 mw.playerWindow.raise_()
                 mw.playerWindow.activateWindow()

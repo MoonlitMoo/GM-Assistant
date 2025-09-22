@@ -1,7 +1,7 @@
 from __future__ import annotations
 from PySide6.QtCore import Signal, QObject, Qt
 from PySide6.QtGui import QActionGroup, QAction
-from PySide6.QtWidgets import QToolButton, QMenu
+from PySide6.QtWidgets import QToolButton, QMenu, QPushButton
 
 from dmt.ui.player_window import ScaleMode
 
@@ -53,3 +53,27 @@ class ScaleModeButton(QToolButton):
         self.set_current_mode(mode)
         self.setText(f"Scale: {mode.value}")
         self.modeChanged.emit(mode)
+
+class BlackoutButton(QPushButton):
+    """A toggle button styled for blackout control."""
+
+    def __init__(self, parent=None):
+        super().__init__("Blackout", parent)
+        self.setCheckable(True)
+        self.setChecked(False)
+        self.setToolTip("Toggle blackout overlay")
+
+        self.setStyleSheet("""
+                    QPushButton {
+                        background-color: white;
+                        color: black;
+                        border: 1px solid #555;
+                        padding: 4px 10px;
+                        border-radius: 6px;
+                    }
+                    QPushButton:checked {
+                        background-color: black;
+                        color: white;
+                        border: 1px solid #222;
+                    }
+                """)

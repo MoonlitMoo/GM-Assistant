@@ -22,6 +22,7 @@ class PlayerWindow(QWidget):
         self._canvas.set_scale_mode(self._display_state.scale_mode())
         self._display_state.scaleModeChanged.connect(self._canvas.set_scale_mode)
         self._display_state.windowedChanged.connect(self._apply_window_mode)
+        self._display_state.blackoutChanged.connect(self._canvas.blackout)
 
         # Apply current window mode on start
         self._apply_window_mode(self._display_state.windowed())
@@ -44,8 +45,7 @@ class PlayerWindow(QWidget):
                 | Qt.WindowCloseButtonHint
             )
             self.showNormal()
-            if not self.isVisible() or self.size().isEmpty():
-                self.resize(1024, 768)
+            self.resize(1024, 768)
         else:
             screens = QGuiApplication.screens() or []
             idx = max(0, min(self._display_state.display_index(), len(screens) - 1))

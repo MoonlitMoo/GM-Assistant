@@ -27,6 +27,7 @@ def to_config_string(mode: ScaleMode) -> str:
 class DisplayState(QObject):
     # Signals
     scaleModeChanged = Signal(ScaleMode)
+    blackoutChanged = Signal(bool)
     windowedChanged = Signal(bool)
     displayIndexChanged = Signal(int)
 
@@ -37,6 +38,7 @@ class DisplayState(QObject):
         super().__init__(parent)
         self._scale_mode = scale_mode
         self._windowed = windowed
+        self._blackout = False
         self._display_index = display_index
 
         self._on_persist = on_persist
@@ -49,6 +51,7 @@ class DisplayState(QObject):
     # --- getters ---
     def scale_mode(self) -> ScaleMode: return self._scale_mode
     def windowed(self) -> bool: return self._windowed
+    def blackout(self) -> bool: return self._blackout
     def display_index(self) -> int: return self._display_index
 
     # --- setters (emit + schedule persist) ---
@@ -69,6 +72,10 @@ class DisplayState(QObject):
         self._display_index = idx
         self.displayIndexChanged.emit(idx)
         self._mark_dirty()
+
+    def set_blackout(self, on: bool):
+        self._blackout = on
+        self.blackoutChanged.emit(on)
 
     # --- persistence bridge ---
     def snapshot(self) -> dict:
