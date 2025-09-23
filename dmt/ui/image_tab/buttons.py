@@ -3,6 +3,7 @@ from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QPushButton, QComboBox
 
 from dmt.ui.player_window import ScaleMode
+from dmt.ui.player_window.display_state import TransitionMode
 
 
 class ScaleModeButton(QComboBox):
@@ -11,6 +12,21 @@ class ScaleModeButton(QComboBox):
     def __init__(self, initial=ScaleMode.FIT, parent=None):
         super().__init__(parent)
         for mode in ScaleMode:
+            self.addItem(mode.value.capitalize(), mode)
+        self.setCurrentIndex(self.findData(initial))
+        self.currentIndexChanged.connect(self._on_changed)
+
+    def _on_changed(self, idx):
+        mode = self.itemData(idx)
+        self.modeChanged.emit(mode)
+
+
+class TransitionModeButton(QComboBox):
+    modeChanged = Signal(TransitionMode)
+
+    def __init__(self, initial=TransitionMode.CROSSFADE, parent=None):
+        super().__init__(parent)
+        for mode in TransitionMode:
             self.addItem(mode.value.capitalize(), mode)
         self.setCurrentIndex(self.findData(initial))
         self.currentIndexChanged.connect(self._on_changed)

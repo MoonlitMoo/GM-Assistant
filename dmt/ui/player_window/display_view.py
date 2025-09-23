@@ -1,12 +1,12 @@
 from __future__ import annotations
 from typing import Optional, Collection
 
-from PySide6.QtCore import Qt, QByteArray, QVariantAnimation, QEasingCurve, QRectF
-from PySide6.QtGui import QImage, QPixmap, QPainter
+from PySide6.QtCore import Qt, QByteArray, QVariantAnimation, QEasingCurve, QPointF
+from PySide6.QtGui import QImage, QPixmap, QPainter, QTransform
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem
 
-from .display_state import ScaleMode
-
+from .display_state import ScaleMode, TransitionMode
+from .transitions import REGISTRY, TransitionAPI
 
 class BaseImageItem(QGraphicsPixmapItem):
     """ Bottom level image canvas. """
@@ -56,10 +56,6 @@ class DisplayView(QGraphicsView):
         self._blackout.setZValue(1000)
         scene.addItem(self._blackout)
 
-        # State
-        self._scale_mode: ScaleMode = ScaleMode.FIT
-        self._apply_scale_mode()
-
         # Blackout animation driver
         self._blackout_anim = QVariantAnimation(self)
         self._blackout_anim.setEasingCurve(QEasingCurve.InOutQuad)
@@ -82,6 +78,12 @@ class DisplayView(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.AnchorViewCenter)
         self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
 
+        # State
+        self._scale_mode: ScaleMode = ScaleMode.FIT
+        self._apply_scale_mode()
+        self._transition_mode: TransitionMode = TransitionMode.CROSSFADE
+        self._transition_running: bool = False
+
     # ---------- Public API (same names as before) ----------
     def set_scale_mode(self, mode: ScaleMode) -> None:
         if mode is self._scale_mode:
@@ -92,6 +94,12 @@ class DisplayView(QGraphicsView):
 
     def scale_mode(self) -> ScaleMode:
         return self._scale_mode
+
+    def set_transition_mode(self, mode: TransitionMode) -> None:
+        self._transition_mode = mode
+
+    def transition_mode(self) -> TransitionMode:
+        return self._transition_mode
 
     def configure_navigation(self, *, enable: bool, modes: Collection[ScaleMode] | None = None,
                              require_ctrl: bool = True, min_zoom: float = 0.25, max_zoom: float = 8.0) -> None:
@@ -104,13 +112,41 @@ class DisplayView(QGraphicsView):
         self._sync_nav_state()
 
     def set_image_qimage(self, img: QImage) -> None:
-        self._base.set_qimage(img)
-        # Scene rect tracks the image bounds
-        pm = self._base.pixmap()
-        r = QRectF(0, 0, pm.width(), pm.height()) if not pm.isNull() else QRectF()
-        self.scene().setSceneRect(r)
-        self._resize_overlays_to_scene()
-        self._apply_scale_mode()
+        pm_new = QPixmap.fromImage(img)
+
+        if self._base.pixmap().isNull() or self._transition_mode == TransitionMode.CUT:
+            self._base.setPixmap(pm_new)
+            self.scene().setSceneRect(0, 0, pm_new.width(), pm_new.height())
+            self._resize_overlays_to_scene()
+            self._apply_scale_mode()
+            return
+
+        if self._transition_running:
+            self._base.setPixmap(pm_new)
+            return
+        self._transition_running = True
+
+        def get_current(): return self._base
+        def set_current(new_item): self._base = new_item
+        def scene_w(): return float(self.sceneRect().width())
+        def scene_h(): return float(self.sceneRect().height())
+        def on_finish(): self._transition_running = False
+
+        api = TransitionAPI(
+            parent=self,
+            scene=self.scene(),
+            get_current=get_current,
+            set_current=set_current,
+            scene_width=scene_w,
+            scene_height=scene_h,
+            on_finish=on_finish,
+            grab_viewport=self._grab_viewport,
+            viewport_scene_topleft=self._viewport_scene_topleft,
+            prepare_new_under_overlay=self._prepare_new_under_overlay,
+        )
+
+        fn = REGISTRY.get(self._transition_mode) or REGISTRY[TransitionMode.CROSSFADE]
+        fn(api, pm_new, 260)
 
     def set_image_bytes(
         self,
@@ -205,6 +241,22 @@ class DisplayView(QGraphicsView):
         self.setDragMode(QGraphicsView.ScrollHandDrag if active else QGraphicsView.NoDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse if active else QGraphicsView.AnchorViewCenter)
         self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
+
+    def _grab_viewport(self) -> QPixmap:
+        return self.viewport().grab()
+
+    def _viewport_scene_topleft(self) -> QPointF:
+        return self.mapToScene(self.viewport().rect().topLeft())
+
+    def _prepare_new_under_overlay(self, pm_new: QPixmap) -> None:
+        """Swap to the NEW image and finalize layout *before* fading out the frozen overlay."""
+        self._base.setPixmap(pm_new)
+        # Finalize scene bounds to NEW content
+        self.scene().setSceneRect(0, 0, pm_new.width(), pm_new.height())
+        self._resize_overlays_to_scene()
+        self._base.setScale(1.0)
+        self._base.setPos(0, 0)
+        self._apply_scale_mode()
 
     # ---------- QGraphicsView overrides ----------
     def resizeEvent(self, ev):

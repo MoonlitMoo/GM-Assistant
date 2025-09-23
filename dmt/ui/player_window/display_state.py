@@ -3,6 +3,16 @@ from typing import Callable
 
 from PySide6.QtCore import QObject, Signal, QTimer
 
+class TransitionMode(Enum):
+    CUT ="cut"
+    CROSSFADE = "crossfade"
+    FADE_BLACK = "fade black"
+    SLIDE_LEFT = "slide left"
+    SLIDE_RIGHT = "slide right"
+    SLIDE_UP = "slide up"
+    SLIDE_DOWN = "slide down"
+    BLUR_DISSOLVE = "blur dissolve"
+
 
 class ScaleMode(Enum):
     FIT = "fit"
@@ -21,22 +31,21 @@ def parse_scale_mode(s: str) -> ScaleMode:
     }.get(s, ScaleMode.FIT)
 
 
-def to_config_string(mode: ScaleMode) -> str:
-    return mode.value
-
 class DisplayState(QObject):
     # Signals
-    scaleModeChanged = Signal(ScaleMode)
-    blackoutChanged = Signal(bool)
-    windowedChanged = Signal(bool)
     displayIndexChanged = Signal(int)
+    windowedChanged = Signal(bool)
+    blackoutChanged = Signal(bool)
+    scaleModeChanged = Signal(ScaleMode)
+    transitionModeChanged = Signal(TransitionMode)
 
-    def __init__(self, *, scale_mode: ScaleMode, windowed: bool, display_index: int,
+    def __init__(self, *, scale_mode: ScaleMode, transition_mode: TransitionMode, windowed: bool, display_index: int,
                  on_persist: Callable[[dict], None] | None = None, parent: QObject | None = None,
                  autosave_debounce_ms: int = 250,
     ):
         super().__init__(parent)
         self._scale_mode = scale_mode
+        self._transition_mode = transition_mode
         self._windowed = windowed
         self._blackout = False
         self._display_index = display_index
@@ -50,6 +59,7 @@ class DisplayState(QObject):
 
     # --- getters ---
     def scale_mode(self) -> ScaleMode: return self._scale_mode
+    def transition_mode(self) -> TransitionMode: return self._transition_mode
     def windowed(self) -> bool: return self._windowed
     def blackout(self) -> bool: return self._blackout
     def display_index(self) -> int: return self._display_index
@@ -60,6 +70,11 @@ class DisplayState(QObject):
         self._scale_mode = mode
         self.scaleModeChanged.emit(mode)
         self._mark_dirty()
+
+    def set_transition_mode(self, mode: TransitionMode) -> None:
+        if mode == self._transition_mode: return
+        self._transition_mode = mode
+        self.transitionModeChanged.emit(mode)
 
     def set_windowed(self, on: bool) -> None:
         if on == self._windowed: return

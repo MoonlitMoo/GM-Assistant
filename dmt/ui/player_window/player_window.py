@@ -21,6 +21,7 @@ class PlayerWindow(QWidget):
         # Apply state and subscribe
         self._canvas.set_scale_mode(self._display_state.scale_mode())
         self._display_state.scaleModeChanged.connect(self._canvas.set_scale_mode)
+        self._display_state.transitionModeChanged.connect(self._canvas.set_transition_mode)
         self._display_state.windowedChanged.connect(self._apply_window_mode)
         self._display_state.blackoutChanged.connect(self._canvas.blackout)
 

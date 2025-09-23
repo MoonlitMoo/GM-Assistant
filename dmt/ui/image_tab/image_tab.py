@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 from db.services.library_service import LibraryService
 from dmt.ui.player_window import DisplayState
 
-from .buttons import ScaleModeButton, BlackoutButton
+from .buttons import ScaleModeButton, BlackoutButton, TransitionModeButton
 from .library_items import AlbumItem
 from .library_widget import LibraryWidget
 
@@ -102,15 +102,15 @@ class ImagesTab(QWidget):
         self._btn_send.clicked.connect(self._send_to_player)
         self._btn_send.setEnabled(False)
 
-        self._btn_fade = QPushButton("Fade")
+        self._btn_transition = TransitionModeButton(parent=self)
+        self._btn_transition.modeChanged.connect(self._display_state.set_transition_mode)
 
         self._btn_black = BlackoutButton(parent=self)
         self._btn_black.toggled.connect(self._display_state.set_blackout)
         self._btn_black.setChecked(True)
 
-
         row_controls.addWidget(self._btn_send)
-        row_controls.addWidget(self._btn_fade)
+        row_controls.addWidget(self._btn_transition)
         row_controls.addWidget(self._btn_black)
         bl.addLayout(row_controls)
 

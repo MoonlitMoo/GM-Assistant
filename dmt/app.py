@@ -12,7 +12,7 @@ from .ui.main_window import MainWindow
 
 # Your DatabaseManager from earlier (engine + sessions, WAL PRAGMAs)
 from db.manager import DatabaseManager
-from .ui.player_window.display_state import DisplayState, parse_scale_mode
+from .ui.player_window.display_state import DisplayState, parse_scale_mode, TransitionMode
 
 DEFAULT_DB = Path.home() / "GMAssistant" / "library.db"
 
@@ -39,6 +39,7 @@ def main() -> None:
     # Create necessary states
     display_state = DisplayState(
         scale_mode=parse_scale_mode(cfg.fitMode),
+        transition_mode=TransitionMode.CROSSFADE,
         windowed=cfg.playerWindowed,
         display_index=cfg.playerDisplay,
         on_persist=lambda d: (
