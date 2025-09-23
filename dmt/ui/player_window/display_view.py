@@ -144,15 +144,8 @@ class DisplayView(QGraphicsView):
         fn = REGISTRY.get(self._transition_mode) or REGISTRY[TransitionMode.CROSSFADE]
         fn(api, pm_new, 260)
 
-    def set_image_bytes(
-        self,
-        data: bytes,
-        *,
-        width: int | None = None,
-        height: int | None = None,
-        channels: int | None = None,
-        format: str | None = None,
-    ) -> bool:
+    def set_image_bytes(self, data: bytes, *, width: int | None = None, height: int | None = None,
+                        channels: int | None = None, format: str | None = None) -> bool:
         # Raw mode
         if width is not None and height is not None:
             if channels not in (1, 3, 4):
@@ -243,9 +236,6 @@ class DisplayView(QGraphicsView):
         pm = self.viewport().grab()
         rect = self.mapToScene(self.viewport().rect()).boundingRect()
         return ViewportSnapshot(pixmap=pm, scene_rect=rect, full_rect=self.sceneRect())
-
-    def _viewport_scene_topleft(self) -> QPointF:
-        return self.mapToScene(self.viewport().rect().topLeft())
 
     def _prepare_new_under_overlay(self, pm_new: QPixmap) -> None:
         """Swap to the NEW image and finalize layout *before* fading out the frozen overlay."""
