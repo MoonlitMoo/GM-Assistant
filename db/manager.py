@@ -36,6 +36,7 @@ def _apply_sqlite_pragmas(engine: Engine) -> None:
         cur.execute("PRAGMA mmap_size = 134217728;")  # 128MB
         cur.close()
 
+
 def _alembic_paths() -> tuple[Path, Path]:
     """Find alembic.ini and migrations dir by walking up from this file."""
     here = Path(__file__).resolve()
@@ -46,11 +47,13 @@ def _alembic_paths() -> tuple[Path, Path]:
             return ini, mig
     raise RuntimeError("Could not locate alembic.ini and db/migration")
 
+
 def _alembic_cfg(alembic_ini: Path, migrations_dir: Path, db_url: str) -> Config:
     cfg = Config(str(alembic_ini))
     cfg.set_main_option("script_location", str(migrations_dir))
     cfg.set_main_option("sqlalchemy.url", db_url)
     return cfg
+
 
 def _has_table(db_path: Path, table: str) -> bool:
     with sqlite3.connect(db_path) as con:
@@ -59,6 +62,7 @@ def _has_table(db_path: Path, table: str) -> bool:
         )
         return cur.fetchone() is not None
 
+
 def _is_empty(db_path: Path) -> bool:
     with sqlite3.connect(db_path) as con:
         cur = con.execute(
@@ -66,6 +70,7 @@ def _is_empty(db_path: Path) -> bool:
             "WHERE type='table' AND name NOT LIKE 'sqlite_%'"
         )
         return cur.fetchone()[0] == 0
+
 
 def _backup_db_file(path: Path) -> Path | None:
     """Create a timestamped backup beside the DB. Returns backup path or None."""
@@ -76,11 +81,12 @@ def _backup_db_file(path: Path) -> Path | None:
     shutil.copy2(path, backup_path)
     return backup_path
 
+
 def _ensure_upgraded(
-    db_path: Path,
-    *,
-    do_backup: bool = True,
-    backup_on_stamp: bool = False,
+        db_path: Path,
+        *,
+        do_backup: bool = True,
+        backup_on_stamp: bool = False,
 ) -> None:
     """Ensure SQLite DB at db_path is migrated to Alembic 'head'.
 
@@ -126,7 +132,6 @@ def _ensure_upgraded(
     if do_backup:
         _backup_db_file(db_path)
     command.upgrade(cfg, "head")
-
 
 
 class DatabaseManager:

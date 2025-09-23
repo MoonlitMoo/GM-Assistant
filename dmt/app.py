@@ -10,7 +10,6 @@ from .core.config import (
 )
 from .ui.main_window import MainWindow
 
-# Your DatabaseManager from earlier (engine + sessions, WAL PRAGMAs)
 from db.manager import DatabaseManager
 from .ui.player_window.display_state import DisplayState, parse_scale_mode, TransitionMode
 

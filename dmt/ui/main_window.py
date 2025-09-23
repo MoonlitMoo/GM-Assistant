@@ -38,7 +38,8 @@ class MainWindow(QMainWindow):
         # Tabs
         self.images_tab = ImagesTab(service=LibraryService(self.dbm), display_state=self.display_state)
         self.initiative_tab = InitiativeTab(self.config)
-        self.settings_tab = SettingsTab(self.config, self.display_state.set_windowed)
+        self.settings_tab = SettingsTab(self.dbm, self.display_state)
+        self.settings_tab.reloadedDatabase.connect(self.images_tab.library.reload)
 
         self._tabs.addTab(self.images_tab, "Images")
         self._tabs.addTab(self.initiative_tab, "Initiative")

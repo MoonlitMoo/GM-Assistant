@@ -54,6 +54,10 @@ class LibraryWidget(QWidget):
         self._populate_roots()
 
     # --------- DB → UI population ---------
+    def reload(self):
+        """ Global helper to reload the widget. """
+        self._populate_roots()
+
     def _populate_roots(self) -> None:
         """Set up the root structure of the tree, then populate children."""
         self.tree.clear()
