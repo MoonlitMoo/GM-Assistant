@@ -87,7 +87,7 @@ class ImagesTab(QWidget):
         btn_add = QPushButton("Add Images…")
         btn_add.clicked.connect(self._add_images)
         row_top.addWidget(btn_add)
-        btn_scale = ScaleModeButton(parent=self)
+        btn_scale = ScaleModeButton(parent=self, initial=self._display_state.scale_mode())
         btn_scale.modeChanged.connect(self._display_state.set_scale_mode)
         row_top.addWidget(btn_scale)
         row_top.addStretch(1)
@@ -232,7 +232,7 @@ class ImagesTab(QWidget):
                 mw.open_player_window()
             fb = self._service.get_image_full_bytes(self._selected_image_id)
             if fb:
-                mw.playerWindow.set_image_bytes(fb)\
+                mw.playerWindow.set_image_bytes(fb)
                 # Remove blackout and update state
                 self._btn_black.setChecked(False)
                 mw.playerWindow.raise_()
