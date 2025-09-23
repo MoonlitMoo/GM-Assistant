@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, Collection
 
 from PySide6.QtCore import Qt, QByteArray, QVariantAnimation, QEasingCurve, QRectF
 from PySide6.QtGui import QImage, QPixmap, QPainter
@@ -58,7 +58,7 @@ class DisplayView(QGraphicsView):
 
         # State
         self._scale_mode: ScaleMode = ScaleMode.FIT
-        self._zoom_factor: float = 1.0
+        self._apply_scale_mode()
 
         # Blackout animation driver
         self._blackout_anim = QVariantAnimation(self)
@@ -71,8 +71,16 @@ class DisplayView(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
-        # Optional: enable hand-drag panning
-        # self.setDragMode(QGraphicsView.ScrollHandDrag)
+        # Navigation config
+        self._nav_enabled: bool = True
+        self._nav_modes: set[ScaleMode] = {ScaleMode.ACTUAL, ScaleMode.FIT_NAV}  # which modes allow nav
+        self._nav_require_ctrl: bool = False
+        self._zoom_min: float = 0.25
+        self._zoom_max: float = 8.0
+        self._user_zoom: float = 1.0
+        self.setDragMode(QGraphicsView.NoDrag)
+        self.setTransformationAnchor(QGraphicsView.AnchorViewCenter)
+        self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
 
     # ---------- Public API (same names as before) ----------
     def set_scale_mode(self, mode: ScaleMode) -> None:
@@ -80,9 +88,20 @@ class DisplayView(QGraphicsView):
             return
         self._scale_mode = mode
         self._apply_scale_mode()
+        self._sync_nav_state()
 
     def scale_mode(self) -> ScaleMode:
         return self._scale_mode
+
+    def configure_navigation(self, *, enable: bool, modes: Collection[ScaleMode] | None = None,
+                             require_ctrl: bool = True, min_zoom: float = 0.25, max_zoom: float = 8.0) -> None:
+        """Enable/disable panning+zooming and specify which ScaleModes it applies to."""
+        self._nav_enabled = bool(enable)
+        self._nav_modes = set(modes) if modes is not None else self._nav_modes
+        self._nav_require_ctrl = bool(require_ctrl)
+        self._zoom_min = float(min_zoom)
+        self._zoom_max = float(max_zoom)
+        self._sync_nav_state()
 
     def set_image_qimage(self, img: QImage) -> None:
         self._base.set_qimage(img)
@@ -148,24 +167,22 @@ class DisplayView(QGraphicsView):
         pm = self._base.pixmap()
         if pm.isNull():
             self.resetTransform()
+            self._user_zoom = 1.0
             return
 
+        # Reset to the mode's baseline transform
         if self._scale_mode is ScaleMode.ACTUAL:
             self.resetTransform()
             self.centerOn(self._base)
-            return
-
-        if self._scale_mode is ScaleMode.STRETCH:
-            # Stretch: ignore aspect; we simulate by fitting then additional scale if needed
+        elif self._scale_mode is ScaleMode.STRETCH:
             self.fitInView(self.sceneRect(), Qt.IgnoreAspectRatio)
-            return
-
-        if self._scale_mode is ScaleMode.FIT:
+        elif self._scale_mode is ScaleMode.FIT:
             self.fitInView(self._base, Qt.KeepAspectRatio)
-            return
+        else:  # FILL
+            self.fitInView(self._base, Qt.KeepAspectRatio)
 
-        # FILL (cover): fit largest dimension (KeepAspectRatio), then allow cropping via view
-        self.fitInView(self._base, Qt.KeepAspectRatio)
+        # After refit, user zoom resets to "1x"
+        self._user_zoom = 1.0  # <— add
 
     def _apply_blackout_opacity(self, v):
         self._blackout.setOpacity(float(v))
@@ -180,19 +197,36 @@ class DisplayView(QGraphicsView):
     def _resize_overlays_to_scene(self):
         self._ensure_blackout_geometry()
 
+    def _nav_active(self) -> bool:
+        return self._nav_enabled and (self._scale_mode in self._nav_modes)
+
+    def _sync_nav_state(self) -> None:
+        active = self._nav_active()
+        self.setDragMode(QGraphicsView.ScrollHandDrag if active else QGraphicsView.NoDrag)
+        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse if active else QGraphicsView.AnchorViewCenter)
+        self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
+
     # ---------- QGraphicsView overrides ----------
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
         # Keep overlays correct on every resize
         self._resize_overlays_to_scene()
-        self._apply_scale_mode()
+        if not self._nav_active():
+            self._apply_scale_mode()
 
     def wheelEvent(self, ev):
-        # Ctrl + Wheel → zoom; otherwise default scroll
-        if ev.modifiers() & Qt.ControlModifier:
+        if self._nav_active() and (not self._nav_require_ctrl or (ev.modifiers() & Qt.ControlModifier)):
             delta = ev.angleDelta().y()
-            factor = 1.15 if delta > 0 else (1 / 1.15)
-            self.scale(factor, factor)
+            step = 1.15 if delta > 0 else (1.0 / 1.15)
+
+            # Compute the zoom we'd have after applying the step
+            new_zoom = self._user_zoom * step
+            # Clamp and compute the relative factor to apply now
+            clamped = max(self._zoom_min, min(self._zoom_max, new_zoom))
+            if clamped != self._user_zoom:
+                factor = clamped / self._user_zoom
+                self._user_zoom = clamped
+                super().scale(factor, factor)
             ev.accept()
-        else:
-            super().wheelEvent(ev)
+            return
+        super().wheelEvent(ev)

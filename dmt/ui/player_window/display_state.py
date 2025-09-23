@@ -6,7 +6,7 @@ from PySide6.QtCore import QObject, Signal, QTimer
 
 class ScaleMode(Enum):
     FIT = "fit"
-    FILL = "fill"
+    FIT_NAV = "fit nav"
     STRETCH = "stretch"
     ACTUAL = "actual"
 
@@ -15,7 +15,7 @@ def parse_scale_mode(s: str) -> ScaleMode:
     s = (s or "fit").lower()
     return {
         "fit": ScaleMode.FIT,
-        "fill": ScaleMode.FILL,
+        "fit nav": ScaleMode.FIT_NAV,
         "stretch": ScaleMode.STRETCH,
         "actual": ScaleMode.ACTUAL,
     }.get(s, ScaleMode.FIT)
