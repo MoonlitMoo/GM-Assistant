@@ -3,7 +3,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 from .display_state import ScaleMode
-from .image_display import ImageDisplayWidget
+from .display_view import DisplayView
 
 class PlayerWindow(QWidget):
     """Separate top-level window shown to players."""
@@ -13,7 +13,7 @@ class PlayerWindow(QWidget):
         self._display_state = display_state
 
         # child canvas for all image work
-        self._canvas = ImageDisplayWidget(self)
+        self._canvas = DisplayView(self)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(self._canvas)
