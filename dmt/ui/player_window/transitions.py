@@ -9,24 +9,24 @@ from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene, QGraphicsRect
 from .display_state import TransitionMode
 
 @dataclass
+class ViewportSnapshot:
+    pixmap: QPixmap
+    scene_rect: QRectF
+    full_rect: QRectF
+
+@dataclass
 class TransitionAPI:
     """
     Adapter from DisplayView to the transition system.
     """
-    # Basic frame info
     parent: QWidget
     scene: QGraphicsScene
+    viewport: Callable[[], ViewportSnapshot]
     get_current: Callable[[], QGraphicsPixmapItem]
     set_current: Callable[[QGraphicsPixmapItem], None]
-    scene_width: Callable[[], float]
-    scene_height: Callable[[], float]
-    # Any final clean up
+    prepare_new_under_overlay: Callable[[QPixmap], None]
     on_finish: Callable[[], None] | None = None
-    # Freeze frame info
-    grab_viewport: Optional[Callable[[], QPixmap]] = None
-    viewport_scene_topleft: Optional[Callable[[], QPointF]] = None
-    prepare_new_under_overlay: Optional[Callable[[QPixmap], None]] = None
-    viewport_scene_rect: Optional[Callable[[], QRectF]] = None
+
 
 # ---- Helpers ----
 def _make_new_item(api: TransitionAPI, pm: QPixmap, z: float) -> QGraphicsPixmapItem:
@@ -46,15 +46,14 @@ def do_cut(api: TransitionAPI, pm_new: QPixmap, duration_ms: int = 0) -> None:
 
 
 def do_crossfade(api: TransitionAPI, pm_new: QPixmap, duration_ms: int = 240) -> None:
-    snap = api.grab_viewport()
-    # Swap to NEW content *under* the overlay right now (fit/resize/etc. inside)
+    snap = api.viewport().pixmap
     api.prepare_new_under_overlay(pm_new)
 
     overlay = QGraphicsPixmapItem(snap)
     overlay.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
     overlay.setOpacity(1.0)
     overlay.setZValue(api.get_current().zValue() + 100)  # well above base
-    overlay.setPos(api.viewport_scene_topleft())
+    overlay.setPos(api.viewport().scene_rect.topLeft())
     api.scene.addItem(overlay)
 
     anim = QVariantAnimation(api.parent)

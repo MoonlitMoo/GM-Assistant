@@ -6,7 +6,8 @@ from PySide6.QtGui import QImage, QPixmap, QPainter, QTransform
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem
 
 from .display_state import ScaleMode, TransitionMode
-from .transitions import REGISTRY, TransitionAPI
+from .transitions import REGISTRY, TransitionAPI, ViewportSnapshot
+
 
 class BaseImageItem(QGraphicsPixmapItem):
     """ Bottom level image canvas. """
@@ -128,20 +129,15 @@ class DisplayView(QGraphicsView):
 
         def get_current(): return self._base
         def set_current(new_item): self._base = new_item
-        def scene_w(): return float(self.sceneRect().width())
-        def scene_h(): return float(self.sceneRect().height())
         def on_finish(): self._transition_running = False
 
         api = TransitionAPI(
             parent=self,
             scene=self.scene(),
+            viewport=self._viewport_snapshot,
             get_current=get_current,
             set_current=set_current,
-            scene_width=scene_w,
-            scene_height=scene_h,
             on_finish=on_finish,
-            grab_viewport=self._grab_viewport,
-            viewport_scene_topleft=self._viewport_scene_topleft,
             prepare_new_under_overlay=self._prepare_new_under_overlay,
         )
 
@@ -242,8 +238,11 @@ class DisplayView(QGraphicsView):
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse if active else QGraphicsView.AnchorViewCenter)
         self.setResizeAnchor(QGraphicsView.AnchorViewCenter)
 
-    def _grab_viewport(self) -> QPixmap:
-        return self.viewport().grab()
+    # ---- Transition helpers ----
+    def _viewport_snapshot(self) -> ViewportSnapshot:
+        pm = self.viewport().grab()
+        rect = self.mapToScene(self.viewport().rect()).boundingRect()
+        return ViewportSnapshot(pixmap=pm, scene_rect=rect, full_rect=self.sceneRect())
 
     def _viewport_scene_topleft(self) -> QPointF:
         return self.mapToScene(self.viewport().rect().topLeft())
