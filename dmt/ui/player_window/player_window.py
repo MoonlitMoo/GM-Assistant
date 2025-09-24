@@ -2,13 +2,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
-from .display_state import ScaleMode
+from .display_state import ScaleMode, DisplayState
 from .display_view import DisplayView
 
 class PlayerWindow(QWidget):
     """Separate top-level window shown to players."""
 
-    def __init__(self, display_state, parent=None):
+    def __init__(self, display_state: DisplayState, parent=None):
         super().__init__(parent)
         self._display_state = display_state
 
@@ -56,3 +56,8 @@ class PlayerWindow(QWidget):
             self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
             self.setGeometry(target.geometry())
             self.showFullScreen()
+
+    def closeEvent(self, event):
+        if event.spontaneous() and self.parent() is not None:
+            self.parent().close_player_window()
+        super().closeEvent(event)
