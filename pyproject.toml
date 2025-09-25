@@ -48,7 +48,7 @@ dev = [
 branch = "main"
 version_toml = ["pyproject.toml:project.version"]
 changelog_file = "CHANGELOG.md"
-build_command = "pyinstaller 'GM Assistant.spec'"
+build_command = ""
 remote.type = "github"
 
 # ---- Packaging ----
