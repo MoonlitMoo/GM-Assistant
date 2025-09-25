@@ -1,0 +1,79 @@
+name: Build & attach assets (after version bump)
+
+on:
+  workflow_run:
+    workflows: ["Version bump (semantic-release)"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: build-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix: { os: [ubuntu-latest, windows-latest] }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      # Pull the artifact from the previous workflow run
+      - name: Download version metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: version-meta
+          path: meta
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+
+      - name: Read tag/sha
+        id: meta
+        shell: bash
+        run: |
+          echo "tag=$(cat meta/tag.txt)" >> "$GITHUB_OUTPUT"
+          echo "sha=$(cat meta/sha.txt)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - name: Install tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .            # runtime deps if your build imports app code
+          python -m pip install pyinstaller python-semantic-release
+
+      - name: Build (PyInstaller)
+        run: |
+          python -m PyInstaller "GM Assistant.spec"
+
+      # Rename per-OS for clarity
+      - name: Rename (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="${{ steps.meta.outputs.tag }}"; VER="${VER#v}"
+          SRC="dist/GM Assistant"; [ -f "$SRC" ] || SRC="$(find dist -maxdepth 1 -type f -print -quit)"
+          mv "$SRC" "dist/GM-Assistant-${VER}-linux"
+      - name: Rename (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.meta.outputs.tag }}".TrimStart("v")
+          $src = Join-Path dist 'GM Assistant.exe'
+          if (-not (Test-Path $src)) { $src = (Get-ChildItem dist -Filter *.exe | Select-Object -First 1).FullName }
+          Rename-Item $src ("dist/GM-Assistant-$ver-windows.exe") -Force
+
+      - name: Publish to the Release
+        run: semantic-release -vv publish --tag "${{ steps.meta.outputs.tag }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
