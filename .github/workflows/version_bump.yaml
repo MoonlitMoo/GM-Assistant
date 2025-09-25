@@ -42,3 +42,17 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Creates/updates pyproject.toml version, CHANGELOG.md, tag vX.Y.Z, and the Release
           semantic-release -vv version --push --vcs-release
+
+      - name: Determine released tag
+        id: get_tag
+        run: echo "tag=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
+
+      - name: Save release metadata as artifact
+        run: |
+          mkdir -p meta
+          echo "${{ steps.get_tag.outputs.tag }}" > meta/tag.txt
+          echo "${{ github.sha }}"              > meta/sha.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: version-meta
+          path: meta/
