@@ -1,0 +1,83 @@
+name: Build & attach assets (after version bump)
+
+on:
+  workflow_run:
+    workflows: ["Version bump (semantic-release)"]  # must match the name above
+    types: [completed]
+    branches: [main]  # only runs when the version workflow ran on main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # only proceed if the version workflow concluded successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Resolve release tag created by the version workflow
+        id: find_tag
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const headSha = context.payload.workflow_run.head_sha;
+            // Find the release created for that exact commit
+            const releases = await github.paginate(github.rest.repos.listReleases, {owner, repo, per_page: 100});
+            const match = releases.find(r => !r.draft && r.target_commitish === headSha);
+            if (!match) {
+              core.setFailed(`No release found for head_sha ${headSha}`);
+              return;
+            }
+            core.setOutput("tag", match.tag_name);
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - name: Install tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .            # runtime deps if your build imports app code
+          python -m pip install pyinstaller python-semantic-release
+
+      - name: Build (PyInstaller)
+        run: |
+          python -m PyInstaller "GM Assistant.spec"
+
+      # If your spec outputs a single file (onefile), give it a nice name per-OS:
+      - name: Rename (Linux onefile)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="${{ steps.find_tag.outputs.tag }}"; VER="${VER#v}"
+          SRC="dist/GM Assistant"; [ -f "$SRC" ] || SRC="$(find dist -maxdepth 1 -type f -print -quit)"
+          cp "$SRC" "dist/GM-Assistant-${VER}-linux"
+      - name: Rename (Windows onefile)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ver = "${{ steps.find_tag.outputs.tag }}".TrimStart("v")
+          $src = Join-Path dist 'GM Assistant.exe'
+          if (-not (Test-Path $src)) { $src = (Get-ChildItem dist -Filter *.exe | Select-Object -First 1).FullName }
+          Copy-Item $src ("dist/GM-Assistant-$ver-windows.exe") -Force
+
+      - name: Publish assets to the release (semantic-release)
+        # Runs your [tool.semantic_release.publish] config and uploads dist/*
+        run: semantic-release -vv publish --tag "${{ steps.find_tag.outputs.tag }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
