@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from importlib.metadata import version
+
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt, QCoreApplication
 
@@ -9,9 +11,9 @@ from .core.config import (
     load_config, save_config, get_last_db_path, set_last_db_path, ORG, APP
 )
 from .ui.main_window import MainWindow
+from .ui.player_window.display_state import DisplayState, parse_scale_mode, TransitionMode
 
 from db.manager import DatabaseManager
-from .ui.player_window.display_state import DisplayState, parse_scale_mode, TransitionMode
 
 DEFAULT_DB = Path.home() / "GMAssistant" / "library.db"
 
@@ -31,6 +33,7 @@ def main() -> None:
     # Set QSettings identity BEFORE any settings access
     QCoreApplication.setOrganizationName(ORG)
     QCoreApplication.setApplicationName(APP)
+    QCoreApplication.setApplicationVersion(version("gm-assistant"))
 
     # Load user prefs (QSettings-backed)
     cfg = load_config()

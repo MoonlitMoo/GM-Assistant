@@ -21,7 +21,7 @@ def _sqlite_enable_fk(dbapi_connection, _):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON;")
     cursor.close()
-
+pass
 
 # --- Fixtures -----------------------------------------------------------------
 

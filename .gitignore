@@ -1,2 +1,7 @@
 /.idea/
 **/__pycache__/
+/build/
+/gm_assistant.egg-info/
+/dmt/_version.py
+/.env
+/dist/

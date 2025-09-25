@@ -24,7 +24,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self, cfg: Config, dbm: DatabaseManager, display_state: DisplayState) -> None:
         super().__init__()
-        self.setWindowTitle("DM Assistant (v1.0 skeleton)")
+        self.setWindowTitle("DM Assistant")
         self.resize(1200, 800)
 
         self.config = cfg
@@ -61,7 +61,7 @@ class MainWindow(QMainWindow):
     def open_player_window(self) -> None:
         """ Create the player window. """
         if self.playerWindow is None:
-            self.playerWindow = PlayerWindow(parent=self, display_state=self.display_state)
+            self.playerWindow = PlayerWindow(self.display_state)
 
     def close_player_window(self) -> None:
         """ Destroy the player window. """
