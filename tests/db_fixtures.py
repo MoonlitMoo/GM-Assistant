@@ -3,6 +3,8 @@ from sqlalchemy import event, Engine, create_engine
 from sqlalchemy.orm import sessionmaker
 
 from db.models import Base, Folder, Album, Image, ImageData, AlbumImage
+from db.models.tag import Tag, ImageTagLink
+
 
 # --- SQLite tuning for tests --------------------------------------------------
 @event.listens_for(Engine, "connect")
@@ -100,4 +102,24 @@ def make_image(session):
         session.flush()
         return img
 
+    return _mk
+
+
+@pytest.fixture()
+def make_tag(session):
+    def _mk(name: str, color_hex: str | None = None, kind: str | None = None) -> Tag:
+        t = Tag(name=name, color_hex=color_hex, kind=kind)
+        session.add(t)
+        session.flush()
+        return t
+    return _mk
+
+
+@pytest.fixture()
+def make_image_tag_link(session):
+    def _mk(image_id: int, tag: Tag) -> ImageTagLink:
+        lnk = ImageTagLink(image_id=image_id, tag=tag)
+        session.add(lnk)
+        session.flush()
+        return lnk
     return _mk
