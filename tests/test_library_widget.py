@@ -223,7 +223,7 @@ def test_add_folder_and_album(widget, create_tree_item):
     album_item = create_tree_item(["My Album"], "album")
     assert isinstance(album_item, AlbumItem)
     assert album_item.label == "My Album"
-    assert widget.service.is_album(album_item.id)
+    assert widget.service.get_album(album_item.id)
     album_db = widget.service.get_album(album_item.id)
     assert album_db
     assert album_db.position == 3
@@ -301,7 +301,7 @@ def test_delete_updates_sibling_positions(widget, create_tree_item, set_context_
 
     parent_item = _find_item_by_path(widget.tree, parent_path)
     children = widget.service.get_root_items() if parent_item is None else \
-        widget.service.get_folder_children(parent_item.id)
+        widget.service.get_children(parent_item.id)
     assert [r.position for r in children] == [0, 1, 2, 3]
 
     # Delete the second item. This should shift Zed→1, Alpha→2.
@@ -311,7 +311,7 @@ def test_delete_updates_sibling_positions(widget, create_tree_item, set_context_
 
     # DB: positions close up
     children = widget.service.get_root_items() if parent_item is None else \
-        widget.service.get_folder_children(parent_item.id)
+        widget.service.get_children(parent_item.id)
     names_by_pos = [r.name for r in children]
     assert names_by_pos == final_children
     assert [r.position for r in children] == [0, 1, 2]
