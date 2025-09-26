@@ -72,6 +72,16 @@ class TaggingService:
             self.tag_repo.delete(s, tag)
             return True
 
+    def cleanup_unused_tags(self) -> int:
+        """Remove tags that are not linked to any image. Returns count deleted."""
+        with self.db.session() as s:
+            return self.tag_repo.delete_unused_for_images(s)
+
+    def tag_usage_map_for_images(self) -> dict[int, int]:
+        with self.db.session() as s:
+            pairs = self.tag_repo.usage_counts(s, limit=1_000_000)
+            return {t.id: cnt for (t, cnt) in pairs}
+
     # ---------- Image associations ----------
     def get_tags_for_image(self, image_id: int) -> list[Tag]:
         with self.db.session() as s:
@@ -139,7 +149,7 @@ class TaggingService:
     # ---------- helpers ----------
     def _resolve_tag(self, s: Session, name_or_id: str | int) -> Tag:
         if isinstance(name_or_id, int):
-            t = self.tag_repo.get_by(s, name_or_id)
+            t = self.tag_repo.get(s, name_or_id)
         else:
             t = self.tag_repo.get_by_name(s, name_or_id)
         if not t:
