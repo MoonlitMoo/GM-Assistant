@@ -3,7 +3,7 @@ import hashlib, mimetypes
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
-from typing import Optional, Iterable
+from typing import Optional
 from PIL import Image as PILImage
 from sqlalchemy import select
 
@@ -272,6 +272,34 @@ class LibraryService:
             if not c:
                 return
             c.caption = new_name
+
+    def move_image(self, image_id: int, new_album_id: int, position: Optional[int] = None) -> None:
+        """Move (or reorder) a single image; repo handles all SQL/ranges."""
+        with self.db.session() as s:
+            ai = self.album_img_repo.get_link_by_image(s, image_id)
+            if ai is None:
+                return
+
+            old_album_id, old_pos = ai.album_id, ai.position
+
+            # Reorder within the same album
+            if new_album_id == old_album_id:
+                size = self.album_img_repo.album_size(s, old_album_id)
+                max_pos = max(0, size - 1)
+                desired = old_pos if position is None else position
+                new_pos = max(0, min(desired, max_pos))
+                if new_pos != old_pos:
+                    self.album_img_repo.reorder_within_album(s, old_album_id, old_pos, new_pos)
+                    ai.position = new_pos
+                return
+
+            # Move across albums
+            self.album_img_repo.shift_down_after(s, old_album_id, old_pos)  # close gap in old album
+            size_dest = self.album_img_repo.album_size(s, new_album_id)
+            insert_pos = size_dest if position is None else max(0, min(position, size_dest))
+            self.album_img_repo.shift_up_from(s, new_album_id, insert_pos)  # open slot in dest
+            ai.album_id = new_album_id
+            ai.position = insert_pos
 
     def reorder_album_images(self, album_id: int, image_ids_in_order: list[int]) -> None:
         """Set an album's image order to image_ids_in_order."""
