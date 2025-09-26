@@ -8,6 +8,9 @@ from PySide6.QtWidgets import (
     QLabel, QToolButton, QMenu, QColorDialog, QSizePolicy, QScrollArea, QFrame
 )
 
+from dmt.ui.image_tab.manage_tags import ManageTagsDialog
+
+
 def _contrast_text_color(hex_color: str) -> str:
     # Simple luminance check for readable text on chip
     try:
@@ -53,12 +56,25 @@ class TagStrip(QWidget):
         scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         root.addWidget(scroll)
 
-        # Add box
+        # Tag addition / management row
+        row = QWidget(self)
+        row_lay = QHBoxLayout(row)
+        row_lay.setContentsMargins(0, 0, 0, 0)
+        row_lay.setSpacing(6)
+        # Add input box
         self._input = QLineEdit(self)
         self._input.setPlaceholderText("Add tag…  (comma to add multiple)")
         self._input.returnPressed.connect(self._on_add_from_input)
         self._input.textEdited.connect(self._on_input_edited)
-        root.addWidget(self._input)
+        row_lay.addWidget(self._input, 1)
+        # Manage tag button.
+        self._manage_btn = QToolButton(self)
+        self._manage_btn.setText("Manage…")
+        self._manage_btn.setToolTip("Manage tags (rename, color, cleanup)")
+        self._manage_btn.clicked.connect(self._open_manage_tags)
+        row_lay.addWidget(self._manage_btn, 0)
+
+        root.addWidget(row)
 
         self._setup_completer()
 
@@ -93,7 +109,8 @@ class TagStrip(QWidget):
         q = self._input.text().strip()
         if not q:
             return
-        names = [t.name for t in self._service.list_tags(query=q, limit=50)]
+        cur_tags = [t.name for t in self._service.get_tags_for_image(self._image_id)]
+        names = [t.name for t in self._service.list_tags(query=q, limit=50) if t.name not in cur_tags]
         if names != self._all_tags_cache:
             self._all_tags_cache = names
             self._completer.model().setStringList(self._all_tags_cache)
@@ -179,4 +196,11 @@ class TagStrip(QWidget):
             return
         updated = self._service.update_tag(old_name, new_name=new_name.strip())
         self.tagRenamed.emit(old_name, updated.name)
+        self.refresh()
+
+    def _open_manage_tags(self):
+        dlg = ManageTagsDialog(self._service, self)
+        dlg.exec()
+        # Refresh chips & completer after possible changes
+        self._setup_completer()
         self.refresh()

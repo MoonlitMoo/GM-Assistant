@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Optional
-from sqlalchemy import select, func
+from sqlalchemy import select, func, delete, exists
 from sqlalchemy.orm import Session
 
 from db.models import Tag, ImageTagLink
@@ -64,6 +64,15 @@ class TagRepo:
     def delete(self, s: Session, tag: Tag) -> None:
         s.delete(tag)
         s.flush()
+
+    def delete_unused_for_images(self, s) -> int:
+        """Delete tags that have no ImageTagLink rows. Returns number deleted."""
+        stmt = (
+            delete(Tag)
+            .where(~exists(select(1).where(ImageTagLink.tag_id == Tag.id)))
+        )
+        res = s.execute(stmt)
+        return max(res.rowcount or 0, 0)
 
 
 class ImageTagRepo:
