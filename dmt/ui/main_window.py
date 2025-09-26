@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from db.services.library_service import LibraryService
+from db.services.tagging_service import TaggingService
 from dmt.core.config import Config
 from db.manager import DatabaseManager
 
@@ -36,7 +37,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self._tabs)
 
         # Tabs
-        self.images_tab = ImagesTab(service=LibraryService(self.dbm), display_state=self.display_state)
+        self.images_tab = ImagesTab(
+            service=LibraryService(self.dbm), tag_service=TaggingService(self.dbm), display_state=self.display_state)
         self.initiative_tab = InitiativeTab(self.config)
         self.settings_tab = SettingsTab(self.dbm, self.display_state)
         self.settings_tab.reloadedDatabase.connect(self.images_tab.library.reload)
