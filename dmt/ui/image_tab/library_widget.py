@@ -79,7 +79,7 @@ class LibraryWidget(QWidget):
     def _populate_children(self, parent_item: QTreeWidgetItem, folder_id: int) -> None:
         """Rebuild the children from the database for a folder."""
         parent_item.takeChildren()
-        for row in self.service.get_folder_children(folder_id):
+        for row in self.service.get_children(folder_id):
             if row.kind == "folder":
                 it = FolderItem(row.id, row.name, row.position)
                 parent_item.addChild(it)
@@ -203,7 +203,7 @@ class LibraryWidget(QWidget):
             self.service.delete_album(item.id, hard=True)
 
         elif isinstance(item, ImageItem):
-            self.service.remove_images_from_album(item.parent().id, [item.id])
+            self.service.delete_image_from_album(item.parent().id, item.id)
             self.albumSelected.emit(self._current_album_item())
         else:
             raise ValueError(f"Unknown type {type(item)}.")
