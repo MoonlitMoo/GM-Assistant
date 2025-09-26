@@ -555,6 +555,51 @@ def test_reorder_full_permutation_updates_positions(widget, make_album_with_imag
     assert [i for i in posmap.keys()] == new_order
 
 
+def test_move_image_updates_positions(widget, make_album_with_images):
+    """ Shifting an image within the same album correctly updates the positions. """
+    album = make_album_with_images(["TestAlbum"], n=6)
+    album.setExpanded(True)
+    before_order = _image_ordered_ids(widget, album.id)
+    assert before_order == [1, 2, 3, 4, 5, 6]
+
+    item = _find_item_by_path(widget.tree, ["TestAlbum", "img_2"])
+    # Move the item to the start
+    widget.service.move_image(item.id, new_album_id=album.id, position=0)
+    after_order = _image_ordered_ids(widget, album.id)
+    assert after_order == [3, 1, 2, 4, 5, 6]
+    posmap = _image_pos_map(widget, album.id)
+    assert list(posmap.values()) == [i for i in range(6)], "Positions don't match number of images"
+
+    # Move the item back to the second position
+    widget.service.move_image(item.id, new_album_id=item.parent().id, position=2)
+    after_order = _image_ordered_ids(widget, album.id)
+    assert after_order == before_order
+    posmap = _image_pos_map(widget, album.id)
+    assert list(posmap.values()) == [i for i in range(6)], "Positions don't match number of images"
+
+
+def test_move_image_between_album_updates_positions(widget, make_album_with_images):
+    """ Shifting images to another album correctly shifts positions in both. """
+    album1 = make_album_with_images(["TestAlbum"], n=6)
+    album2 = make_album_with_images(["TestAlbum2"], n=3)
+
+    album1.setExpanded(True)
+    before_a1 = _image_ordered_ids(widget, album1.id)
+    before_a2 = _image_ordered_ids(widget, album2.id)
+    assert before_a1 == [1, 2, 3, 4, 5, 6]
+    assert before_a2 == [1, 2, 3]
+
+    item = _find_item_by_path(widget.tree, ["TestAlbum", "img_4"])
+    # Move the item to the other album
+    widget.service.move_image(item.id, new_album_id=album2.id, position=1)
+    posmap_a1 = _image_pos_map(widget, album1.id)
+    assert list(posmap_a1.keys()) == [1, 2, 3, 4, 6]
+    assert list(posmap_a1.values()) == [i for i in range(5)]
+    posmap_a2 = _image_pos_map(widget, album2.id)
+    assert list(posmap_a2.keys()) == [1, 5, 2, 3]
+    assert list(posmap_a2.values()) == [i for i in range(4)]
+
+
 def test_reorder_noop_when_same_order(widget, make_album_with_images):
     """Passing current order is a no-op."""
     album = make_album_with_images(["TestAlbum"], n=6)
