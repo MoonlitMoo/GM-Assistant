@@ -8,7 +8,9 @@ from PySide6.QtWidgets import (
     QMessageBox, QColorDialog, QMenu, QInputDialog
 )
 
+
 class _TagRow:
+    """ Row in the TagTable """
     __slots__ = ("id", "name", "color_hex", "usage")
     def __init__(self, id: int, name: str, color_hex: Optional[str], usage: int):
         self.id = id
@@ -21,9 +23,13 @@ class _TagTableModel(QAbstractTableModel):
 
     def __init__(self, rows: List[_TagRow]):
         super().__init__()
-        self._all: List[_TagRow] = rows
+        self._all: List[_TagRow] = list(rows)
         self._filtered: List[_TagRow] = list(rows)
+        self._query: str = ""          # current filter text
+        self._sort_col = 2             # default: Usage
+        self._sort_order = Qt.DescendingOrder
 
+    # --- Qt model basics ---
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self._filtered)
 
@@ -37,51 +43,97 @@ class _TagTableModel(QAbstractTableModel):
         col = index.column()
 
         if role == Qt.DisplayRole:
-            if col == 0:
-                return row.name
-            if col == 1:
-                return row.color_hex or ""
-            if col == 2:
-                return str(row.usage)
+            if col == 0: return row.name
+            if col == 1: return row.color_hex or ""
+            if col == 2: return str(row.usage)
 
-        if role == Qt.DecorationRole and col == 1 and row.color_hex:
-            # Provide a colored swatch in the Color column
-            color = QColor(row.color_hex)
-            if color.isValid():
-                # swatch = QWidget()
-                # DecorationRole expects a QIcon/QPixmap ideally; for simplicity, return a color brush
-                return QBrush(color)
+        if role == Qt.BackgroundRole and col == 1 and row.color_hex:
+            qc = QColor(row.color_hex)
+            if qc.isValid():
+                return QBrush(qc)
+
+        if role == Qt.ForegroundRole and col == 1 and row.color_hex:
+            # ensure readable text over background
+            c = row.color_hex.lstrip("#")
+            if len(c) == 6:
+                r, g, b = int(c[0:2],16), int(c[2:4],16), int(c[4:6],16)
+                lum = 0.2126*r + 0.7152*g + 0.0722*b
+                return QBrush(QColor("#000000" if lum > 160 else "#FFFFFF"))
 
         if role == Qt.TextAlignmentRole and col == 2:
             return Qt.AlignRight | Qt.AlignVCenter
 
         return None
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole):
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Horizontal:
             return self.HEADERS[section]
         return str(section + 1)
 
-    # helpers
-    def at(self, row: int) -> _TagRow:
-        return self._filtered[row]
-
+    # --- public helpers ---
     def set_rows(self, rows: List[_TagRow]) -> None:
         self.beginResetModel()
-        self._all = rows
-        self._filtered = list(rows)
+        self._all = list(rows)
+        # keep current sort & filter
+        self._apply_sort_inplace()
+        self._apply_filter_inplace()
         self.endResetModel()
 
     def apply_filter(self, query: str) -> None:
-        q = query.strip().lower()
-        self.beginResetModel()
+        self._query = query or ""
+        self.layoutAboutToBeChanged.emit()
+        self._apply_filter_inplace()
+        self.layoutChanged.emit()
+
+    # --- sorting ---
+    def sort(self, column: int, order: Qt.SortOrder = Qt.AscendingOrder) -> None:
+        """Sort backing data, then reapply current filter."""
+        self._sort_col = column
+        self._sort_order = order
+        self.layoutAboutToBeChanged.emit()
+        self._apply_sort_inplace()
+        self._apply_filter_inplace()
+        self.layoutChanged.emit()
+
+    def _apply_sort_inplace(self) -> None:
+        """Sort self._all according to current (column, order) with stable tie-breaks."""
+        col, order = self._sort_col, self._sort_order
+        reverse = (order == Qt.DescendingOrder)
+
+        # define key per column, with stable secondary keys
+        if col == 2:  # Usage
+            # Primary: usage (desc/asc), Secondary: name asc (case-insensitive)
+            def key(r: _TagRow):
+                # for reverse, we invert via 'reverse=True' rather than negating
+                return (r.usage, r.name.lower())
+            self._all.sort(key=key, reverse=reverse)
+
+        elif col == 0:  # Name
+            # Primary: name (A/Z per order), Secondary: usage desc (so popular names group first)
+            def key(r: _TagRow):
+                return (r.name.lower(), -r.usage)
+            # reverse only flips the primary (name); secondary keeps usage-desc feel
+            self._all.sort(key=key, reverse=reverse)
+
+        elif col == 1:  # Color
+            # Primary: color hex (case-insensitive), Secondary: name asc
+            def key(r: _TagRow):
+                return ((r.color_hex or "").lower(), r.name.lower())
+            self._all.sort(key=key, reverse=reverse)
+
+        else:
+            # Fallback: by name
+            self._all.sort(key=lambda r: r.name.lower(), reverse=reverse)
+
+    def _apply_filter_inplace(self) -> None:
+        q = self._query.strip().lower()
         if not q:
             self._filtered = list(self._all)
         else:
             self._filtered = [r for r in self._all if q in r.name.lower()]
-        self.endResetModel()
+
 
 class ManageTagsDialog(QDialog):
     def __init__(self, tagging_service, parent=None):
