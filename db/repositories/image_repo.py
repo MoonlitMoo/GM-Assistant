@@ -1,5 +1,5 @@
 from __future__ import annotations
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update, func
 from sqlalchemy.orm import Session
 from db.models import Image, ImageData, AlbumImage
 
@@ -28,6 +28,7 @@ class ImageRepo:
 
 
 class AlbumImageRepo:
+    # Creation / Deletion / Checks
     def link(self, s: Session, album_id: int, image_id: int, position: int | None = None) -> AlbumImage:
         if position is None:
             max_pos = s.execute(
@@ -45,13 +46,49 @@ class AlbumImageRepo:
         )).scalar_one_or_none()
         if row: s.delete(row)
 
-    def is_linked(self, s, album_id: int, image_id: int) -> bool:
+    def is_linked(self, s: Session, album_id: int, image_id: int) -> bool:
         return s.execute(
             select(AlbumImage).where(AlbumImage.album_id == album_id, AlbumImage.image_id == image_id)
         ).first() is not None
 
+    def album_size(self, s: Session, album_id: int) -> int:
+        return s.execute(
+            select(func.count()).select_from(AlbumImage).where(AlbumImage.album_id == album_id)
+        ).scalar_one()
+
+    # Get links
+    def get_link_by_image(self, s: Session, image_id: int) -> AlbumImage | None:
+        return s.execute(
+            select(AlbumImage).where(AlbumImage.image_id == image_id)
+        ).scalar_one_or_none()
+
     def links_for_album(self, s: Session, album_id: int) -> list[AlbumImage]:
         return s.execute(select(AlbumImage).where(AlbumImage.album_id == album_id)).scalars().all()
 
-    def delete_all_for_album(self, s: Session, album_id: int) -> None:
-        s.execute(delete(AlbumImage).where(AlbumImage.album_id == album_id))
+    # Position of link updaters
+    def shift_up_from(self, s: Session, album_id: int, from_pos: int) -> None:
+        """Make room at/after from_pos: positions >= from_pos → +1."""
+        s.execute(update(AlbumImage)
+            .where(AlbumImage.album_id == album_id, AlbumImage.position >= from_pos)
+            .values(position=AlbumImage.position + 1)
+        )
+
+    def shift_down_after(self, s: Session, album_id: int, from_pos: int) -> None:
+        """Close gap after from_pos: positions > from_pos → -1."""
+        s.execute(update(AlbumImage)
+            .where(AlbumImage.album_id == album_id, AlbumImage.position > from_pos)
+            .values(position=AlbumImage.position - 1)
+        )
+
+    def reorder_within_album(self, s: Session, album_id: int, old_pos: int, new_pos: int) -> None:
+        """Move one item within the same album using the shift helpers."""
+        if new_pos == old_pos:
+            return
+        if new_pos > old_pos:
+            # moving down: close old gap, then re-open at new_pos
+            self.shift_down_after(s, album_id, old_pos)
+            self.shift_up_from(s, album_id, new_pos)
+        else:
+            # moving up: open at new_pos, then close old gap
+            self.shift_up_from(s, album_id, new_pos)
+            self.shift_down_after(s, album_id, old_pos)

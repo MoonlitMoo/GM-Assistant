@@ -61,7 +61,7 @@ class FolderRepo:
             # 2) Close the gap that appears AFTER old_pos once the moving item vacates it (-1)
             self.shift_down_after(s, parent_id, old_pos)
 
-    def shift_down_after(self, s, parent_id: int | None, old_pos: int) -> None:
+    def shift_down_after(self, s: Session, parent_id: int | None, old_pos: int) -> None:
         """Decrement positions of siblings after old_pos (folders + albums under same parent)."""
         s.execute(update(Folder).where(Folder.parent_id.is_(parent_id), Folder.position > old_pos)
             .values(position=Folder.position - 1))
