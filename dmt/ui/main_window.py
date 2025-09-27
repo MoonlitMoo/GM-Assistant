@@ -9,9 +9,11 @@ from PySide6.QtWidgets import (
 )
 
 from db.services.library_service import LibraryService
+from db.services.song_service import SongService, PlaylistService
 from db.services.tagging_service import TaggingService
 from dmt.core.config import Config
 from db.manager import DatabaseManager
+from .music_tab.music_tab import SongTab
 
 from .player_window import PlayerWindow
 from .image_tab import ImagesTab
@@ -36,14 +38,22 @@ class MainWindow(QMainWindow):
         self._tabs = QTabWidget()
         self.setCentralWidget(self._tabs)
 
+        # Start up multi-use services
+        ts = TaggingService(self.dbm)
+        ss = SongService(self.dbm, tagging_service=ts)
+
         # Tabs
         self.images_tab = ImagesTab(
-            service=LibraryService(self.dbm), tag_service=TaggingService(self.dbm), display_state=self.display_state)
+            service=LibraryService(self.dbm), tag_service=ts, display_state=self.display_state)
         self.initiative_tab = InitiativeTab(self.config)
         self.settings_tab = SettingsTab(self.dbm, self.display_state)
         self.settings_tab.reloadedDatabase.connect(self.images_tab.library.reload)
 
+        song_tab = SongTab(song_service=ss, playlist_service=PlaylistService(self.dbm),
+                           tagging_service=ts)
+
         self._tabs.addTab(self.images_tab, "Images")
+        self._tabs.addTab(song_tab, "Music")
         self._tabs.addTab(self.initiative_tab, "Initiative")
         self._tabs.addTab(self.settings_tab, "Settings")
 
