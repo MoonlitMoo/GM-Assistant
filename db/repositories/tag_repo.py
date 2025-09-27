@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy import select, func, delete, exists
 from sqlalchemy.orm import Session
 
-from db.models import Tag, ImageTagLink
+from db.models import Tag, ImageTagLink, SongTagLink
 
 
 class TagRepo:
@@ -38,6 +38,33 @@ class TagRepo:
             .limit(limit)
         )
         return [(t, cnt) for t, cnt in s.execute(stmt).all()]
+
+    def get_ids_by_names(self, s: Session, names: list[str], *, ensure: bool = False) -> list[int]:
+        """Resolve tag ids given names. If ensure=True, create any missing."""
+        norm = [n.strip() for n in names if n.strip()]
+        if not norm:
+            return []
+        existing = s.execute(select(Tag).where(Tag.name.in_(norm))).scalars().all()
+        existing_map = {t.name: t for t in existing}
+        out_ids: list[int] = [t.id for t in existing]
+
+        if ensure:
+            for n in norm:
+                if n not in existing_map:
+                    t = self.create(s, n)
+                    out_ids.append(t.id)
+
+        return out_ids
+
+    def song_tag_usage_counts(self, s: Session) -> list[tuple[int, str, int]]:
+        """Return (tag_id, tag_name, count) for tags used by songs."""
+        rows = s.execute(
+            select(Tag.id, Tag.name, func.count(SongTagLink.song_id))
+            .join(SongTagLink, SongTagLink.tag_id == Tag.id)
+            .group_by(Tag.id, Tag.name)
+            .order_by(func.count(SongTagLink.song_id).desc())
+        ).all()
+        return [(r[0], r[1], r[2]) for r in rows]
 
     # ---------- writes ----------
     def create(self, s: Session, name: str, *, color_hex: str | None = None, kind: str | None = None) -> Tag:

@@ -4,15 +4,20 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from db.manager import DatabaseManager
-from db.models import Tag
+from db.models import Tag, SongTagLink
 from db.repositories import TagRepo, ImageTagRepo
+
 
 # Domain errors
 class TagNotFound(Exception): ...
+
+
 class TagNameConflict(Exception): ...
+
 
 class TaggingService:
     """Business logic for Tag catalogue and Image↔Tag associations."""
+
     def __init__(self, db: DatabaseManager):
         self.db = db
         self.tag_repo = TagRepo()
@@ -145,6 +150,40 @@ class TaggingService:
             ranked = self.tag_repo.usage_counts(s, limit=limit * 2)
             out = [t for (t, _) in ranked if t.id not in have]
             return out[:limit]
+
+    # ---------- Song associations ----------
+    def attach_tags_to_song_ids(self, s: Session, song_id: int, tag_ids: list[int]) -> None:
+        """Idempotent: attach tag ids to a song."""
+        existing = {
+            t.tag_id for t in s.query(SongTagLink).filter(SongTagLink.song_id == song_id).all()
+        }
+        for tid in tag_ids:
+            if tid not in existing:
+                s.add(SongTagLink(song_id=song_id, tag_id=tid))
+        s.flush()
+
+    def bulk_update_song_tags(self, s: Session, song_ids: list[int], *,
+                              add_tag_names: list[str] | None = None,
+                              add_tag_ids: list[int] | None = None,
+                              remove_tag_ids: list[int] | None = None) -> None:
+        """Batch add/remove tags from many songs."""
+        ids_to_add: list[int] = []
+        if add_tag_names:
+            ids_to_add.extend(self.tag_repo.get_ids_by_names(s, add_tag_names, ensure=True))
+        if add_tag_ids:
+            ids_to_add.extend(add_tag_ids)
+        ids_to_add = sorted(set(ids_to_add))
+
+        if ids_to_add:
+            for sid in song_ids:
+                self.attach_tags_to_song_ids(s, sid, ids_to_add)
+
+        if remove_tag_ids:
+            s.query(SongTagLink).filter(
+                SongTagLink.song_id.in_(song_ids),
+                SongTagLink.tag_id.in_(remove_tag_ids)
+            ).delete(synchronize_session=False)
+        s.flush()
 
     # ---------- helpers ----------
     def _resolve_tag(self, s: Session, name_or_id: str | int) -> Tag:
