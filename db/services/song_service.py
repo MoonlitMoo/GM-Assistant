@@ -47,6 +47,11 @@ class SongService:
         self.tag_repo = TagRepo()
         self.tagging = tagging_service
 
+    # ---------- Read ----------
+    def get(self, song_id: int):
+        with self.db.session() as s:
+            return self.song_repo.get(s, song_id)
+
     # ---------- Ingestion / Mutations (own session + commit) ----------
     def add_song(
         self,
@@ -220,6 +225,11 @@ class PlaylistService:
         self.pl = PlaylistRepo()
         self.songs = SongRepo()
         self.tags = TagRepo()
+
+    # ---------- Read ----------
+    def get(self, p_id: int):
+        with self.db.session() as s:
+            return self.pl.get(s, p_id)
 
     # ---------- Manual playlists (own session + commit where needed) ----------
     def create_manual(self, name: str) -> Playlist:

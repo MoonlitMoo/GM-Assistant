@@ -152,7 +152,7 @@ class SongRepo:
         if eager_tags:
             opt = [joinedload(Song.tags).joinedload(SongTagLink.tag)]
 
-        rows = s.execute(base.options(*opt).offset(offset).limit(limit)).scalars().all()
+        rows = s.execute(base.options(*opt).offset(offset).limit(limit)).unique().scalars().all()
         return rows, total
 
     # ---------- Tag read helpers (no mutations) ----------

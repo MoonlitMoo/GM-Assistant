@@ -2,23 +2,18 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import (
-    QMainWindow,
-    QTabWidget,
-    QToolBar
-)
+from PySide6.QtWidgets import QMainWindow, QTabWidget, QToolBar
 
+from dmt.core.config import Config
+from db.manager import DatabaseManager
 from db.services.library_service import LibraryService
 from db.services.song_service import SongService, PlaylistService
 from db.services.tagging_service import TaggingService
-from dmt.core.config import Config
-from db.manager import DatabaseManager
-from .music_tab.music_tab import SongTab
 
-from .player_window import PlayerWindow
+from .player_window import PlayerWindow, DisplayState
 from .image_tab import ImagesTab
+from .music_tab import SongTab
 from .initiative_tab import InitiativeTab
-from .player_window.display_state import DisplayState
 from .settings_tab import SettingsTab
 
 

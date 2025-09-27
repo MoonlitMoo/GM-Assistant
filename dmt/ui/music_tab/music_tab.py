@@ -272,7 +272,7 @@ class SongTab(QWidget):
             QMessageBox.information(self, "No Selection", "Select one or more songs first.")
             return
         # Quick chooser: list manual/image playlists
-        pls = self.playlist_service.pl.list_all()
+        pls = self.playlist_service.list_all()
         names = [f"{p.name} ({p.type.value.lower()})" for p in pls]
         if not names:
             QMessageBox.information(self, "No Playlists", "Create a playlist first in the sidebar.")
