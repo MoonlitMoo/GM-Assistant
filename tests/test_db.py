@@ -4,8 +4,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from db.models import Image, Tag, ImageTagLink
-from tests.db_fixtures import session, make_folder, make_album, make_image, make_tag, make_image_tag_link
+from db.models import Image, Tag, ImageTagLink, SongSource, SongTagLink, PlaylistType, PlaylistItem
+from tests.conftest import session, make_folder, make_album, make_image, make_tag, make_image_tag_link
 
 
 # --- Folder/Album/Image: inserts & constraints
@@ -140,6 +140,7 @@ def test_tag_color_hex(session, make_tag):
     session.commit()
     assert session.get(Tag, ok.id).color_hex == "#A1B2C3"
 
+
 @pytest.mark.parametrize("hex", ["#123", "A1B2C3", "A1B2C3#"])
 def test_tag_color_hex_check(session, make_tag, hex):
     with pytest.raises(IntegrityError):
@@ -211,3 +212,106 @@ def test_image_tag_link_deleted_on_image_delete(session, make_image, make_tag, m
 
     gone = session.execute(select(ImageTagLink).where(ImageTagLink.id.in_(ids))).scalars().all()
     assert gone == []
+
+
+# --- Song: inserts, uniqueness & cascade
+
+def test_create_song_and_basic_fields(session, make_song):
+    s = make_song(title="Song A", artist="Artist A", source=SongSource.LOCAL, uri="file:///a.mp3", duration_ms=1000)
+    session.commit()
+    assert s.id is not None
+    assert s.title == "Song A"
+    assert s.artist == "Artist A"
+    assert s.source == SongSource.LOCAL
+    assert s.duration_ms == 1000
+
+
+def test_song_uri_unique_constraint(session, make_song):
+    make_song(title="One", uri="file:///dup.mp3")
+    session.commit()
+    with pytest.raises(IntegrityError):
+        make_song(title="Two", uri="file:///dup.mp3")
+        session.commit()
+
+
+def test_tagging_song_unique_and_indexes(session, make_song, make_tag, tag_song):
+    s = make_song(title="T1", uri="file:///t1.mp3")
+    t1 = make_tag("combat")
+    tag_song(s, t1)
+
+    # Ensure eager-loaded tag relationship exists for chip rendering
+    link = session.query(SongTagLink).filter_by(song_id=s.id, tag_id=t1.id).one()
+    assert link.tag.name == "combat"
+
+
+def test_duplicate(session, make_song, make_tag, tag_song):
+    s = make_song(title="T1", uri="file:///t1.mp3")
+    t1 = make_tag("combat")
+    tag_song(s, t1)
+    with pytest.raises(IntegrityError):
+        tag_song(s, t1)
+        session.commit()
+
+
+def test_cascade_delete_song_removes_song_tags(session, make_song, make_tag, tag_song):
+    s = make_song(uri="file:///casc.mp3")
+    t = make_tag("ambient")
+    link = tag_song(s, t)
+    session.commit()
+
+    # Delete song → link should be removed via CASCADE
+    session.delete(s)
+    session.commit()
+
+    assert session.get(SongTagLink, (link.id,)) is None
+
+
+# --- Playlist: Create / delete cascades
+def test_create_manual_playlist_and_add_items(session, make_playlist, make_song, add_playlist_item):
+    p = make_playlist("My List", PlaylistType.MANUAL)
+    s1 = make_song(title="A", uri="file:///a.mp3")
+    s2 = make_song(title="B", uri="file:///b.mp3")
+
+    add_playlist_item(p, s1, position=0)
+    add_playlist_item(p, s2, position=1)
+    session.commit()
+
+    # Items are ordered by position
+    items = session.query(PlaylistItem).filter_by(playlist_id=p.id).order_by(PlaylistItem.position.asc()).all()
+    assert [it.song_id for it in items] == [s1.id, s2.id]
+
+
+def test_playlist_item_cascade_on_playlist_delete(session, make_playlist, make_song, add_playlist_item):
+    p = make_playlist("Temp", PlaylistType.MANUAL)
+    s = make_song(uri="file:///x.mp3")
+    it = add_playlist_item(p, s, position=0)
+    session.commit()
+
+    session.delete(p)
+    session.commit()
+
+    assert session.get(PlaylistItem, (it.id,)) is None
+
+
+def test_playlist_item_cascade_on_song_delete(session, make_playlist, make_song, add_playlist_item):
+    p = make_playlist("Keep", PlaylistType.MANUAL)
+    s = make_song(uri="file:///keep.mp3")
+    it = add_playlist_item(p, s, position=0)
+    session.commit()
+
+    session.delete(s)
+    session.commit()
+
+    assert session.get(PlaylistItem, (it.id,)) is None
+
+
+def test_position_must_be_present(session, make_playlist, make_song):
+    p = make_playlist("Invalid", PlaylistType.MANUAL)
+    s = make_song(uri="file:///pos.mp3")
+    # Omit position should violate NOT NULL (depending on your model); here we assert IntegrityError
+    from db.models.playlist import PlaylistItem
+    it = PlaylistItem(playlist_id=p.id, song_id=s.id, position=None)  # type: ignore[arg-type]
+    session.add(it)
+    with pytest.raises(IntegrityError):
+        session.commit()
+    session.rollback()

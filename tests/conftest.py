@@ -1,9 +1,13 @@
+from datetime import datetime, UTC
+
 import pytest
 from sqlalchemy import event, Engine, create_engine
 from sqlalchemy.orm import sessionmaker
 
-from db.models import Base, Folder, Album, Image, ImageData, AlbumImage
-from db.models.tag import Tag, ImageTagLink
+from db.models import (
+    Base, Folder, Album, Image, ImageData, AlbumImage, PlaylistType, Playlist, PlaylistItem,
+    SongSource, Song, Tag, ImageTagLink, SongTagLink
+)
 
 
 # --- SQLite tuning for tests --------------------------------------------------
@@ -25,6 +29,7 @@ def session():
     with session() as s:
         yield s
         s.rollback()  # clean even if the test forgot
+
 
 # --- Helper fixtures for creating rows ----------------------------------------
 @pytest.fixture()
@@ -112,6 +117,7 @@ def make_tag(session):
         session.add(t)
         session.flush()
         return t
+
     return _mk
 
 
@@ -122,4 +128,54 @@ def make_image_tag_link(session):
         session.add(lnk)
         session.flush()
         return lnk
+
     return _mk
+
+
+@pytest.fixture()
+def make_song(session):
+    def _make(title: str = "Track", artist: str = "Unknown", source: SongSource = SongSource.LOCAL,
+              uri: str = "file:///track.mp3", duration_ms: int = 120_000) -> Song:
+        s = Song(
+            title=title, artist=artist, source=source, uri=uri, duration_ms=duration_ms,
+            date_added=datetime.now(UTC))
+        session.add(s)
+        session.flush()
+        return s
+
+    return _make
+
+
+@pytest.fixture()
+def tag_song(session):
+    def _link(song: Song, tag: Tag) -> SongTagLink:
+        link = SongTagLink(song_id=song.id, tag_id=tag.id)
+        session.add(link)
+        session.flush()
+        return link
+
+    return _link
+
+
+@pytest.fixture()
+def make_playlist(session):
+    def _make(name: str, type_: PlaylistType = PlaylistType.MANUAL, query=None, image: Image | None = None) -> Playlist:
+        p = Playlist(name=name, type=type_, query=query)
+        if image is not None:
+            p.image = image
+        session.add(p)
+        session.flush()
+        return p
+
+    return _make
+
+
+@pytest.fixture()
+def add_playlist_item(session):
+    def _add(playlist: Playlist, song: Song, position: int) -> PlaylistItem:
+        item = PlaylistItem(playlist_id=playlist.id, song_id=song.id, position=position)
+        session.add(item)
+        session.flush()
+        return item
+
+    return _add

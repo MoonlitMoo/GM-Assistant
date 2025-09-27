@@ -14,7 +14,7 @@ from db.services.library_service import LibraryService
 from dmt.ui.image_tab.library_items import FolderItem, AlbumItem
 from dmt.ui.image_tab.library_widget import LibraryWidget
 
-from tests.db_fixtures import session, make_folder, make_album, make_image
+from tests.conftest import session, make_folder, make_album, make_image
 
 
 class FakeContextMenu:
