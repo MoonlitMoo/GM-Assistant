@@ -13,7 +13,7 @@ from .core.config import (
 from .ui.main_window import MainWindow
 from .ui.player_window.display_state import DisplayState, parse_scale_mode, TransitionMode
 
-from db.manager import DatabaseManager
+from dmt.db.manager import DatabaseManager
 
 DEFAULT_DB = Path.home() / "GMAssistant" / "library.db"
 

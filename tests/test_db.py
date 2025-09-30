@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from db.models import Image, Tag, ImageTagLink
+from dmt.db.models import Image, Tag, ImageTagLink
 from tests.db_fixtures import session, make_folder, make_album, make_image, make_tag, make_image_tag_link
 
 

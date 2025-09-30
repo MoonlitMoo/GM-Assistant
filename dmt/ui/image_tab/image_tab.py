@@ -9,8 +9,8 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QTextEdit, QFileDialog, QMessageBox, QStyle
 )
 
-from db.services.library_service import LibraryService
-from db.services.tagging_service import TaggingService
+from dmt.db.services.library_service import LibraryService
+from dmt.db.services.tagging_service import TaggingService
 from dmt.ui.player_window import DisplayState
 
 from .buttons import ScaleModeButton, BlackoutButton, TransitionModeButton

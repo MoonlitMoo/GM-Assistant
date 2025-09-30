@@ -7,9 +7,9 @@ from typing import Optional
 from PIL import Image as PILImage
 from sqlalchemy import select
 
-from db.manager import DatabaseManager
-from db.models import AlbumImage, Image
-from db.repositories import FolderRepo, AlbumRepo, ImageRepo, AlbumImageRepo
+from dmt.db.manager import DatabaseManager
+from dmt.db.models import AlbumImage, Image
+from dmt.db.repositories import FolderRepo, AlbumRepo, ImageRepo, AlbumImageRepo
 
 
 @dataclass

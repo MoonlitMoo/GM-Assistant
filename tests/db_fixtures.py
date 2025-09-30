@@ -2,8 +2,8 @@ import pytest
 from sqlalchemy import event, Engine, create_engine
 from sqlalchemy.orm import sessionmaker
 
-from db.models import Base, Folder, Album, Image, ImageData, AlbumImage
-from db.models.tag import Tag, ImageTagLink
+from dmt.db.models import Base, Folder, Album, Image, ImageData, AlbumImage
+from dmt.db.models import Tag, ImageTagLink
 
 
 # --- SQLite tuning for tests --------------------------------------------------

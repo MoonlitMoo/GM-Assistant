@@ -8,10 +8,10 @@ from PySide6.QtWidgets import (
     QToolBar
 )
 
-from db.services.library_service import LibraryService
-from db.services.tagging_service import TaggingService
+from dmt.db.services.library_service import LibraryService
+from dmt.db.services.tagging_service import TaggingService
 from dmt.core.config import Config
-from db.manager import DatabaseManager
+from dmt.db.manager import DatabaseManager
 
 from .player_window import PlayerWindow
 from .image_tab import ImagesTab

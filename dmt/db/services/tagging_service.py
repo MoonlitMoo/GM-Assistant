@@ -3,9 +3,9 @@ from typing import Iterable
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from db.manager import DatabaseManager
-from db.models import Tag
-from db.repositories import TagRepo, ImageTagRepo
+from dmt.db.manager import DatabaseManager
+from dmt.db.models import Tag
+from dmt.db.repositories import TagRepo, ImageTagRepo
 
 # Domain errors
 class TagNotFound(Exception): ...
@@ -61,7 +61,7 @@ class TaggingService:
 
     def delete_tag(self, name_or_id: str | int, *, force: bool = False) -> bool:
         """Delete a tag. If force=False and tag is in use, return False."""
-        from db.models import ImageTagLink
+        from dmt.db.models import ImageTagLink
         with self.db.session() as s:
             tag = self._resolve_tag(s, name_or_id)
             in_use = s.query(ImageTagLink.id).filter(ImageTagLink.tag_id == tag.id).first() is not None

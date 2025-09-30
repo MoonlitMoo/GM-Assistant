@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Optional, Iterable, Tuple
 from sqlalchemy import select, func, update
 from sqlalchemy.orm import Session
-from db.models import Folder, Album
+from dmt.db.models import Folder, Album
 
 
 class FolderRepo:

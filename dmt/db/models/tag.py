@@ -4,7 +4,7 @@ from sqlalchemy import Integer, Text, UniqueConstraint, Index, CheckConstraint, 
 from sqlalchemy.orm import (
     Mapped, mapped_column, relationship
 )
-from db.models.mixins import TimestampMixin, Base
+from dmt.db.models.mixins import TimestampMixin, Base
 
 
 # ---------- Tag ----------

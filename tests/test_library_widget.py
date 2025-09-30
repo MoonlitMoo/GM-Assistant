@@ -8,9 +8,9 @@ from PySide6.QtCore import QSize
 from PySide6.QtGui import QImage, QColor
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QAbstractItemView
 
-from db.manager import DatabaseManager
-from db.models import Image, ImageData
-from db.services.library_service import LibraryService
+from dmt.db.manager import DatabaseManager
+from dmt.db.models import Image, ImageData
+from dmt.db.services.library_service import LibraryService
 from dmt.ui.image_tab.library_items import FolderItem, AlbumItem
 from dmt.ui.image_tab.library_widget import LibraryWidget
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 from sqlalchemy import select, delete, update, func
 from sqlalchemy.orm import Session
-from db.models import Image, ImageData, AlbumImage
+from dmt.db.models import Image, ImageData, AlbumImage
 
 
 class ImageRepo:

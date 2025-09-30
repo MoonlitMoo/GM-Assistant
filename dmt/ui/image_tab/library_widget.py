@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, \
     QInputDialog, QLineEdit, QMessageBox, QMenu, QTreeWidgetItem
 
-from db.services.library_service import LibraryService
+from dmt.db.services.library_service import LibraryService
 from .library_items import FolderItem, AlbumItem, ImageItem, COL_LABEL
 from .library_tree import LibraryTree
 

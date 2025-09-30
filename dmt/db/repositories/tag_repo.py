@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy import select, func, delete, exists
 from sqlalchemy.orm import Session
 
-from db.models import Tag, ImageTagLink
+from dmt.db.models import Tag, ImageTagLink
 
 
 class TagRepo:
@@ -29,7 +29,7 @@ class TagRepo:
 
     def usage_counts(self, s: Session, limit: int = 100) -> list[tuple[Tag, int]]:
         """ Return list of most used tags. """
-        from db.models import ImageTagLink
+        from dmt.db.models import ImageTagLink
         stmt = (
             select(Tag, func.count())
             .join(ImageTagLink, ImageTagLink.tag_id == Tag.id)

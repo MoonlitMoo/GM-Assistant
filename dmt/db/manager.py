@@ -42,7 +42,7 @@ def _alembic_paths() -> tuple[Path, Path]:
     here = Path(__file__).resolve()
     for p in (here, *here.parents):
         ini = p / "alembic.ini"
-        mig = p / "db" / "migrations"
+        mig = p / "dmt" / "db" / "migrations"
         if ini.exists() and mig.exists():
             return ini, mig
     raise RuntimeError("Could not locate alembic.ini and db/migration")
