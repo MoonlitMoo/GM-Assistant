@@ -60,3 +60,25 @@ class ImageTagLink(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<ImageTagLink image_id={self.image_id} tag_id={self.tag_id}>"
+
+
+class SongTagLink(Base, TimestampMixin):
+    """Defines the tags associated with a song."""
+    __tablename__ = "song_tag"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    song_id: Mapped[int] = mapped_column(
+        ForeignKey("song.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    tag_id: Mapped[int] = mapped_column(
+        ForeignKey("tag.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # Eager-load tag to simplify UI chip rendering
+    tag: Mapped["Tag"] = relationship("Tag", lazy="joined")
+
+    __table_args__ = (
+        UniqueConstraint("song_id", "tag_id", name="uq_song_tag_song_tag"),
+        Index("ix_song_tag_song_id", "song_id"),
+        Index("ix_song_tag_tag_id", "tag_id"),
+    )
