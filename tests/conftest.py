@@ -1,4 +1,5 @@
 import pytest
+from PySide6.QtWidgets import QInputDialog
 from sqlalchemy import event, Engine, create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -15,7 +16,7 @@ def _sqlite_enable_fk(dbapi_connection, _):
     cursor.close()
 
 
-# --- Fixtures -----------------------------------------------------------------
+# --- Database Fixtures -----------------------------------------------------------------
 @pytest.fixture()
 def session():
     """Fresh session per test."""
@@ -25,6 +26,7 @@ def session():
     with session() as s:
         yield s
         s.rollback()  # clean even if the test forgot
+
 
 # --- Helper fixtures for creating rows ----------------------------------------
 @pytest.fixture()
@@ -112,6 +114,7 @@ def make_tag(session):
         session.add(t)
         session.flush()
         return t
+
     return _mk
 
 
@@ -122,4 +125,55 @@ def make_image_tag_link(session):
         session.add(lnk)
         session.flush()
         return lnk
+
     return _mk
+
+
+# --- UI patching fixtures ------------------
+class _FakeContextMenu:
+    """ Fake context menu with decision preselected. """
+    decision = "Delete"
+
+    def __init__(self, *args, **kwargs):
+        self._actions = []
+        self._chosen = None
+
+    def addAction(self, text):
+        # Create a tiny action stub with identity semantics
+        act = type("Act", (), {})()
+        act.text = text
+        self._actions.append(act)
+        # Preselect decision
+        if text == self.decision:
+            self._chosen = act
+        return act
+
+    def actions(self):
+        return list(self._actions)
+
+    # Mimic QMenu.exec(...) API and return the “clicked” action
+    def exec(self, *args, **kwargs):
+        return self._chosen
+
+
+@pytest.fixture()
+def set_context_menu(monkeypatch):
+    """ Sets the context menu option to return the given decision. """
+    def _set_menu(src, decision):
+        monkeypatch.setattr(_FakeContextMenu, "decision", decision)
+        monkeypatch.setattr(src, "QMenu", _FakeContextMenu)
+
+    return _set_menu
+
+
+@pytest.fixture()
+def set_dialog_text(monkeypatch):
+    """ Set the text for the next item in the dialog entry box. """
+
+    def set_text(name):
+        def get_text_cycle(*args, **kwargs):
+            return name, True
+
+        monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text_cycle))
+
+    return set_text

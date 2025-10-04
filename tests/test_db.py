@@ -5,7 +5,6 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from dmt.db.models import Image, Tag, ImageTagLink
-from tests.db_fixtures import session, make_folder, make_album, make_image, make_tag, make_image_tag_link
 
 
 # --- Folder/Album/Image: inserts & constraints
@@ -139,6 +138,7 @@ def test_tag_color_hex(session, make_tag):
     ok = make_tag("Greenish", color_hex="#A1B2C3")
     session.commit()
     assert session.get(Tag, ok.id).color_hex == "#A1B2C3"
+
 
 @pytest.mark.parametrize("hex", ["#123", "A1B2C3", "A1B2C3#"])
 def test_tag_color_hex_check(session, make_tag, hex):
