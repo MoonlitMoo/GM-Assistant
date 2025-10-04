@@ -4,7 +4,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from dmt.db.models import Image, Tag, ImageTagLink
+from dmt.db.models import Image, Tag, ImageTagLink, SongSource, Song
+from dmt.db.models.tag import SongTagLink
 
 
 # --- Folder/Album/Image: inserts & constraints
@@ -211,3 +212,96 @@ def test_image_tag_link_deleted_on_image_delete(session, make_image, make_tag, m
 
     gone = session.execute(select(ImageTagLink).where(ImageTagLink.id.in_(ids))).scalars().all()
     assert gone == []
+
+
+# --- Song: insert / constraints
+def test_song_insert_minimal_url(session, make_song):
+    s1 = make_song(title="Theme", artist="", source=SongSource.url, source_url="https://x/y.mp3")
+    session.commit()
+
+    got = session.get(Song, s1.id)
+    assert got is not None
+    assert got.source == SongSource.url
+    assert got.source_url == "https://x/y.mp3"
+    assert got.play_count == 0
+    assert got.added_at is not None  # server/python default set
+
+
+def test_song_unique_source_sourceid(session, make_song):
+    # First insert
+    a = make_song(
+        title="A",
+        artist="AA",
+        source=SongSource.spotify,
+        source_id="track123",
+        source_url="https://open.spotify.com/track/track123",
+    )
+    session.commit()
+    assert a.id is not None
+
+    # Duplicate (same source/source_id) must fail
+    with pytest.raises(IntegrityError):
+        _ = make_song(
+            title="A2",
+            artist="AA2",
+            source=SongSource.spotify,
+            source_id="track123",
+            source_url="https://open.spotify.com/track/track123",
+        )
+        session.commit()
+
+
+def test_song_file_requires_local_path(session, make_song):
+    # Valid when local_path provided
+    s_ok = make_song(
+        title="Local",
+        artist="",
+        source=SongSource.file,
+        local_path="/abs/path/file.ogg",
+        source_url=None,
+    )
+    session.commit()
+    assert session.get(Song, s_ok.id).local_path == "/abs/path/file.ogg"
+
+    with pytest.raises(IntegrityError):
+        _ = make_song(source=SongSource.file, local_path=None, source_url=None)
+        session.commit()
+
+
+def test_song_duration_non_negative(session, make_song):
+    _ = make_song(duration_ms=0)
+    session.commit()
+
+    with pytest.raises(IntegrityError):
+        _ = make_song(duration_ms=-1)
+        session.commit()
+
+
+def test_songtaglink_uniqueness_and_cascade(session, make_song, make_tag):
+    # Song + two tags
+    song = make_song(title="Tagged", artist="", source=SongSource.url, source_url="https://x/t.mp3")
+    t1 = make_tag("Mood")
+    t2 = make_tag("Combat")
+    session.flush()
+
+    # Create links
+    l1 = SongTagLink(song_id=song.id, tag_id=t1.id)
+    l2 = SongTagLink(song_id=song.id, tag_id=t2.id)
+    session.add_all([l1, l2])
+    session.commit()
+
+    # Verify links exist
+    q = select(SongTagLink).where(SongTagLink.song_id == song.id)
+    links = session.execute(q).scalars().all()
+    assert {lnk.tag_id for lnk in links} == {t1.id, t2.id}
+
+    # Cascade delete from Song -> links
+    session.delete(song)
+    session.commit()
+    remaining = session.execute(q).scalars().all()
+    assert remaining == []
+
+    # Unique (song_id, tag_id)
+    with pytest.raises(IntegrityError):
+        session.add(SongTagLink(song_id=song.id, tag_id=t1.id))
+        session.commit()

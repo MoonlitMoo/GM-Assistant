@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QInputDialog
 from sqlalchemy import event, Engine, create_engine
 from sqlalchemy.orm import sessionmaker
 
-from dmt.db.models import Base, Folder, Album, Image, ImageData, AlbumImage
+from dmt.db.models import Base, Folder, Album, Image, ImageData, AlbumImage, SongSource, Song
 from dmt.db.models import Tag, ImageTagLink
 
 
@@ -129,6 +129,19 @@ def make_image_tag_link(session):
     return _mk
 
 
+@pytest.fixture()
+def make_song(session):
+    def _mk(title="Test", artist="Anon", album=None, source=SongSource.url, source_id=None,
+            source_url="https://example.com/a.mp3", duration_ms=None, local_path=None):
+        obj = Song(title=title, artist=artist, album=album, source=source, source_id=source_id,
+                   source_url=source_url, duration_ms=duration_ms, local_path=local_path)
+        session.add(obj)
+        session.flush()
+        return obj
+
+    return _mk
+
+
 # --- UI patching fixtures ------------------
 class _FakeContextMenu:
     """ Fake context menu with decision preselected. """
@@ -159,6 +172,7 @@ class _FakeContextMenu:
 @pytest.fixture()
 def set_context_menu(monkeypatch):
     """ Sets the context menu option to return the given decision. """
+
     def _set_menu(src, decision):
         monkeypatch.setattr(_FakeContextMenu, "decision", decision)
         monkeypatch.setattr(src, "QMenu", _FakeContextMenu)
