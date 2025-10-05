@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
         # Tabs
         self.images_tab = ImagesTab(
             service=LibraryService(self.dbm), tag_service=TaggingService(self.dbm), display_state=self.display_state)
-        self.initiative_tab = InitiativeTab(self.config)
+        self.initiative_tab = InitiativeTab(self)
         self.settings_tab = SettingsTab(self.dbm, self.display_state)
         self.settings_tab.reloadedDatabase.connect(self.images_tab.library.reload)
 
