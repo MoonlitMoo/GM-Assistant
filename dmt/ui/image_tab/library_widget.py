@@ -105,6 +105,10 @@ class LibraryWidget(QWidget):
         if item is None:
             return
 
+        # If it's an image, set current item to the parent album
+        if isinstance(item, ImageItem):
+            item = item.parent() or self.tree.visible_root()
+
         # If an Album is selected, create alongside it (i.e., in its parent Folder)
         if isinstance(item, AlbumItem):
             item = item.parent() or self.tree.visible_root()
@@ -156,14 +160,19 @@ class LibraryWidget(QWidget):
         if not item:
             return
 
-        # Disallow menu on visible root
-        if item is self.tree.visible_root():
-            return
-
         # Validation passed, create the menu
         menu = QMenu(self)
-        act_rename = menu.addAction("Rename")
-        act_delete = menu.addAction("Delete")
+        if not item == self.tree.visible_root():
+            act_rename = menu.addAction("Rename")
+            act_delete = menu.addAction("Delete")
+        else:
+            act_rename, act_delete = None, None
+        if not isinstance(item, ImageItem):
+            act_create_f = menu.addAction("Create Folder")
+            act_create_a = menu.addAction("Create Album")
+        else:
+            act_create_f, act_create_a = None, None
+
         chosen = menu.exec(self.tree.viewport().mapToGlobal(pos))
         if not chosen:
             return
@@ -173,6 +182,10 @@ class LibraryWidget(QWidget):
             self._on_rename(item)
         elif chosen == act_delete:
             self._on_delete(item)
+        elif chosen == act_create_f:
+            self._create_node(make_album=False)
+        elif chosen == act_create_a:
+            self._create_node(make_album=True)
 
     def _on_rename(self, item: QTreeWidgetItem):
         """Rename in DB then update the tree item text."""
