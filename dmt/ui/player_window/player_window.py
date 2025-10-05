@@ -1,9 +1,10 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 from .display_state import ScaleMode, DisplayState
 from .display_view import DisplayView
+from .initiative_overlay import InitiativeOverlay
 
 
 class PlayerWindow(QWidget):
@@ -18,6 +19,12 @@ class PlayerWindow(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(self._canvas)
+
+        # HUD overlay for initiative tracker
+        self._init_overlay = InitiativeOverlay(self)
+        self._init_overlay.hide()
+        # Position overlay top-right after layout settles
+        QTimer.singleShot(0, self._position_initiative_overlay)
 
         # Apply initial state
         self._canvas.set_scale_mode(self._display_state.scale_mode())
@@ -52,12 +59,36 @@ class PlayerWindow(QWidget):
     def blackout(self, on: bool, *, fade_ms: int | None = None):
         self._canvas.blackout(on, fade_ms=fade_ms)
 
+    # ---- Initiative Overlay API ----
+    def show_initiative_overlay(self, names: list[str], current_idx: int):
+        self._init_overlay.set_entries(names, current_idx)
+        self._init_overlay.show()
+        self._position_initiative_overlay()
+
+    def update_initiative_overlay(self, names: list[str], current_idx: int):
+        if not self._init_overlay.isVisible():
+            self._init_overlay.show()
+        self._init_overlay.set_entries(names, current_idx)
+        self._position_initiative_overlay()
+
+    def hide_initiative_overlay(self):
+        self._init_overlay.hide()
+
     # ---- Internal state handling ----
     def _on_initiative_changed(self, names: list, current_idx: int, visible: bool):
         if visible and names:
-            self._canvas.show_initiative(names, current_idx)
+            self.show_initiative_overlay(names, current_idx)
         else:
-            self._canvas.hide_initiative()
+            self.hide_initiative_overlay()
+
+    def _position_initiative_overlay(self):
+        """Anchor overlay in top-right corner of Player window."""
+        m = 16  # margin
+        if not self._init_overlay:
+            return
+        w = self._init_overlay.width()
+        h = self._init_overlay.height()
+        self._init_overlay.move(self.width() - w - m, m)
 
     # ---- window sizing logic ----
     def _apply_window_mode(self, windowed: bool):
@@ -80,11 +111,6 @@ class PlayerWindow(QWidget):
             self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool | Qt.Window)
             self.setGeometry(target.geometry())
             self.showFullScreen()
-
-    def closeEvent(self, event):
-        if event.spontaneous() and self.parent() is not None:
-            self.parent().close_player_window()
-        super().closeEvent(event)
 
     def make_companion_tool(self):
         # preserve current position/size
@@ -114,3 +140,13 @@ class PlayerWindow(QWidget):
         self.setGeometry(geom)
         if focus:
             self.activateWindow()
+
+    # ---- overrides ----
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._position_initiative_overlay()
+
+    def closeEvent(self, event):
+        if event.spontaneous() and self.parent() is not None:
+            self.parent().close_player_window()
+        super().closeEvent(event)

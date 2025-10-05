@@ -30,81 +30,6 @@ class BlackoutOverlayItem(QGraphicsRectItem):
         self.setVisible(False)     # toggled by animation driver
 
 
-class InitiativeOverlayItem(QGraphicsItem):
-    """Simple overlay: rounded rect with list of names; current is highlighted."""
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setZValue(900)  # below blackout(1000), above image(0)
-        self._names: list[str] = []
-        self._current: int = -1
-        self._padding_h = 10
-        self._padding_v = 8
-        self._gap = 4
-        self._radius = 8
-        self._bg = Qt.black
-        self._bg_alpha = 180
-        self._fg = Qt.white
-        self._accent = Qt.yellow
-        self._font = QFont()  # default app font
-        self._bounds = QRectF()
-
-    def set_entries(self, names: list[str], current: int):
-        self._names = list(names)
-        self._current = int(current) if current is not None else -1
-        self._recalc_bounds()
-        self.update()
-
-    def _recalc_bounds(self):
-        fm = QFontMetrics(self._font)
-        width = 0
-        height = self._padding_v  # top padding
-        for i, name in enumerate(self._names):
-            w = fm.horizontalAdvance(name)
-            width = max(width, w)
-            height += fm.height()
-            if i < len(self._names) - 1:
-                height += self._gap
-        width += self._padding_h * 2
-        height += self._padding_v  # bottom padding
-        self._bounds = QRectF(0, 0, float(max(width, 80)), float(max(height, fm.height() + self._padding_v * 2)))
-
-    # --- QGraphicsItem interface ---
-    def boundingRect(self) -> QRectF:
-        return self._bounds
-
-    def paint(self, p: QPainter, option, widget=None):
-        if not self._names:
-            return
-        # background
-        p.setRenderHint(QPainter.Antialiasing, True)
-        p.setBrush(self._bg)
-        p.setOpacity(self._bg_alpha / 255.0)
-        p.setPen(Qt.NoPen)
-        p.drawRoundedRect(self._bounds, self._radius, self._radius)
-
-        # text
-        p.setOpacity(1.0)
-        fm = QFontMetrics(self._font)
-        x = self._padding_h
-        y = self._padding_v + fm.ascent()
-        for i, name in enumerate(self._names):
-            if i == self._current:
-                # accent bar + bold text
-                bar_w = 4
-                p.fillRect(QRectF(self._bounds.left(), y - fm.ascent(), bar_w, fm.height()), self._accent)
-                font_bold = QFont(self._font)
-                font_bold.setBold(True)
-                p.setFont(font_bold)
-                p.setPen(self._accent)
-                p.drawText(x + bar_w + 6, y, name)
-                p.setFont(self._font)
-                p.setPen(self._fg)
-            else:
-                p.setPen(self._fg)
-                p.drawText(x, y, name)
-            y += fm.height() + self._gap
-
-
 class DisplayView(QGraphicsView):
     """
     GraphicsView-based display with:
@@ -139,10 +64,6 @@ class DisplayView(QGraphicsView):
         self._blackout_anim.setDuration(250)
         self._blackout_anim.valueChanged.connect(self._apply_blackout_opacity)
         self._blackout_anim.finished.connect(self._finalize_blackout_visibility)
-
-        # Initiative overlay
-        self._init_overlay: InitiativeOverlayItem | None = None
-        self._overlay_margin = 16
 
         # Disable scrollbars unless zooming/panning
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -268,26 +189,6 @@ class DisplayView(QGraphicsView):
         self._blackout_anim.setEndValue(end)
         self._blackout_anim.start()
 
-    # ---------- Initiative overlay API ----------
-    def show_initiative(self, names: list[str], current_idx: int) -> None:
-        if self._init_overlay is None:
-            self._init_overlay = InitiativeOverlayItem()
-            self.scene().addItem(self._init_overlay)
-        self._init_overlay.setVisible(True)
-        self._init_overlay.set_entries(names, current_idx)
-        self._position_initiative_overlay()
-
-    def update_initiative(self, names: list[str], current_idx: int) -> None:
-        if self._init_overlay is None or not self._init_overlay.isVisible():
-            self.show_initiative(names, current_idx)
-            return
-        self._init_overlay.set_entries(names, current_idx)
-        self._position_initiative_overlay()
-
-    def hide_initiative(self) -> None:
-        if self._init_overlay:
-            self._init_overlay.setVisible(False)
-
     # ---------- Image Internals ----------
     def _apply_scale_mode(self) -> None:
         pm = self._base.pixmap()
@@ -321,22 +222,9 @@ class DisplayView(QGraphicsView):
         # Cover full scene rect
         self._blackout.setRect(self.sceneRect())
 
-    # ---------- Initiative Internals ----------
-    def _position_initiative_overlay(self) -> None:
-        """Place overlay at top-right of the current scene rect with a margin."""
-        if not self._init_overlay or not self._init_overlay.isVisible():
-            return
-        s = self.sceneRect()
-        br = self._init_overlay.boundingRect()
-        # position so overlay's top-right matches scene.topRight() - margin
-        x = s.right() - br.width() - self._overlay_margin
-        y = s.top() + self._overlay_margin
-        self._init_overlay.setPos(x, y)
-
     # ---------- General Internals ----------
     def _resize_overlays_to_scene(self):
         self._ensure_blackout_geometry()
-        self._position_initiative_overlay()
 
     def _nav_active(self) -> bool:
         return self._nav_enabled and (self._scale_mode in self._nav_modes)
@@ -386,4 +274,5 @@ class DisplayView(QGraphicsView):
                 super().scale(factor, factor)
             ev.accept()
             return
+        self._resize_overlays_to_scene()
         super().wheelEvent(ev)
