@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Callable
+from typing import Callable, Dict, Any
 
 from PySide6.QtCore import QObject, Signal, QTimer
 
@@ -39,16 +39,17 @@ class DisplayState(QObject):
     scaleModeChanged = Signal(ScaleMode)
     transitionModeChanged = Signal(TransitionMode)
 
-    def __init__(self, *, scale_mode: ScaleMode, transition_mode: TransitionMode, windowed: bool, display_index: int,
-                 on_persist: Callable[[dict], None] | None = None, parent: QObject | None = None,
+    def __init__(self, on_persist: Callable[[dict], None] | None = None, parent: QObject | None = None,
                  autosave_debounce_ms: int = 250,
     ):
         super().__init__(parent)
-        self._scale_mode = scale_mode
-        self._transition_mode = transition_mode
-        self._windowed = windowed
+        # General defaults
+        self._display_index = 0
+        self._windowed = True
+        # Overlay defaults
+        self._transition_mode = TransitionMode.CROSSFADE
+        self._scale_mode = ScaleMode.FIT
         self._blackout = False
-        self._display_index = display_index
 
         self._on_persist = on_persist
         self._dirty = False
@@ -95,10 +96,17 @@ class DisplayState(QObject):
     # --- persistence bridge ---
     def snapshot(self) -> dict:
         return {
-            "fitMode": self._scale_mode.value,
-            "playerWindowed": self._windowed,
             "playerDisplay": self._display_index,
+            "playerWindowed": self._windowed,
+            "fitMode": self._scale_mode.value,
+            "transitionMode": self._transition_mode.value
         }
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        self._display_index = int(state.get("playerDisplay", 0))
+        self._windowed = bool(state.get("playerWindowed", True))
+        self._scale_mode = ScaleMode(state.get("fitMode", "fit"))
+        self._transition_mode = TransitionMode(state.get("transitionMode", "crossfade"))
 
     def _mark_dirty(self):
         self._dirty = True

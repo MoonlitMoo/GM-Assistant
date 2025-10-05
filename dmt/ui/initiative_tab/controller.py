@@ -139,7 +139,7 @@ class InitiativeController:
         self._round = 0
 
     # ----- persistence -----
-    def snap(self) -> Dict[str, Any]:
+    def snapshot(self) -> Dict[str, Any]:
         return {
             "running": self._running,
             "cursor": self._cursor,
