@@ -64,6 +64,8 @@ class MainWindow(QMainWindow):
         """ Create the player window. """
         if self.playerWindow is None:
             self.playerWindow = PlayerWindow(self.display_state)
+        else:
+            self.playerWindow.bring_to_front()
 
     def close_player_window(self) -> None:
         """ Destroy the player window. """
