@@ -11,6 +11,7 @@ from .core.config import (
     load_config, save_config, get_last_db_path, set_last_db_path, ORG, APP
 )
 from .ui.main_window import MainWindow
+from .ui.initiative_tab import InitiativeController
 from .ui.player_window.display_state import DisplayState, parse_scale_mode, TransitionMode
 
 from dmt.db.manager import DatabaseManager
@@ -50,6 +51,8 @@ def main() -> None:
             setattr(cfg, "playerDisplay", d["playerDisplay"])
         )
     )
+    initiative_controller = InitiativeController()
+    initiative_controller.load_state(cfg.initiativeState)
 
     # Open database (last used or default) and remember it
     db = DatabaseManager()
@@ -59,7 +62,7 @@ def main() -> None:
     set_last_db_path(db_path)
 
     # Construct and show the main window (pass db so widgets can use it)
-    win = MainWindow(cfg=cfg, dbm=db, display_state=display_state)
+    win = MainWindow(cfg=cfg, dbm=db, display_state=display_state, initiative_ctl=initiative_controller)
     win.show()
 
     # Persist settings on quit
@@ -68,6 +71,7 @@ def main() -> None:
         cfg.fitMode = snap["fitMode"]
         cfg.playerWindowed = snap["playerWindowed"]
         cfg.playerDisplay = snap["playerDisplay"]
+        cfg.initiativeState = initiative_controller.snap()
         save_config(cfg)
         if db.path:
             set_last_db_path(db.path)

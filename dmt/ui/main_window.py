@@ -15,7 +15,7 @@ from dmt.db.manager import DatabaseManager
 
 from .player_window import PlayerWindow
 from .image_tab import ImagesTab
-from .initiative_tab import InitiativeTab
+from .initiative_tab import InitiativeTab, InitiativeController
 from .player_window.display_state import DisplayState
 from .settings_tab import SettingsTab
 
@@ -23,7 +23,8 @@ from .settings_tab import SettingsTab
 class MainWindow(QMainWindow):
     """ The main window for the GM to use the tools from. """
 
-    def __init__(self, cfg: Config, dbm: DatabaseManager, display_state: DisplayState) -> None:
+    def __init__(self, cfg: Config, dbm: DatabaseManager,
+                 display_state: DisplayState, initiative_ctl: InitiativeController) -> None:
         super().__init__()
         self.setWindowTitle("DM Assistant")
         self.resize(1200, 800)
@@ -39,7 +40,7 @@ class MainWindow(QMainWindow):
         # Tabs
         self.images_tab = ImagesTab(
             service=LibraryService(self.dbm), tag_service=TaggingService(self.dbm), display_state=self.display_state)
-        self.initiative_tab = InitiativeTab(self)
+        self.initiative_tab = InitiativeTab(self, ctl=initiative_ctl)
         self.settings_tab = SettingsTab(self.dbm, self.display_state)
         self.settings_tab.reloadedDatabase.connect(self.images_tab.library.reload)
 

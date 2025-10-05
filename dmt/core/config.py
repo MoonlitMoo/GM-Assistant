@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+from dataclasses import field
 from pathlib import Path
-from typing import List
+from typing import List, Any
 from pydantic import BaseModel, Field
 from PySide6.QtCore import QSettings
 
@@ -30,6 +31,7 @@ class Config(BaseModel):
     hotkeys: Hotkeys = Field(default_factory=Hotkeys)
     ui: UIState = Field(default_factory=UIState)
     playerWindowed: bool = True
+    initiativeState: dict[str, Any] = field(default_factory=dict)
 
 
 def _s() -> QSettings:
@@ -79,6 +81,11 @@ def load_config() -> Config:
     splitter_sizes = _read_json(s, "splitterSizes", {})
     s.endGroup()
 
+    # --- Initiative ---
+    s.beginGroup("initiative")
+    initiative_state = _read_json(s, "state", {})
+    s.endGroup()
+
     return Config(
         imageRoots=image_roots,
         playerDisplay=player_display,
@@ -87,6 +94,7 @@ def load_config() -> Config:
         hotkeys=hk,
         ui=UIState(geometry=geometry, splitterSizes=splitter_sizes),
         playerWindowed=player_windowed,
+        initiativeState=initiative_state
     )
 
 
@@ -113,6 +121,11 @@ def save_config(cfg: Config) -> None:
     s.beginGroup("ui")
     _write_json(s, "geometry", dict(cfg.ui.geometry))
     _write_json(s, "splitterSizes", dict(cfg.ui.splitterSizes))
+    s.endGroup()
+
+    # --- Initiative ---
+    s.beginGroup("initiative")
+    _write_json(s, "state", cfg.initiativeState)
     s.endGroup()
 
 

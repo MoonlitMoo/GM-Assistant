@@ -8,9 +8,9 @@ from .table_model import InitiativeTableModel
 
 
 class InitiativeTab(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, ctl: InitiativeController = None):
         super().__init__(parent)
-        self.ctl = InitiativeController()
+        self.ctl = ctl
         self.model = InitiativeTableModel(self.ctl)
 
         # --- UI ---

@@ -1,5 +1,6 @@
+import json
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import itertools
 
 
@@ -19,8 +20,12 @@ class InitiativeController:
         self._list: List[Combatant] = []
         self._cursor: Optional[int] = None  # index into _list
         self._running: bool = False
+        self._round: int = 0
 
     # ------------------ read ------------------
+    def round(self) -> int:
+        return self._round
+
     def list(self) -> List[Combatant]:
         return self._list
 
@@ -105,21 +110,65 @@ class InitiativeController:
         self._running = True
         if self._cursor is None:
             self._cursor = 0
-        # mark first as revealed for future Player window logic (no UI here)
+        if self._round == 0:
+            self._round = 1
         self._list[self._cursor].is_revealed = True
 
     def next(self) -> None:
         if not self._running or not self._list:
             return
+        prev = self._cursor
         self._cursor = (self._cursor + 1) % len(self._list)
+        if prev is not None and self._cursor == 0:
+            self._round += 1
         self._list[self._cursor].is_revealed = True
 
     def back(self) -> None:
         if not self._running or not self._list:
             return
+        prev = self._cursor
         self._cursor = (self._cursor - 1 + len(self._list)) % len(self._list)
+        if prev is not None and prev == 0:
+            # wrapped backwards from top → go to previous round, clamp at 1
+            self._round = max(1, self._round - 1)
         self._list[self._cursor].is_revealed = True
 
     def end(self) -> None:
         self._running = False
         self._cursor = None
+        self._round = 0
+
+    # ----- persistence -----
+    def snap(self) -> Dict[str, Any]:
+        return {
+            "running": self._running,
+            "cursor": self._cursor,
+            "round": self._round,
+            "list": [
+                {
+                    "id": c.id,
+                    "name": c.name,
+                    "initiative": c.initiative,
+                    "is_revealed": c.is_revealed,
+                } for c in self._list
+            ],
+        }
+
+    def load_state(self, state: Dict[str, Any]) -> None:
+        self._list = []
+        for d in state.get("list", []):
+            self._list.append(Combatant(
+                id=int(d["id"]),
+                name=str(d["name"]),
+                initiative=int(d["initiative"]),
+                is_revealed=bool(d.get("is_revealed", False)),
+            ))
+        self._cursor = state.get("cursor", None)
+        self._running = bool(state.get("running", False))
+        self._round = int(state.get("round", 0))
+
+        # ensure cursor is valid
+        if self._cursor is not None and not (0 <= self._cursor < len(self._list)):
+            self._cursor = 0 if self._list else None
+        if self._running and self._round == 0 and self._list:
+            self._round = 1
