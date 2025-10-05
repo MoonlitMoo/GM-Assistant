@@ -38,6 +38,7 @@ class DisplayState(QObject):
     blackoutChanged = Signal(bool)
     scaleModeChanged = Signal(ScaleMode)
     transitionModeChanged = Signal(TransitionMode)
+    initiativeChanged = Signal(list, int, bool)
 
     def __init__(self, on_persist: Callable[[dict], None] | None = None, parent: QObject | None = None,
                  autosave_debounce_ms: int = 250,
@@ -47,9 +48,12 @@ class DisplayState(QObject):
         self._display_index = 0
         self._windowed = True
         # Overlay defaults
-        self._transition_mode = TransitionMode.CROSSFADE
         self._scale_mode = ScaleMode.FIT
+        self._transition_mode = TransitionMode.CROSSFADE
         self._blackout = False
+        self._initiative_visible = False
+        self._initiative_names: list[str] = []
+        self._initiative_current: int = -1
 
         self._on_persist = on_persist
         self._dirty = False
@@ -65,7 +69,19 @@ class DisplayState(QObject):
     def blackout(self) -> bool: return self._blackout
     def display_index(self) -> int: return self._display_index
 
-    # --- setters (emit + schedule persist) ---
+    # --- Image overlay API ---
+    def set_display_index(self, idx: int) -> None:
+        if idx == self._display_index: return
+        self._display_index = idx
+        self.displayIndexChanged.emit(idx)
+        self._mark_dirty()
+
+    def set_windowed(self, on: bool) -> None:
+        if on == self._windowed: return
+        self._windowed = on
+        self.windowedChanged.emit(on)
+        self._mark_dirty()
+
     def set_scale_mode(self, mode: ScaleMode) -> None:
         if mode == self._scale_mode: return
         self._scale_mode = mode
@@ -77,21 +93,26 @@ class DisplayState(QObject):
         self._transition_mode = mode
         self.transitionModeChanged.emit(mode)
 
-    def set_windowed(self, on: bool) -> None:
-        if on == self._windowed: return
-        self._windowed = on
-        self.windowedChanged.emit(on)
-        self._mark_dirty()
-
-    def set_display_index(self, idx: int) -> None:
-        if idx == self._display_index: return
-        self._display_index = idx
-        self.displayIndexChanged.emit(idx)
-        self._mark_dirty()
-
+    # ---- Blackout overlay API ----
     def set_blackout(self, on: bool):
         self._blackout = on
         self.blackoutChanged.emit(on)
+
+    # ---- Initiative overlay API ----
+    def set_initiative(self, names: list[str], current_idx: int) -> None:
+        self._initiative_names = list(names)
+        self._initiative_current = int(current_idx) if current_idx is not None else -1
+        self._initiative_visible = True
+        self.initiativeChanged.emit(self._initiative_names, self._initiative_current, True)
+
+    def update_initiative(self, names: list[str], current_idx: int) -> None:
+        self._initiative_names = list(names)
+        self._initiative_current = int(current_idx) if current_idx is not None else -1
+        self.initiativeChanged.emit(self._initiative_names, self._initiative_current, self._initiative_visible)
+
+    def hide_initiative(self) -> None:
+        self._initiative_visible = False
+        self.initiativeChanged.emit([], -1, False)
 
     # --- persistence bridge ---
     def snapshot(self) -> dict:
@@ -99,7 +120,10 @@ class DisplayState(QObject):
             "playerDisplay": self._display_index,
             "playerWindowed": self._windowed,
             "fitMode": self._scale_mode.value,
-            "transitionMode": self._transition_mode.value
+            "transitionMode": self._transition_mode.value,
+            "initiativeVisible": self._initiative_visible,
+            "initiativeNames": self._initiative_names,
+            "initiativeIndex": self._initiative_current
         }
 
     def load_state(self, state: Dict[str, Any]) -> None:
@@ -107,6 +131,9 @@ class DisplayState(QObject):
         self._windowed = bool(state.get("playerWindowed", True))
         self._scale_mode = ScaleMode(state.get("fitMode", "fit"))
         self._transition_mode = TransitionMode(state.get("transitionMode", "crossfade"))
+        self._initiative_visible = state.get("initiativeVisible", False)
+        self._initiative_names = state.get("initiativeNames", [])
+        self._initiative_current = state.get("initiativeIndex", -1)
 
     def _mark_dirty(self):
         self._dirty = True

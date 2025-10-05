@@ -5,12 +5,14 @@ from PySide6.QtWidgets import (
 )
 from .controller import InitiativeController
 from .table_model import InitiativeTableModel
+from ..player_window import DisplayState
 
 
 class InitiativeTab(QWidget):
-    def __init__(self, parent=None, ctl: InitiativeController = None):
+    def __init__(self, parent, ctl: InitiativeController, state: DisplayState):
         super().__init__(parent)
         self.ctl = ctl
+        self.state = state
         self.model = InitiativeTableModel(self.ctl)
 
         # ---- Top bar with Round label ----
@@ -150,27 +152,34 @@ class InitiativeTab(QWidget):
         if not self.ctl.list():
             return
         self.ctl.start()
-        self.model.layoutChanged.emit()  # refresh highlight
+        self.model.layoutChanged.emit()
         self.btn_start.setEnabled(False)
         self.btn_next.setEnabled(True)
         self.btn_back.setEnabled(True)
         self.btn_end.setEnabled(True)
         self.table.setFocus()
+        names, idx = self._revealed_subset()
+        self.state.set_initiative(names, idx)
         self._after_model_change()
 
     def _on_next(self):
         self.ctl.next()
         self.model.layoutChanged.emit()
+        names, idx = self._revealed_subset()
+        self.state.update_initiative(names, idx)
         self._after_model_change()
 
     def _on_back(self):
         self.ctl.back()
         self.model.layoutChanged.emit()
+        names, idx = self._revealed_subset()
+        self.state.update_initiative(names, idx)
         self._after_model_change()
 
     def _on_end(self):
         self.ctl.end()
         self.model.layoutChanged.emit()
+        self.state.hide_initiative()
         self._refresh_buttons()
         self._after_model_change()
 
@@ -212,6 +221,20 @@ class InitiativeTab(QWidget):
     def _after_model_change(self):
         self._resize_table_width()
         self._update_round_label()
+
+    def _revealed_subset(self) -> tuple[list[str], int]:
+        """Return (revealed_names_in_order, current_idx_within_that_list)."""
+        L = self.ctl.list()
+        if not L or self.ctl.cursor_index() is None:
+            return [], -1
+
+        # Rule: only show combatants that have been revealed (is_revealed=True).
+        revealed = [c.name for c in L if c.is_revealed]
+        # current index within the revealed subset:
+        cur = self.ctl.cursor_index()
+        current_name = L[cur].name if cur is not None and 0 <= cur < len(L) else None
+        current_idx = revealed.index(current_name) if current_name in revealed else -1
+        return revealed, current_idx
 
     # --- overrides
     def showEvent(self, event):

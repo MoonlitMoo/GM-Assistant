@@ -9,7 +9,7 @@ from .display_view import DisplayView
 class PlayerWindow(QWidget):
     """Separate top-level window shown to players."""
 
-    def __init__(self, display_state: DisplayState, parent=None):
+    def __init__(self, display_state: DisplayState):
         super().__init__(None)
         self._display_state = display_state
 
@@ -25,6 +25,7 @@ class PlayerWindow(QWidget):
         self._display_state.transitionModeChanged.connect(self._canvas.set_transition_mode)
         self._display_state.windowedChanged.connect(self._apply_window_mode)
         self._display_state.blackoutChanged.connect(self._canvas.blackout)
+        self._display_state.initiativeChanged.connect(self._on_initiative_changed)
 
         # Apply current window mode on start
         self.setWindowFlag(Qt.WindowDoesNotAcceptFocus, True)
@@ -44,6 +45,12 @@ class PlayerWindow(QWidget):
 
     def blackout(self, on: bool, *, fade_ms: int | None = None):
         self._canvas.blackout(on, fade_ms=fade_ms)
+
+    def _on_initiative_changed(self, names: list, current_idx: int, visible: bool):
+        if visible and names:
+            self._canvas.show_initiative(names, current_idx)
+        else:
+            self._canvas.hide_initiative()
 
     # ---- window sizing logic ----
     def _apply_window_mode(self, windowed: bool):
