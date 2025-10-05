@@ -68,6 +68,9 @@ class DisplayState(QObject):
     def windowed(self) -> bool: return self._windowed
     def blackout(self) -> bool: return self._blackout
     def display_index(self) -> int: return self._display_index
+    def initiative_visible(self) -> bool: return self._initiative_visible
+    def initiative_items(self) -> list: return self._initiative_names
+    def initiative_index(self) -> int: return self._initiative_current
 
     # --- Image overlay API ---
     def set_display_index(self, idx: int) -> None:

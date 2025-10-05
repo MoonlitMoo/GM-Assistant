@@ -19,13 +19,19 @@ class PlayerWindow(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(self._canvas)
 
-        # Apply state and subscribe
+        # Apply initial state
         self._canvas.set_scale_mode(self._display_state.scale_mode())
+        self._canvas.set_transition_mode(self._display_state.transition_mode())
+        self._on_initiative_changed(self._display_state.initiative_items(), self._display_state.initiative_index(),
+                                    self._display_state.initiative_visible())
+
+        # Subscribe to state changes
         self._display_state.scaleModeChanged.connect(self._canvas.set_scale_mode)
         self._display_state.transitionModeChanged.connect(self._canvas.set_transition_mode)
         self._display_state.windowedChanged.connect(self._apply_window_mode)
         self._display_state.blackoutChanged.connect(self._canvas.blackout)
         self._display_state.initiativeChanged.connect(self._on_initiative_changed)
+
 
         # Apply current window mode on start
         self.setWindowFlag(Qt.WindowDoesNotAcceptFocus, True)
@@ -46,6 +52,7 @@ class PlayerWindow(QWidget):
     def blackout(self, on: bool, *, fade_ms: int | None = None):
         self._canvas.blackout(on, fade_ms=fade_ms)
 
+    # ---- Internal state handling ----
     def _on_initiative_changed(self, names: list, current_idx: int, visible: bool):
         if visible and names:
             self._canvas.show_initiative(names, current_idx)

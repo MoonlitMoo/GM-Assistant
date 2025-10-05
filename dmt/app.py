@@ -35,7 +35,7 @@ def main() -> None:
     cfg = load_config()
 
     # Create necessary states
-    display_state = DisplayState(on_persist=lambda d: setattr(cfg.displayState, d, {}))
+    display_state = DisplayState(on_persist=lambda d: setattr(cfg, "displayState", d))
     display_state.load_state(cfg.displayState)
     initiative_controller = InitiativeController()
     initiative_controller.load_state(cfg.initiativeState)

@@ -103,7 +103,7 @@ class ImagesTab(QWidget):
         self._btn_send.clicked.connect(self._send_to_player)
         self._btn_send.setEnabled(False)
 
-        self._btn_transition = TransitionModeButton(parent=self)
+        self._btn_transition = TransitionModeButton(parent=self, initial=self._display_state.transition_mode())
         self._btn_transition.modeChanged.connect(self._display_state.set_transition_mode)
 
         self._btn_black = BlackoutButton(parent=self)
