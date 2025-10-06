@@ -29,7 +29,7 @@ class PlayerWindow(QWidget):
         self._canvas.set_scale_mode(self._display_state.scale_mode())
         self._canvas.set_transition_mode(self._display_state.transition_mode())
         self._on_initiative_changed(self._display_state.initiative_items(), self._display_state.initiative_index(),
-                                    self._display_state.initiative_visible())
+                                    self._display_state.initiative_round(), self._display_state.initiative_visible())
 
         # Subscribe to state changes
         self._display_state.scaleModeChanged.connect(self._canvas.set_scale_mode)
@@ -72,9 +72,9 @@ class PlayerWindow(QWidget):
         self._init_overlay.hide()
 
     # ---- Internal state handling ----
-    def _on_initiative_changed(self, names: list, current_idx: int, visible: bool):
+    def _on_initiative_changed(self, names: list, current_idx: int, round: int, visible: bool):
         if visible and names:
-            self.show_initiative_overlay(names, current_idx)
+            self.show_initiative_overlay(names, current_idx, round)
         else:
             self.hide_initiative_overlay()
 

@@ -1,28 +1,56 @@
-from PySide6.QtGui import QShortcut, QKeySequence, Qt
+from __future__ import annotations
+from typing import Tuple, List
+
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QSpinBox, QPushButton,
-    QTableView, QMessageBox, QLabel, QHeaderView
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QSpinBox,
+    QPushButton, QTableView, QMessageBox, QHeaderView, QSizePolicy
 )
+
 from .controller import InitiativeController
 from .table_model import InitiativeTableModel
-from ..player_window import DisplayState
-
+from dmt.ui.player_window import DisplayState
 
 class InitiativeTab(QWidget):
     def __init__(self, parent, ctl: InitiativeController, state: DisplayState):
         super().__init__(parent)
-        self.ctl = ctl
         self.state = state
+        self.ctl = ctl
         self.model = InitiativeTableModel(self.ctl)
 
-        # ---- Top bar with Round label ----
-        self.lbl_round = QLabel(self)
-        self.lbl_round.setText("Round: –")
-        self.lbl_round.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        # ---------- Header bar ----------
+        self.lbl_round = QLabel("Round: –")
         self.lbl_round.setStyleSheet("font-weight: 600;")
 
-        # --- UI ---
-        self.table = QTableView(self)
+        self.btn_show = QPushButton("Show on Player")
+        self.btn_show.setCheckable(True)
+
+        self.btn_reset = QPushButton("Reset")
+        self.btn_clear = QPushButton("Clear Table")
+
+        header = QHBoxLayout()
+        header.addWidget(self.lbl_round)
+        header.addStretch(1)
+        header.addWidget(self.btn_show)
+        header.addWidget(self.btn_reset)
+        header.addWidget(self.btn_clear)
+
+        # ---------- Add row ----------
+        self.name_edit = QLineEdit(); self.name_edit.setPlaceholderText("Name")
+        self.name_edit.setFixedWidth(160)
+        self.init_spin = QSpinBox(); self.init_spin.setRange(-999, 999); self.init_spin.setValue(10)
+        self.init_spin.setFixedWidth(64)
+        self.btn_add = QPushButton("Add"); self.btn_add.setFixedWidth(64)
+
+        addrow = QHBoxLayout()
+        addrow.addWidget(self.name_edit)
+        addrow.addWidget(self.init_spin)
+        addrow.addWidget(self.btn_add)
+        addrow.addStretch(1)
+
+        # ---------- Table ----------
+        self.table = QTableView()
         self.table.setModel(self.model)
         self.table.setSelectionBehavior(QTableView.SelectRows)
         self.table.setSelectionMode(QTableView.SingleSelection)
@@ -30,231 +58,189 @@ class InitiativeTab(QWidget):
         self.table.setAcceptDrops(True)
         self.table.setDragDropMode(QTableView.InternalMove)
         self.table.setDropIndicatorShown(True)
-        self.table.horizontalHeader().setStretchLastSection(True)
         self.table.setSortingEnabled(False)
-        # Auto fit header size
-        header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Interactive)
-        header.setSectionResizeMode(1, QHeaderView.Interactive)
-        header.setStretchLastSection(False)
-        header.setMinimumSectionSize(80)
-        # Add table row deletion
-        self._sc_delete = QShortcut(QKeySequence(Qt.Key_Delete), self.table)
-        self._sc_delete.activated.connect(self._delete_selected)
+        self.table.verticalHeader().setVisible(False)
+        hdr = self.table.horizontalHeader()
+        hdr.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # 👁
+        hdr.setSectionResizeMode(1, QHeaderView.Stretch)           # Name
+        hdr.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Initiative
+        self.table.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
 
-        self.name_edit = QLineEdit(self)
-        self.name_edit.setPlaceholderText("Name")
-        self.init_spin = QSpinBox(self)
-        self.init_spin.setRange(-999, 999)
-        self.init_spin.setValue(10)
-        self.btn_add = QPushButton("Add", self)
-        # Fix widths
-        self.name_edit.setFixedWidth(140)
-        self.init_spin.setFixedWidth(60)
-        self.btn_add.setFixedWidth(60)
-        # Shortcuts for adding combatant
-        self.name_edit.returnPressed.connect(self._on_add)  # when typing in Name
-        self._sc_add_return = QShortcut(QKeySequence(Qt.Key_Return), self)
-        self._sc_add_enter = QShortcut(QKeySequence(Qt.Key_Enter), self)
-        self._sc_add_return.activated.connect(self._trigger_add_shortcut)
-        self._sc_add_enter.activated.connect(self._trigger_add_shortcut)
-        self.btn_add.setAutoDefault(True)
-        self.btn_add.setDefault(True)
+        # ---------- Footer bar ----------
+        self.btn_back = QPushButton("◀ Back")
+        self.btn_next = QPushButton("Next ▶")
+        self.btn_end  = QPushButton("End")
+        self.btn_back.setEnabled(False)
+        self.btn_next.setEnabled(False)
+        self.btn_end.setEnabled(False)
 
-        self.btn_start = QPushButton("Start Visual", self)
-        self.btn_reset = QPushButton("Reset", self)
-        self.btn_next = QPushButton("Next ▶", self)
-        self.btn_back = QPushButton("◀ Back", self)
-        self.btn_end = QPushButton("End", self)
-        # Arrow key shortcuts for Next / Back
-        self._sc_next = QShortcut(QKeySequence(Qt.Key_Right), self)
-        self._sc_back = QShortcut(QKeySequence(Qt.Key_Left), self)
-        self._sc_next.activated.connect(self._on_next)
-        self._sc_back.activated.connect(self._on_back)
-        self._sc_next.setContext(Qt.WidgetWithChildrenShortcut)
-        self._sc_back.setContext(Qt.WidgetWithChildrenShortcut)
-        # Set enable mirroring state
-        self.btn_start.setEnabled(not state.initiative_visible())
-        self.btn_next.setEnabled(state.initiative_visible())
-        self.btn_back.setEnabled(state.initiative_visible())
-        self.btn_end.setEnabled(state.initiative_visible())
+        footer = QHBoxLayout()
+        footer.addWidget(self.btn_back)
+        footer.addWidget(self.btn_next)
+        footer.addStretch(1)
+        footer.addWidget(self.btn_end)
 
-        # layout
-        topbar = QHBoxLayout()
-        topbar.addWidget(self.lbl_round, 0)
-        topbar.addStretch()
-
-        form = QHBoxLayout()
-        form.setSpacing(4)
-        form.addWidget(self.name_edit, 2)
-        form.addWidget(self.init_spin, 1)
-        form.addWidget(self.btn_add, 0)
-        form.addStretch()
-
-        controls = QHBoxLayout()
-        controls.addWidget(self.btn_start)
-        controls.addWidget(self.btn_reset)
-        controls.addWidget(self.btn_back)
-        controls.addWidget(self.btn_next)
-        controls.addWidget(self.btn_end)
-        controls.addStretch()
-
+        # ---------- Root layout ----------
         root = QVBoxLayout(self)
-        root.addLayout(topbar)
-        root.addLayout(form)
-        root.addWidget(self.table, 0)
-        root.addLayout(controls)
+        root.addLayout(header)
+        root.addLayout(addrow)
+        root.addWidget(self.table, 1)
+        root.addLayout(footer)
         self.setLayout(root)
-        self._resize_table_width()
 
-        # --- signals ---
+        # ---------- Signals ----------
         self.btn_add.clicked.connect(self._on_add)
-        self.btn_start.clicked.connect(self._on_start)
+        self.btn_show.toggled.connect(self._on_toggle_show)
         self.btn_reset.clicked.connect(self._on_reset)
-        self.btn_next.clicked.connect(self._on_next)
+        self.btn_clear.clicked.connect(self._on_clear)
         self.btn_back.clicked.connect(self._on_back)
+        self.btn_next.clicked.connect(self._on_next)
         self.btn_end.clicked.connect(self._on_end)
 
-        self.model.modelReset.connect(self._after_model_change)
-        self.model.layoutChanged.connect(self._after_model_change)
-        self.model.rowsInserted.connect(lambda *_: self._after_model_change())
-        self.model.rowsRemoved.connect(lambda *_: self._after_model_change())
+        # Shortcuts
+        QShortcut(QKeySequence(Qt.Key_Return), self, self._trigger_add_shortcut)
+        QShortcut(QKeySequence(Qt.Key_Enter),  self, self._trigger_add_shortcut)
+        QShortcut(QKeySequence(Qt.Key_Delete), self.table, self._delete_selected)
+        sc_next = QShortcut(QKeySequence(Qt.Key_Right), self, self._on_next)
+        sc_back = QShortcut(QKeySequence(Qt.Key_Left),  self, self._on_back)
+        sc_next.setContext(Qt.WidgetWithChildrenShortcut)
+        sc_back.setContext(Qt.WidgetWithChildrenShortcut)
 
-    # ------------- handlers -------------
-    def _on_add(self):
-        name = self.name_edit.text().strip()
-        if not name:
-            QMessageBox.warning(self, "Missing name", "Please enter a name.")
-            return
-        ini = int(self.init_spin.value())
-        self.model.insertCombatant(name, ini)
-        self.name_edit.clear()
-        # keep Start enabled if we have at least one entry
+        # Initial sizing
+        QTimer.singleShot(0, self._resize_table_width)
         self._refresh_buttons()
+        self._update_round_label()
 
-    def _trigger_add_shortcut(self):
-        """Fire Add when Return/Enter is pressed in the name field, initiative spinbox, or Add button."""
-        fw = self.focusWidget()
-        if fw in (self.name_edit, self.init_spin, self.btn_add):
-            self._on_add()
+    # ---------- Helpers ----------
+    def _revealed_subset(self) -> Tuple[List[str], int]:
+        L = self.ctl.list()
+        cur = self.ctl.cursor_index()
+        if not L or cur is None:
+            return ([], -1)
+        revealed = [c.name for c in L if c.is_revealed]
+        current_name = L[cur].name
+        return revealed, revealed.index(current_name) if current_name in revealed else -1
 
-    def _delete_selected(self):
-        """Delete currently selected row(s) in the table."""
-        sel = self.table.selectionModel()
-        if not sel:
+    def _push_overlay_snapshot(self):
+        if not self.state:
             return
-        rows = sorted({idx.row() for idx in sel.selectedRows()}, reverse=True)
-        if not rows:
-            return
-        for r in rows:
-            self.model.removeRows(r, 1)
-        # keep buttons state sensible
-        self._refresh_buttons()
-        self._after_model_change()
-
-    def _on_start(self):
-        if not self.ctl.list():
-            return
-        self.ctl.start()
-        self.model.layoutChanged.emit()
-        self.table.setFocus()
         names, idx = self._revealed_subset()
-        self.state.set_initiative(names, idx)
-        self._after_model_change()
-        self._refresh_buttons()
-
-    def _on_next(self):
-        self.ctl.next()
-        self.model.layoutChanged.emit()
-        names, idx = self._revealed_subset()
-        self.state.update_initiative(names, idx)
-        self._after_model_change()
-
-    def _on_back(self):
-        self.ctl.back()
-        self.model.layoutChanged.emit()
-        names, idx = self._revealed_subset()
-        self.state.update_initiative(names, idx)
-        self._after_model_change()
-
-    def _on_reset(self):
-        self.ctl.reset()
-        self._on_start()
-
-    def _on_end(self):
-        self.ctl.end()
-        self.model.layoutChanged.emit()
-        self.state.hide_initiative()
-        self._refresh_buttons()
-        self._after_model_change()
+        if self.btn_show.isChecked() and names:
+            self.state.set_initiative(names, idx, self.ctl.round())
+        else:
+            self.state.hide_initiative()
 
     def _refresh_buttons(self):
         has_any = bool(self.ctl.list())
         running = self.ctl.is_running()
-        self.btn_start.setEnabled(has_any and not running)
-        self.btn_next.setEnabled(running)
-        self.btn_back.setEnabled(running)
-        self.btn_end.setEnabled(running)
-
-    def _resize_table_width(self, extra_padding: int = 12, min_width: int = 240,
-                            max_width: int = 420, col_min_widths: tuple[int, int] = (160, 80)):
-        """Resize table width to fit current column contents (no height changes)."""
-        # Compute natural content sizes first
-        header = self.table.horizontalHeader()
-        self.table.resizeColumnsToContents()
-        cols = self.model.columnCount()
-        # Enforce per-column minimums
-        for c in range(cols):
-            current = header.sectionSize(c)
-            min_col = col_min_widths[c] if c < len(col_min_widths) else 40
-            if current < min_col:
-                header.resizeSection(c, min_col)
-
-        col_sum = sum(self.table.columnWidth(c) for c in range(cols))
-        frame = self.table.frameWidth() * 2
-        vheader_w = self.table.verticalHeader().width() if self.table.verticalHeader().isVisible() else 0
-        vscroll_w = self.table.verticalScrollBar().width() if self.table.verticalScrollBar().isVisible() else 0
-
-        w = col_sum + frame + vheader_w + vscroll_w + extra_padding
-        w = max(min_width, min(max_width, w))
-        self.table.setFixedWidth(w)
+        self.btn_back.setEnabled(running and has_any)
+        self.btn_next.setEnabled(running and has_any)
+        self.btn_end.setEnabled(has_any)  # End hides overlay; keep enabled when list exists
 
     def _update_round_label(self):
         r = self.ctl.round()
         self.lbl_round.setText(f"Round: {r if r > 0 else '–'}")
 
-    def _after_model_change(self):
+    # width-only resize that clamps minimums
+    def _resize_table_width(self, extra_padding: int = 12, min_width: int = 220, max_width: int = 520):
+        self.table.resizeColumnsToContents()
+        cols = self.model.columnCount()
+        # clip column mins (👁, Name, Init)
+        mins = (40, 100, 60)
+        hdr = self.table.horizontalHeader()
+        for c in range(cols):
+            size = hdr.sectionSize(c)
+            if size < mins[c]:
+                hdr.resizeSection(c, mins[c])
+        col_sum = sum(hdr.sectionSize(c) for c in range(cols))
+        frame = self.table.frameWidth() * 2
+        vscroll_w = self.table.verticalScrollBar().width() if self.table.verticalScrollBar().isVisible() else 0
+        w = col_sum + frame + vscroll_w + extra_padding
+        w = max(min_width, min(max_width, w))
+        self.table.setFixedWidth(w)
+
+    # ---------- Slots ----------
+    def _on_add(self):
+        name = self.name_edit.text().strip()
+        if not name:
+            QMessageBox.warning(self, "Missing name", "Please enter a name.")
+            return
+        self.model.insertCombatant(name, int(self.init_spin.value()))
+        self.name_edit.clear()
         self._resize_table_width()
-        self._update_round_label()
+        self._refresh_buttons()
 
-    def _revealed_subset(self) -> tuple[list[str], int]:
-        """Return (revealed_names_in_order, current_idx_within_that_list)."""
-        L = self.ctl.list()
-        if not L or self.ctl.cursor_index() is None:
-            return [], -1
-
-        # Rule: only show combatants that have been revealed (is_revealed=True).
-        revealed = [c.name for c in L if c.is_revealed]
-        # current index within the revealed subset:
-        cur = self.ctl.cursor_index()
-        current_name = L[cur].name if cur is not None and 0 <= cur < len(L) else None
-        current_idx = revealed.index(current_name) if current_name in revealed else -1
-        return revealed, current_idx
-
-    # --- overrides
-    def showEvent(self, event):
-        """Automatically focus correct widget when tab becomes visible."""
-        super().showEvent(event)
-        self._focus_appropriate_widget()
-
-    def focusInEvent(self, event):
-        """Also handle keyboard focus switching to this tab."""
-        super().focusInEvent(event)
-        self._focus_appropriate_widget()
-
-    def _focus_appropriate_widget(self):
-        """Focus the correct widget depending on state."""
+    def _on_toggle_show(self, checked: bool):
+        if checked and not self.ctl.is_running() and self.ctl.list():
+            # auto-start if DM wants to show before pressing next/back
+            self.ctl.start()
+        self._refresh_buttons()
+        self._push_overlay_snapshot()
+        # focus table for arrows
         if self.ctl.is_running():
             self.table.setFocus()
-        else:
-            self.name_edit.setFocus()
+
+    def _on_reset(self):
+        self.ctl.reset_round_and_visibility()
+        self.model.layoutChanged.emit()
+        self._update_round_label()
+        # If visible, overlay will clear until next advancement
+        self._push_overlay_snapshot()
+
+    def _on_clear(self):
+        self.ctl.clear()
+        self.model.layoutChanged.emit()
+        self._update_round_label()
+        self._refresh_buttons()
+        if self.state:
+            self.state.hide_initiative()
+        self.btn_show.setChecked(False)
+
+    def _on_back(self):
+        if not self.ctl.is_running():
+            self.ctl.start()
+        self.ctl.back()
+        self.model.layoutChanged.emit()
+        self._update_round_label()
+        self._push_overlay_snapshot()
+
+    def _on_next(self):
+        if not self.ctl.is_running():
+            self.ctl.start()
+        self.ctl.next()
+        self.model.layoutChanged.emit()
+        self._update_round_label()
+        self._push_overlay_snapshot()
+
+    def _on_end(self):
+        self.btn_show.setChecked(False)
+        self.ctl.end()
+        self.model.layoutChanged.emit()
+        self._update_round_label()
+        self._refresh_buttons()
+        if self.state:
+            self.state.hide_initiative()
+
+    def _trigger_add_shortcut(self):
+        fw = self.focusWidget()
+        if fw in (self.name_edit, self.init_spin, self.btn_add):
+            self._on_add()
+
+    def _delete_selected(self):
+        sel = self.table.selectionModel()
+        if not sel:
+            return
+        rows = sorted({i.row() for i in sel.selectedRows()}, reverse=True)
+        for r in rows:
+            self.model.removeRows(r, 1)
+        self._resize_table_width()
+        self._refresh_buttons()
+
+    # keep table sized if fonts/rows change
+    def showEvent(self, e):
+        super().showEvent(e)
+        QTimer.singleShot(0, self._resize_table_width)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        QTimer.singleShot(0, self._resize_table_width)

@@ -1,24 +1,27 @@
-from PySide6.QtCore import (QAbstractTableModel, QModelIndex, Qt, QMimeData, QByteArray, QDataStream, QIODevice)
-from PySide6.QtGui import QColor
+from __future__ import annotations
 from typing import Any
-from .controller import InitiativeController
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QMimeData
+from PySide6.QtGui import QColor
+from .controller import InitiativeController, Combatant
 
-HEADERS = ["Name", "Initiative"]
-
+HEADERS = ["👁", "Name", "Initiative"]
 
 class InitiativeTableModel(QAbstractTableModel):
+    """3 columns: visible checkbox, name, initiative. Drag to manually reorder."""
+    MIME = "application/x-initiative-row"
+
     def __init__(self, ctl: InitiativeController):
         super().__init__()
         self.ctl = ctl
 
-    # ----- basic shape -----
+    # --- shape ---
     def rowCount(self, parent=QModelIndex()) -> int:
         return len(self.ctl.list())
 
     def columnCount(self, parent=QModelIndex()) -> int:
-        return 2
+        return 3
 
-    # ----- data -----
+    # --- data ---
     def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> Any:
         if not index.isValid():
             return None
@@ -26,62 +29,71 @@ class InitiativeTableModel(QAbstractTableModel):
         col = index.column()
 
         if role == Qt.DisplayRole:
-            if col == 0:
+            if col == 1:  # Name
                 return row.name
-            if col == 1:
+            if col == 2:  # Initiative
                 return row.initiative
 
-        if role == Qt.TextAlignmentRole and col == 1:
+        if role == Qt.CheckStateRole and col == 0:
+            return Qt.Checked if row.is_revealed else Qt.Unchecked
+
+        if role == Qt.TextAlignmentRole and col == 2:
             return Qt.AlignRight | Qt.AlignVCenter
 
-        if role == Qt.BackgroundRole and self.ctl.cursor_index() == index.row() and self.ctl.is_running():
-            return QColor("#233")  # subtle current-row highlight
-
-        if role == Qt.ForegroundRole and self.ctl.cursor_index() == index.row() and self.ctl.is_running():
+        # highlight current turn while running
+        if role == Qt.BackgroundRole and self.ctl.is_running() and self.ctl.cursor_index() == index.row():
+            return QColor("#233")
+        if role == Qt.ForegroundRole and self.ctl.is_running() and self.ctl.cursor_index() == index.row():
             return QColor("#E6F3FF")
 
         return None
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole):
+    def headerData(self, section: int, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
             return HEADERS[section]
         return None
 
-    # ----- editing -----
+    # --- flags / editing ---
     def flags(self, index: QModelIndex):
         base = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         if index.isValid():
-            base |= Qt.ItemIsEditable | Qt.ItemIsDragEnabled
+            base |= Qt.ItemIsDragEnabled
+            if index.column() == 0:
+                base |= Qt.ItemIsUserCheckable
+            else:
+                base |= Qt.ItemIsEditable
         else:
             base |= Qt.ItemIsDropEnabled
-        # table supports dropping between rows
         return base
 
     def setData(self, index: QModelIndex, value, role: int = Qt.EditRole):
-        if role != Qt.EditRole or not index.isValid():
+        if not index.isValid():
             return False
-        row = index.row()
-        col = index.column()
-        if col == 0:
-            self.ctl.update_by_index(row, name=str(value))
-            self.dataChanged.emit(index, index, [Qt.DisplayRole])
+        r, c = index.row(), index.column()
+
+        if c == 0 and role == Qt.CheckStateRole:
+            self.ctl.set_revealed(r, value == Qt.Checked)
+            self.dataChanged.emit(index, index, [Qt.CheckStateRole])
             return True
-        if col == 1:
-            try:
-                ini = int(value)
-            except ValueError:
-                return False
-            # reinsert to maintain sorted-on-update invariant
-            self.beginResetModel()
-            self.ctl.update_by_index(row, initiative=ini)
-            self.endResetModel()
-            return True
+
+        if role == Qt.EditRole:
+            if c == 1:
+                self.ctl.update_by_index(r, name=str(value))
+                self.dataChanged.emit(index, index, [Qt.DisplayRole])
+                return True
+            if c == 2:
+                try:
+                    ini = int(value)
+                except ValueError:
+                    return False
+                self.beginResetModel()
+                self.ctl.update_by_index(r, initiative=ini)
+                self.endResetModel()
+                return True
         return False
 
-    # ----- insert/remove through model API -----
+    # --- insert/remove API for the tab ---
     def insertCombatant(self, name: str, initiative: int):
-        # We don't know the position beforehand because of sort-on-insert,
-        # do a reset for simplicity (small list, acceptable).
         self.beginResetModel()
         self.ctl.add(name, initiative)
         self.endResetModel()
@@ -93,57 +105,30 @@ class InitiativeTableModel(QAbstractTableModel):
         self.endResetModel()
         return True
 
-    # ----- drag & drop reorder (manual override) -----
+    # --- drag/drop reorder (custom mime, simple + robust) ---
     def supportedDropActions(self):
         return Qt.MoveAction
 
     def mimeTypes(self):
-        return ["application/x-initiative-row", "application/x-qabstractitemmodeldatalist"]
+        return [self.MIME, "application/x-qabstractitemmodeldatalist"]
 
     def mimeData(self, indexes):
         mime = QMimeData()
-        if not indexes:
-            return mime
-        # We only support single-row moves; take the first selected index's row.
-        row = indexes[0].row()
-        ba = QByteArray()
-        stream = QDataStream(ba, QIODevice.WriteOnly)
-        stream.writeInt32(row)
-        mime.setData("application/x-initiative-row", ba)
+        if indexes:
+            mime.setData(self.MIME, str(indexes[0].row()).encode("utf-8"))
         return mime
 
     def dropMimeData(self, data: QMimeData, action, row, column, parent):
-        if action != Qt.MoveAction:
+        if action != Qt.MoveAction or not data.hasFormat(self.MIME):
             return False
-        src_row = self._extract_drag_row(data)
-        if src_row is None:
+        try:
+            src_row = int(bytes(data.data(self.MIME)).decode("utf-8"))
+        except Exception:
             return False
-
-        # Determine destination row:
         dst_row = row if row != -1 else (parent.row() if parent.isValid() else self.rowCount())
         if dst_row > src_row:
-            dst_row -= 1  # Qt's move semantics
-
+            dst_row -= 1
         self.beginResetModel()
         self.ctl.move_row(src_row, dst_row)
         self.endResetModel()
         return True
-
-    def _extract_drag_row(self, data: QMimeData):
-        fmt = "application/x-initiative-row"
-        if data.hasFormat(fmt):
-            ba = data.data(fmt)
-            stream = QDataStream(ba)
-            try:
-                row = stream.readInt32()
-                return int(row)
-            except Exception:
-                return None
-
-        # Fallbacks (not usually hit, but harmless)
-        if data.hasText():
-            try:
-                return int(data.text())
-            except ValueError:
-                pass
-        return None

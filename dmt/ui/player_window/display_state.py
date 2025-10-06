@@ -38,7 +38,7 @@ class DisplayState(QObject):
     blackoutChanged = Signal(bool)
     scaleModeChanged = Signal(ScaleMode)
     transitionModeChanged = Signal(TransitionMode)
-    initiativeChanged = Signal(list, int, bool)
+    initiativeChanged = Signal(list, int, int, bool)
 
     def __init__(self, on_persist: Callable[[dict], None] | None = None, parent: QObject | None = None,
                  autosave_debounce_ms: int = 250,
@@ -54,6 +54,7 @@ class DisplayState(QObject):
         self._initiative_visible = False
         self._initiative_names: list[str] = []
         self._initiative_current: int = -1
+        self._initiative_round: int = 0
 
         self._on_persist = on_persist
         self._dirty = False
@@ -71,6 +72,7 @@ class DisplayState(QObject):
     def initiative_visible(self) -> bool: return self._initiative_visible
     def initiative_items(self) -> list: return self._initiative_names
     def initiative_index(self) -> int: return self._initiative_current
+    def initiative_round(self) -> int: return self._initiative_round
 
     # --- Image overlay API ---
     def set_display_index(self, idx: int) -> None:
@@ -102,20 +104,16 @@ class DisplayState(QObject):
         self.blackoutChanged.emit(on)
 
     # ---- Initiative overlay API ----
-    def set_initiative(self, names: list[str], current_idx: int) -> None:
+    def set_initiative(self, names: list[str], current_idx: int, round: int) -> None:
         self._initiative_names = list(names)
         self._initiative_current = int(current_idx) if current_idx is not None else -1
         self._initiative_visible = True
-        self.initiativeChanged.emit(self._initiative_names, self._initiative_current, True)
-
-    def update_initiative(self, names: list[str], current_idx: int) -> None:
-        self._initiative_names = list(names)
-        self._initiative_current = int(current_idx) if current_idx is not None else -1
-        self.initiativeChanged.emit(self._initiative_names, self._initiative_current, self._initiative_visible)
+        self._initiative_round = True
+        self.initiativeChanged.emit(self._initiative_names, self._initiative_current, round, True)
 
     def hide_initiative(self) -> None:
         self._initiative_visible = False
-        self.initiativeChanged.emit([], -1, False)
+        self.initiativeChanged.emit([], -1, 0, False)
 
     # --- persistence bridge ---
     def snapshot(self) -> dict:
@@ -126,7 +124,8 @@ class DisplayState(QObject):
             "transitionMode": self._transition_mode.value,
             "initiativeVisible": self._initiative_visible,
             "initiativeNames": self._initiative_names,
-            "initiativeIndex": self._initiative_current
+            "initiativeIndex": self._initiative_current,
+            "initiativeRound": self._initiative_round,
         }
 
     def load_state(self, state: Dict[str, Any]) -> None:
@@ -137,6 +136,7 @@ class DisplayState(QObject):
         self._initiative_visible = state.get("initiativeVisible", False)
         self._initiative_names = state.get("initiativeNames", [])
         self._initiative_current = state.get("initiativeIndex", -1)
+        self._initiative_round = state.get("initiativeRound", 0)
 
     def _mark_dirty(self):
         self._dirty = True
