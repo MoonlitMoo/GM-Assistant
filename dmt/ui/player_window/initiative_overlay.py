@@ -1,13 +1,17 @@
 from PySide6.QtGui import QPainter, QBrush, QPen, QColor, QLinearGradient, QFont
-from PySide6.QtWidgets import QGraphicsDropShadowEffect, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QGraphicsDropShadowEffect, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QSizePolicy
+from PySide6.QtCore import Qt, QTimer, Signal
+
 
 class InitiativeOverlay(QWidget):
+    resized = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         # --- Parchment theme palette ---
         self._col_bg_light = QColor(236, 228, 204, 235)   # parchment base
@@ -91,27 +95,48 @@ class InitiativeOverlay(QWidget):
         super().paintEvent(event)
 
     def set_entries(self, names: list[str], current_idx: int, round_num: int | None = None):
-        self.lbl_round.setText(f"Round: {round_num if round_num else '–'}")
+        # Pause repaints while we rebuild
+        self.setUpdatesEnabled(False)
 
+        if round_num is not None:
+            self.lbl_round.setText(f"Round: {round_num}")
+        else:
+            self.lbl_round.setText("Round: –")
+
+        # Clear + rebuild rows
         for lbl in self._labels:
             lbl.deleteLater()
         self._labels.clear()
 
         for i, name in enumerate(names):
-            lbl = QLabel(f"{i+1}: {name}")
-            lbl.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            lbl = QLabel(f"{i + 1}: {name}")
             lbl.setContentsMargins(8, 3, 8, 3)
+            lbl.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             if i == current_idx:
-                # gold wash + deep bar, ink text
                 lbl.setStyleSheet(
-                    "background-color: " + self._q(self._col_gold_wash) + ";" +
-                    "border-left: 5px solid " + self._q(self._col_gold_bar) + ";" +
-                    "color: " + self._q(self._col_ink) + ";" +
-                    "font-weight: 600;"
+                    "background-color: rgba(212,170,59,70);"
+                    "border-left: 5px solid rgba(160,120,40,220);"
+                    "color: rgba(54,38,25,255); font-weight:600;"
                 )
             else:
-                lbl.setStyleSheet("background-color: transparent; color: " + self._q(self._col_ink) + ";")
+                lbl.setStyleSheet("background-color: transparent; color: rgba(54,38,25,255);")
             self.list_layout.addWidget(lbl)
             self._labels.append(lbl)
 
+        # Recompute layout geometry now (no paint yet)
+        self.main_layout.activate()
         self.adjustSize()
+
+        self.setUpdatesEnabled(True)
+
+        # Defer one tick so fonts/metrics settle, then emit resized
+        QTimer.singleShot(0, self._after_rebuild)
+
+    def _after_rebuild(self):
+        self.adjustSize()
+        self.update()
+        self.resized.emit()  # PlayerWindow will reposition us
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self.resized.emit()

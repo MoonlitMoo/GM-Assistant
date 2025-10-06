@@ -23,8 +23,7 @@ class PlayerWindow(QWidget):
         # HUD overlay for initiative tracker
         self._init_overlay = InitiativeOverlay(self)
         self._init_overlay.hide()
-        # Position overlay top-right after layout settles
-        QTimer.singleShot(0, self._position_initiative_overlay)
+        self._init_overlay.resized.connect(self._position_initiative_overlay)
 
         # Apply initial state
         self._canvas.set_scale_mode(self._display_state.scale_mode())
@@ -60,16 +59,14 @@ class PlayerWindow(QWidget):
         self._canvas.blackout(on, fade_ms=fade_ms)
 
     # ---- Initiative Overlay API ----
-    def show_initiative_overlay(self, names: list[str], current_idx: int):
-        self._init_overlay.set_entries(names, current_idx)
+    def show_initiative_overlay(self, names, idx, round_num=None):
+        self._init_overlay.set_entries(names, idx, round_num)
         self._init_overlay.show()
-        self._position_initiative_overlay()
 
-    def update_initiative_overlay(self, names: list[str], current_idx: int):
+    def update_initiative_overlay(self, names, idx, round_num=None):
+        self._init_overlay.set_entries(names, idx, round_num)
         if not self._init_overlay.isVisible():
             self._init_overlay.show()
-        self._init_overlay.set_entries(names, current_idx)
-        self._position_initiative_overlay()
 
     def hide_initiative_overlay(self):
         self._init_overlay.hide()

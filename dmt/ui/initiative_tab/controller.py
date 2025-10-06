@@ -103,6 +103,11 @@ class InitiativeController:
                 elif dst <= self._cursor < src:
                     self._cursor += 1
 
+    def reset(self):
+        self._cursor = 0
+        for i in self._list:
+            i.is_revealed = False
+
     # ------------------ flow ------------------
     def start(self) -> None:
         if not self._list:

@@ -62,6 +62,7 @@ class InitiativeTab(QWidget):
         self.btn_add.setDefault(True)
 
         self.btn_start = QPushButton("Start Visual", self)
+        self.btn_reset = QPushButton("Reset", self)
         self.btn_next = QPushButton("Next ▶", self)
         self.btn_back = QPushButton("◀ Back", self)
         self.btn_end = QPushButton("End", self)
@@ -72,10 +73,11 @@ class InitiativeTab(QWidget):
         self._sc_back.activated.connect(self._on_back)
         self._sc_next.setContext(Qt.WidgetWithChildrenShortcut)
         self._sc_back.setContext(Qt.WidgetWithChildrenShortcut)
-
-        self.btn_next.setEnabled(False)
-        self.btn_back.setEnabled(False)
-        self.btn_end.setEnabled(False)
+        # Set enable mirroring state
+        self.btn_start.setEnabled(not state.initiative_visible())
+        self.btn_next.setEnabled(state.initiative_visible())
+        self.btn_back.setEnabled(state.initiative_visible())
+        self.btn_end.setEnabled(state.initiative_visible())
 
         # layout
         topbar = QHBoxLayout()
@@ -91,6 +93,7 @@ class InitiativeTab(QWidget):
 
         controls = QHBoxLayout()
         controls.addWidget(self.btn_start)
+        controls.addWidget(self.btn_reset)
         controls.addWidget(self.btn_back)
         controls.addWidget(self.btn_next)
         controls.addWidget(self.btn_end)
@@ -107,6 +110,7 @@ class InitiativeTab(QWidget):
         # --- signals ---
         self.btn_add.clicked.connect(self._on_add)
         self.btn_start.clicked.connect(self._on_start)
+        self.btn_reset.clicked.connect(self._on_reset)
         self.btn_next.clicked.connect(self._on_next)
         self.btn_back.clicked.connect(self._on_back)
         self.btn_end.clicked.connect(self._on_end)
@@ -153,14 +157,11 @@ class InitiativeTab(QWidget):
             return
         self.ctl.start()
         self.model.layoutChanged.emit()
-        self.btn_start.setEnabled(False)
-        self.btn_next.setEnabled(True)
-        self.btn_back.setEnabled(True)
-        self.btn_end.setEnabled(True)
         self.table.setFocus()
         names, idx = self._revealed_subset()
         self.state.set_initiative(names, idx)
         self._after_model_change()
+        self._refresh_buttons()
 
     def _on_next(self):
         self.ctl.next()
@@ -175,6 +176,10 @@ class InitiativeTab(QWidget):
         names, idx = self._revealed_subset()
         self.state.update_initiative(names, idx)
         self._after_model_change()
+
+    def _on_reset(self):
+        self.ctl.reset()
+        self._on_start()
 
     def _on_end(self):
         self.ctl.end()
