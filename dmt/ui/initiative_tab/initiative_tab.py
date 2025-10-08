@@ -225,6 +225,7 @@ class InitiativeTab(QWidget):
         fw = self.focusWidget()
         if fw in (self.name_edit, self.init_spin, self.btn_add):
             self._on_add()
+        self.name_edit.setFocus()
 
     def _delete_selected(self):
         sel = self.table.selectionModel()

@@ -40,6 +40,12 @@ class InitiativeController:
         pos = 0
         while pos < len(self._list) and self._list[pos].initiative >= c.initiative:
             pos += 1
+        # Correct cursor if we are adding before selected
+        if self._cursor and self._list:
+            cur_pos = self._cursor % len(self._list)
+            print(cur_pos)
+            if pos <= cur_pos:
+                self._cursor += 1
         self._list.insert(pos, c)
         return c
 
