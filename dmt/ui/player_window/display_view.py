@@ -1,9 +1,9 @@
 from __future__ import annotations
 from typing import Optional, Collection
 
-from PySide6.QtCore import Qt, QByteArray, QVariantAnimation, QEasingCurve, QPointF
-from PySide6.QtGui import QImage, QPixmap, QPainter, QTransform
-from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem
+from PySide6.QtCore import Qt, QByteArray, QVariantAnimation, QEasingCurve, QPointF, QRectF
+from PySide6.QtGui import QImage, QPixmap, QPainter, QTransform, QFont, QFontMetrics
+from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsItem
 
 from .display_state import ScaleMode, TransitionMode
 from .transitions import REGISTRY, TransitionAPI, ViewportSnapshot
@@ -53,6 +53,7 @@ class DisplayView(QGraphicsView):
         self._base.setZValue(0)
         scene.addItem(self._base)
 
+        # Blackout overlay
         self._blackout = BlackoutOverlayItem()
         self._blackout.setZValue(1000)
         scene.addItem(self._blackout)
@@ -85,7 +86,7 @@ class DisplayView(QGraphicsView):
         self._transition_mode: TransitionMode = TransitionMode.CROSSFADE
         self._transition_running: bool = False
 
-    # ---------- Public API (same names as before) ----------
+    # ---------- Image API ----------
     def set_scale_mode(self, mode: ScaleMode) -> None:
         if mode is self._scale_mode:
             return
@@ -170,6 +171,7 @@ class DisplayView(QGraphicsView):
         self.set_image_qimage(img)
         return True
 
+    # ---------- Blackout overlay API ----------
     def blackout(self, on: bool, *, fade_ms: Optional[int] = None) -> None:
         """Animate a full black overlay in/out."""
         if fade_ms is not None:
@@ -187,7 +189,7 @@ class DisplayView(QGraphicsView):
         self._blackout_anim.setEndValue(end)
         self._blackout_anim.start()
 
-    # ---------- Internals ----------
+    # ---------- Image Internals ----------
     def _apply_scale_mode(self) -> None:
         pm = self._base.pixmap()
         if pm.isNull():
@@ -209,6 +211,7 @@ class DisplayView(QGraphicsView):
         # After refit, user zoom resets to "1x"
         self._user_zoom = 1.0  # <— add
 
+    # ---------- Blackout Internals ----------
     def _apply_blackout_opacity(self, v):
         self._blackout.setOpacity(float(v))
 
@@ -219,6 +222,7 @@ class DisplayView(QGraphicsView):
         # Cover full scene rect
         self._blackout.setRect(self.sceneRect())
 
+    # ---------- General Internals ----------
     def _resize_overlays_to_scene(self):
         self._ensure_blackout_geometry()
 
@@ -270,4 +274,5 @@ class DisplayView(QGraphicsView):
                 super().scale(factor, factor)
             ev.accept()
             return
+        self._resize_overlays_to_scene()
         super().wheelEvent(ev)

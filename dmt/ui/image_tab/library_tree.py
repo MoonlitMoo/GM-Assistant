@@ -3,7 +3,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtWidgets import QTreeWidget, QAbstractItemView, QTreeWidgetItem
 
-from db.services.library_service import LibraryService
+from dmt.db.services.library_service import LibraryService
 from dmt.ui.image_tab.library_items import COL_LABEL, ROLE_KIND, FolderItem, AlbumItem, ImageItem
 
 

@@ -8,39 +8,12 @@ from PySide6.QtCore import QSize
 from PySide6.QtGui import QImage, QColor
 from PySide6.QtWidgets import QInputDialog, QMessageBox, QAbstractItemView
 
-from db.manager import DatabaseManager
-from db.models import Image, ImageData
-from db.services.library_service import LibraryService
+from dmt.db.manager import DatabaseManager
+from dmt.db.models import Image, ImageData
+from dmt.db.services.library_service import LibraryService
 from dmt.ui.image_tab.library_items import FolderItem, AlbumItem
 from dmt.ui.image_tab.library_widget import LibraryWidget
-
-from tests.test_db import session, make_folder, make_album, make_image
-
-
-class FakeContextMenu:
-    """ Fake context menu with decision preselected. """
-    decision = "Delete"
-
-    def __init__(self, *args, **kwargs):
-        self._actions = []
-        self._chosen = None
-
-    def addAction(self, text):
-        # Create a tiny action stub with identity semantics
-        act = type("Act", (), {})()
-        act.text = text
-        self._actions.append(act)
-        # Preselect decision
-        if text == self.decision:
-            self._chosen = act
-        return act
-
-    def actions(self):
-        return list(self._actions)
-
-    # Mimic QMenu.exec(...) API and return the “clicked” action
-    def exec(self, *args, **kwargs):
-        return self._chosen
+import dmt.ui.image_tab.library_widget as lw
 
 
 @pytest.fixture()
@@ -77,19 +50,6 @@ def widget(simple_db, qtbot, monkeypatch):
     w = LibraryWidget(service=LibraryService(dmb))
     qtbot.addWidget(w)
     return w
-
-
-@pytest.fixture()
-def set_dialog_text(monkeypatch):
-    """ Set the text for the next item in the dialog entry box. """
-
-    def set_text(name):
-        def get_text_cycle(*args, **kwargs):
-            return name, True
-
-        monkeypatch.setattr(QInputDialog, "getText", staticmethod(get_text_cycle))
-
-    return set_text
 
 
 @pytest.fixture()
@@ -140,17 +100,6 @@ def make_album_with_images(widget, create_tree_item, make_png):
         return album
 
     return _make_filled_album
-
-
-@pytest.fixture()
-def set_context_menu(monkeypatch):
-    """ Sets the context menu option to return the given decision. """
-    import dmt.ui.image_tab.library_widget as lw
-    def _set_menu(decision):
-        monkeypatch.setattr(FakeContextMenu, "decision", decision)
-        monkeypatch.setattr(lw, "QMenu", FakeContextMenu)
-
-    return _set_menu
 
 
 # ---- Helper functions ----
@@ -223,7 +172,7 @@ def test_add_folder_and_album(widget, create_tree_item):
     album_item = create_tree_item(["My Album"], "album")
     assert isinstance(album_item, AlbumItem)
     assert album_item.label == "My Album"
-    assert widget.service.is_album(album_item.id)
+    assert widget.service.get_album(album_item.id)
     album_db = widget.service.get_album(album_item.id)
     assert album_db
     assert album_db.position == 3
@@ -251,7 +200,7 @@ def test_root_protected_from_delete(widget, monkeypatch):
 
 
 def test_remove_folder_and_album(widget, create_tree_item, set_context_menu):
-    set_context_menu("Delete")
+    set_context_menu(lw, "Delete")
 
     # Add the test nodes at root
     folder_item = create_tree_item(["Temp Folder"], "folder")
@@ -292,7 +241,7 @@ def test_remove_folder_and_album(widget, create_tree_item, set_context_menu):
 ])
 def test_delete_updates_sibling_positions(widget, create_tree_item, set_context_menu, parent_path, final_children):
     """Deleting an item closes the position gap among remaining siblings."""
-    set_context_menu("Delete")
+    set_context_menu(lw, "Delete")
 
     # In root we start with: Session 1 (pos 0, folder), Session 2 (pos 1, folder)
     # Add two more: + Folder "Zed" (pos 2), + Album "Alpha" (pos 3)
@@ -301,7 +250,7 @@ def test_delete_updates_sibling_positions(widget, create_tree_item, set_context_
 
     parent_item = _find_item_by_path(widget.tree, parent_path)
     children = widget.service.get_root_items() if parent_item is None else \
-        widget.service.get_folder_children(parent_item.id)
+        widget.service.get_children(parent_item.id)
     assert [r.position for r in children] == [0, 1, 2, 3]
 
     # Delete the second item. This should shift Zed→1, Alpha→2.
@@ -311,7 +260,7 @@ def test_delete_updates_sibling_positions(widget, create_tree_item, set_context_
 
     # DB: positions close up
     children = widget.service.get_root_items() if parent_item is None else \
-        widget.service.get_folder_children(parent_item.id)
+        widget.service.get_children(parent_item.id)
     names_by_pos = [r.name for r in children]
     assert names_by_pos == final_children
     assert [r.position for r in children] == [0, 1, 2]
@@ -370,7 +319,7 @@ def test_move_across_parents_inserts_and_shifts(widget):
 def test_recreate_item(widget, create_tree_item, set_context_menu):
     """ Check that we can make, delete, remake without problems. """
     # Set to delete
-    set_context_menu("Delete")
+    set_context_menu(lw, "Delete")
 
     # Create
     item = create_tree_item(["Test"], "folder")
@@ -386,7 +335,7 @@ def test_recreate_item(widget, create_tree_item, set_context_menu):
 
 
 def test_rename_folder_and_album(widget, set_context_menu, set_dialog_text):
-    set_context_menu("Rename")
+    set_context_menu(lw, "Rename")
 
     # Get the two things to be renamed, expanding top folder to get at subfolder
     folder_item = _find_item_by_path(widget.tree, ["Session 1"])
@@ -581,7 +530,7 @@ def test_remove_single_image_repacks_positions(widget, set_context_menu, make_al
     img_ids = _image_ordered_ids(widget, album.id)
 
     # Remove the middle image from the album
-    set_context_menu("Delete")
+    set_context_menu(lw, "Delete")
     image_item = _find_item_by_path(widget.tree, ["TestAlbum", "img_1"])
     pos_folder = widget.tree.visualItemRect(image_item).center()
     widget._on_tree_context_menu(pos_folder)
@@ -608,7 +557,7 @@ def test_remove_image_deletes_orphans(widget, set_context_menu, make_album_with_
     album2 = make_album_with_images(["TestAlbum2"], n=1)
 
     # Act: remove both from the first album, with orphan cleanup enabled
-    set_context_menu("Delete")
+    set_context_menu(lw, "Delete")
     for i in range(album.childCount(), -1, -1):
         pos_image = widget.tree.visualItemRect(album.child(i)).center()
         widget._on_tree_context_menu(pos_image)
@@ -632,7 +581,7 @@ def test_rename_image(widget, set_context_menu, set_dialog_text, make_album_with
     album = make_album_with_images(["TestAlbum"], n=1)
     album.setExpanded(True)
 
-    set_context_menu("Rename")
+    set_context_menu(lw, "Rename")
     set_dialog_text("Renamed Image")
     item = _find_item_by_path(widget.tree, ["TestAlbum", "img_0"])
     pos_image = widget.tree.visualItemRect(item).center()
