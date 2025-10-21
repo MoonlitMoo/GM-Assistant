@@ -53,15 +53,15 @@ remote.type = "github"
 
 # ---- Packaging ----
 [tool.setuptools]
-packages = ["dmt", "db"]
+packages = ["dmt"]
 
 # ---- Include package data ----
 [tool.setuptools.package-data]
-db = [
-  "migrations/**/*.py",
-  "migrations/**/*.mako",
-  "migrations/**/*.sql",
-  "migrations/script.py.mako",
+dmt = [
+  "db/migrations/**/*.py",
+  "db/migrations/**/*.mako",
+  "db/migrations/**/*.sql",
+  "db/migrations/script.py.mako",
 ]
 
 [tool.pytest.ini_options]

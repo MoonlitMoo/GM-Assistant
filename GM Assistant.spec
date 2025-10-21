@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_data_files
 from PyInstaller.utils.hooks import collect_submodules
 
-datas = [('db', 'db'), ('alembic.ini', '.')]
+datas = [('dmt/db', 'dmt/db'), ('alembic.ini', '.')]
 hiddenimports = ['shiboken6', 'logging.config']
 datas += collect_data_files('PySide6')
 hiddenimports += collect_submodules('PySide6.QtCore')
