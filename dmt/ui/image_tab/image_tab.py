@@ -9,12 +9,14 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QTextEdit, QFileDialog, QMessageBox, QStyle
 )
 
-from db.services.library_service import LibraryService
+from dmt.db.services.library_service import LibraryService
+from dmt.db.services.tagging_service import TaggingService
 from dmt.ui.player_window import DisplayState
 
 from .buttons import ScaleModeButton, BlackoutButton, TransitionModeButton
 from .library_items import AlbumItem
 from .library_widget import LibraryWidget
+from .tag_strip import TagStrip
 
 
 class ThumbnailList(QListWidget):
@@ -46,7 +48,7 @@ class ImagesTab(QWidget):
       - Library: rename/delete on groups & collections
       - Thumbnails: rename caption / remove from collection
     """
-    def __init__(self, service: LibraryService, display_state: DisplayState) -> None:
+    def __init__(self, service: LibraryService, tag_service: TaggingService, display_state: DisplayState) -> None:
         super().__init__()
         self._service = service
         self._display_state = display_state
@@ -93,16 +95,15 @@ class ImagesTab(QWidget):
         row_top.addStretch(1)
         bl.addLayout(row_top)
 
-        self._caption = QTextEdit()
-        self._caption.setPlaceholderText("Notes / caption (DM only)")
-        bl.addWidget(self._caption)
+        self.tag_strip = TagStrip(parent=self, tagging_service=tag_service)
+        bl.addWidget(self.tag_strip)
 
         row_controls = QHBoxLayout()
         self._btn_send = QPushButton("Send to Player")
         self._btn_send.clicked.connect(self._send_to_player)
         self._btn_send.setEnabled(False)
 
-        self._btn_transition = TransitionModeButton(parent=self)
+        self._btn_transition = TransitionModeButton(parent=self, initial=self._display_state.transition_mode())
         self._btn_transition.modeChanged.connect(self._display_state.set_transition_mode)
 
         self._btn_black = BlackoutButton(parent=self)
@@ -186,6 +187,7 @@ class ImagesTab(QWidget):
             self._preview_pixmap = pm
             self._update_preview_scaled()
 
+        self.tag_strip.set_image(image_id)
         self._btn_send.setEnabled(True)
         self._btn_black.setEnabled(True)
 

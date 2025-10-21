@@ -8,13 +8,14 @@ from PySide6.QtWidgets import (
     QToolBar
 )
 
-from db.services.library_service import LibraryService
+from dmt.db.services.library_service import LibraryService
+from dmt.db.services.tagging_service import TaggingService
 from dmt.core.config import Config
-from db.manager import DatabaseManager
+from dmt.db.manager import DatabaseManager
 
 from .player_window import PlayerWindow
 from .image_tab import ImagesTab
-from .initiative_tab import InitiativeTab
+from .initiative_tab import InitiativeTab, InitiativeController
 from .player_window.display_state import DisplayState
 from .settings_tab import SettingsTab
 
@@ -22,7 +23,8 @@ from .settings_tab import SettingsTab
 class MainWindow(QMainWindow):
     """ The main window for the GM to use the tools from. """
 
-    def __init__(self, cfg: Config, dbm: DatabaseManager, display_state: DisplayState) -> None:
+    def __init__(self, cfg: Config, dbm: DatabaseManager,
+                 display_state: DisplayState, initiative_ctl: InitiativeController) -> None:
         super().__init__()
         self.setWindowTitle("DM Assistant")
         self.resize(1200, 800)
@@ -36,8 +38,9 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self._tabs)
 
         # Tabs
-        self.images_tab = ImagesTab(service=LibraryService(self.dbm), display_state=self.display_state)
-        self.initiative_tab = InitiativeTab(self.config)
+        self.images_tab = ImagesTab(
+            service=LibraryService(self.dbm), tag_service=TaggingService(self.dbm), display_state=self.display_state)
+        self.initiative_tab = InitiativeTab(self, ctl=initiative_ctl, state=display_state)
         self.settings_tab = SettingsTab(self.dbm, self.display_state)
         self.settings_tab.reloadedDatabase.connect(self.images_tab.library.reload)
 
@@ -62,6 +65,8 @@ class MainWindow(QMainWindow):
         """ Create the player window. """
         if self.playerWindow is None:
             self.playerWindow = PlayerWindow(self.display_state)
+        else:
+            self.playerWindow.bring_to_front()
 
     def close_player_window(self) -> None:
         """ Destroy the player window. """

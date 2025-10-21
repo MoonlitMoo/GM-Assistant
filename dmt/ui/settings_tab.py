@@ -13,9 +13,8 @@ from PySide6.QtWidgets import (
     QFormLayout, QLineEdit, QPushButton, QHBoxLayout, QFileDialog, QMessageBox,
 )
 
-from db.manager import DatabaseManager
+from dmt.db.manager import DatabaseManager
 from .player_window import DisplayState
-from ..core.config import Config
 
 
 class DatabaseSelectorWidget(QWidget):
