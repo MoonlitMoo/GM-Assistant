@@ -1,10 +1,16 @@
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QGuiApplication
-from PySide6.QtWidgets import QWidget, QVBoxLayout
+import json
+import sys
+from typing import Any
 
-from .display_state import ScaleMode, DisplayState
-from .display_view import DisplayView
-from .initiative_overlay import InitiativeOverlay
+from PySide6 import QtCore
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtNetwork import QLocalSocket
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QApplication
+
+from dmt.ui.player_window.display_state import ScaleMode, DisplayState
+from dmt.ui.player_window.display_view import DisplayView
+from dmt.ui.player_window.initiative_overlay import InitiativeOverlay
 
 
 class PlayerWindow(QWidget):
@@ -35,6 +41,7 @@ class PlayerWindow(QWidget):
         self._display_state.scaleModeChanged.connect(self._canvas.set_scale_mode)
         self._display_state.transitionModeChanged.connect(self._canvas.set_transition_mode)
         self._display_state.windowedChanged.connect(self._apply_window_mode)
+        self._display_state.imageChanged.connect(self.set_image_bytes)
         self._display_state.blackoutChanged.connect(self._canvas.blackout)
         self._display_state.initiativeChanged.connect(self._on_initiative_changed)
 
@@ -147,3 +154,66 @@ class PlayerWindow(QWidget):
         if event.spontaneous() and self.parent() is not None:
             self.parent().close_player_window()
         super().closeEvent(event)
+
+
+class PlayerClient(QtCore.QObject):
+    """ The socket to handle receiving the information for the player window display state. """
+
+    def __init__(self, name: str, window: PlayerWindow):
+        super().__init__()
+        self.sock = QLocalSocket(self)
+        self.window = window
+        self._buffer = ""
+        self.sock.readyRead.connect(self._read)
+        self.sock.disconnected.connect(QApplication.quit)
+        self.sock.errorOccurred.connect(lambda *_: QApplication.quit())
+        self.sock.connectToServer(name)
+
+    def _read(self):
+        while self.sock.bytesAvailable():
+            chunk = bytes(self.sock.readAll()).decode("utf-8", errors="ignore")
+            self._buffer += chunk
+            lines = self._buffer.splitlines(keepends=True)
+            complete, rest = [], ""
+            for ln in lines:
+                if ln.endswith("\n"):
+                    complete.append(ln.rstrip("\n"))
+                else:
+                    rest += ln
+            self._buffer = rest
+            for line in complete:
+                if not line.strip():
+                    continue
+                try:
+                    msg = json.loads(line)
+                except Exception:
+                    continue
+                self._dispatch(msg)
+
+    def _dispatch(self, msg: dict[str, Any]):
+        method = getattr(self.window._display_state, msg['op'])
+        method(*msg['args'], **msg['kwargs'])
+
+
+
+def main():
+    # argv: player_process.py --socket <name>
+    args = sys.argv[1:]
+    if len(args) >= 2 and args[0] == "--socket":
+        name = args[1]
+    else:
+        print("player_process: missing --socket <name>", file=sys.stderr)
+        sys.exit(2)
+
+    app = QApplication(sys.argv)
+    dp = DisplayState(is_receiver=True)
+    win = PlayerWindow(display_state=dp)
+    client = PlayerClient(name, win)
+    dp.socket = client
+    # Show by default; main can immediately resize/move as desired.
+    win.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

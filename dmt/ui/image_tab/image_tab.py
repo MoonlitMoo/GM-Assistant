@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import base64
 from typing import List, Optional
 
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QWidget, QSplitter, QVBoxLayout, QLabel, QPushButton, QHBoxLayout,
-    QListWidget, QListWidgetItem, QTextEdit, QFileDialog, QMessageBox, QStyle
+    QListWidget, QListWidgetItem, QFileDialog, QMessageBox, QStyle
 )
 
 from dmt.db.services.library_service import LibraryService
@@ -228,14 +229,6 @@ class ImagesTab(QWidget):
     def _send_to_player(self):
         if self._selected_image_id is None:
             return
-        mw = self.window()
-        if hasattr(mw, "playerWindow"):
-            if mw.playerWindow is None:
-                mw.open_player_window()
-            fb = self._service.get_image_full_bytes(self._selected_image_id)
-            if fb:
-                mw.playerWindow.set_image_bytes(fb)
-                # Remove blackout and update state
-                self._btn_black.setChecked(False)
-                mw.playerWindow.raise_()
-                mw.playerWindow.activateWindow()
+        img_bytes = self._service.get_image_full_bytes(self._selected_image_id)
+        b64 = base64.b64encode(img_bytes).decode("ascii")
+        self._display_state.set_image(b64)

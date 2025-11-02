@@ -1,4 +1,5 @@
 from enum import Enum
+from functools import wraps
 from typing import Callable, Dict, Any
 
 from PySide6.QtCore import QObject, Signal, QTimer
@@ -31,19 +32,71 @@ def parse_scale_mode(s: str) -> ScaleMode:
     }.get(s, ScaleMode.FIT)
 
 
+def remote_op(method):
+    """
+    Decorator for remote operation methods of the display state.
+    Automatically yoinks the data and sends over configured socket.
+    - If self.is_receiver is False: send {"op": <method name>, "args": args, "kwargs": kwargs?} over self.socket.
+        Then execute locally to sync
+    - If True: execute the method locally.
+    """
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if getattr(self, "is_receiver", False):
+            # Receiver side: execute the operation locally
+            return method(self, *args, **kwargs)
+
+        # Sender side: setup call and sanitise enums
+        n_args = []
+        for i, a in enumerate(args):
+            if isinstance(a, (TransitionMode, ScaleMode)):
+                n_args.append(a.value)
+            else:
+                n_args.append(a)
+        args = tuple(n_args)
+
+        payload = {"op": method.__name__, "args": args, "kwargs": kwargs}
+
+        # Get the player controller to send with
+        sender = getattr(self, "sender", None)
+        if sender is None:
+            raise RuntimeError("remote_op: instance has no 'sender' to send on")
+
+        try:
+            sender.send(obj=payload)
+        except Exception as e:
+            raise RuntimeError("remote_op failed") from e
+        return method(self, *args, **kwargs)
+
+    return wrapper
+
+
+
 class DisplayState(QObject):
+    """ The display state for driving the player window. Since we run the player window as a separate process it can be
+    configured as the receiver or sender. If sender, then remote_op decorated functions are sent via the sender.send(),
+    before being run locally.
+    As such a command done to the main window display state will be propagated to the player window process, with signals
+    emitted in both processes for syncing of state.
+    """
     # Signals
     displayIndexChanged = Signal(int)
     windowedChanged = Signal(bool)
     blackoutChanged = Signal(bool)
     scaleModeChanged = Signal(ScaleMode)
+    imageChanged = Signal(Any)
     transitionModeChanged = Signal(TransitionMode)
     initiativeChanged = Signal(list, int, int, bool)
 
-    def __init__(self, on_persist: Callable[[dict], None] | None = None, parent: QObject | None = None,
-                 autosave_debounce_ms: int = 250,
-    ):
+
+
+    def __init__(self, on_persist: Callable[[dict], None] | None = None, is_receiver: bool = False,
+                 parent: QObject | None = None, autosave_debounce_ms: int = 250,
+                 ):
         super().__init__(parent)
+        # Remote operation vars
+        self.is_receiver = is_receiver
+        self.sender = None
         # General defaults
         self._display_index = 0
         self._windowed = True
@@ -75,35 +128,49 @@ class DisplayState(QObject):
     def initiative_round(self) -> int: return self._initiative_round
 
     # --- Image overlay API ---
+    @remote_op
     def set_display_index(self, idx: int) -> None:
         if idx == self._display_index: return
         self._display_index = idx
         self.displayIndexChanged.emit(idx)
         self._mark_dirty()
 
+    @remote_op
     def set_windowed(self, on: bool) -> None:
         if on == self._windowed: return
         self._windowed = on
         self.windowedChanged.emit(on)
         self._mark_dirty()
 
-    def set_scale_mode(self, mode: ScaleMode) -> None:
+    @remote_op
+    def set_scale_mode(self, mode: ScaleMode | str) -> None:
+        if isinstance(mode, str):
+            mode = ScaleMode(mode)
         if mode == self._scale_mode: return
         self._scale_mode = mode
         self.scaleModeChanged.emit(mode)
         self._mark_dirty()
 
-    def set_transition_mode(self, mode: TransitionMode) -> None:
+    @remote_op
+    def set_transition_mode(self, mode: TransitionMode | str) -> None:
+        if isinstance(mode, str):
+            mode = TransitionMode(mode)
         if mode == self._transition_mode: return
         self._transition_mode = mode
         self.transitionModeChanged.emit(mode)
 
+    @remote_op
+    def set_image(self, *a, **k):
+        self.imageChanged.emit(*a, **k)
+
     # ---- Blackout overlay API ----
+    @remote_op
     def set_blackout(self, on: bool):
         self._blackout = on
         self.blackoutChanged.emit(on)
 
     # ---- Initiative overlay API ----
+    @remote_op
     def set_initiative(self, names: list[str], current_idx: int, round: int) -> None:
         self._initiative_names = list(names)
         self._initiative_current = int(current_idx) if current_idx is not None else -1
@@ -111,6 +178,7 @@ class DisplayState(QObject):
         self._initiative_round = True
         self.initiativeChanged.emit(self._initiative_names, self._initiative_current, round, True)
 
+    @remote_op
     def hide_initiative(self) -> None:
         self._initiative_visible = False
         self.initiativeChanged.emit([], -1, 0, False)
@@ -128,6 +196,7 @@ class DisplayState(QObject):
             "initiativeRound": self._initiative_round,
         }
 
+    @remote_op
     def load_state(self, state: Dict[str, Any]) -> None:
         self._display_index = int(state.get("playerDisplay", 0))
         self._windowed = bool(state.get("playerWindowed", True))

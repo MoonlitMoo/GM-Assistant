@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import base64
 from typing import Optional, Collection
 
 from PySide6.QtCore import Qt, QByteArray, QVariantAnimation, QEasingCurve, QPointF, QRectF
@@ -164,7 +166,9 @@ class DisplayView(QGraphicsView):
             self.set_image_qimage(img)
             return True
 
-        # Encoded mode
+        # Encoded mode (hack fix for coverting str to bytes)
+        if isinstance(data, str):
+            data = base64.b64decode(data)
         img = QImage.fromData(data, format.encode() if format else None)
         if img.isNull():
             return False
