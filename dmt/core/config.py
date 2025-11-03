@@ -9,7 +9,7 @@ from PySide6.QtCore import QSettings
 
 # QSettings scope
 ORG = "PersonalApps"
-APP = "GM Assistant"
+APP = "gm-assistant"
 
 
 class UIState(BaseModel):

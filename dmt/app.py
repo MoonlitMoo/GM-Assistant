@@ -12,6 +12,7 @@ from PySide6.QtCore import Qt, QCoreApplication
 from .core.config import (
     load_config, save_config, ORG, APP
 )
+from .core.platform_helpers import set_app_identity, ensure_linux_desktop_entries
 from .ui.main_window import MainWindow
 from .ui.initiative_tab import InitiativeController
 from .ui.player_window.display_state import DisplayState
@@ -27,13 +28,15 @@ def main() -> None:
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
-    app = QApplication(sys.argv)
+    # Check that setup is completed for desktop icons + files.
+    ensure_linux_desktop_entries()
 
+    app = QApplication(sys.argv)
     # Set QSettings identity BEFORE any settings access
     QCoreApplication.setOrganizationName(ORG)
     QCoreApplication.setApplicationName(APP)
     QCoreApplication.setApplicationVersion(version("gm-assistant"))
-    QApplication.setWindowIcon(QIcon("dmt/icons/gm-assistant-dm.ico"))
+    set_app_identity("GMAssistant.Main", APP)
 
     # Load user prefs (QSettings-backed)
     cfg = load_config()

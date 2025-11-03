@@ -8,6 +8,8 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QApplication
 
+from dmt.core.config import ORG, APP
+from dmt.core.platform_helpers import set_app_identity
 from dmt.ui.player_window.display_state import ScaleMode, DisplayState
 from dmt.ui.player_window.display_view import DisplayView
 from dmt.ui.player_window.initiative_overlay import InitiativeOverlay
@@ -18,6 +20,7 @@ class PlayerWindow(QWidget):
 
     def __init__(self, display_state: DisplayState):
         super().__init__(None)
+        self.setWindowTitle("DM Assistant (Player)")
         self._display_state = display_state
 
         # child canvas for all image work
@@ -101,7 +104,7 @@ class PlayerWindow(QWidget):
         """Switch between normal resizable window and fullscreen on the chosen screen."""
         if windowed:
             self.setWindowFlags(
-                Qt.Tool | Qt.Window |
+                Qt.Window |
                 Qt.WindowTitleHint | Qt.WindowSystemMenuHint |
                 Qt.WindowMinMaxButtonsHint | Qt.WindowCloseButtonHint
             )
@@ -114,7 +117,7 @@ class PlayerWindow(QWidget):
             self._display_state.set_display_index(idx)
             if self.windowHandle():
                 self.windowHandle().setScreen(target)
-            self.setWindowFlags(Qt.FramelessWindowHint | Qt.Tool | Qt.Window)
+            self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
             self.setGeometry(target.geometry())
             self.showFullScreen()
 
@@ -198,12 +201,18 @@ def main():
         print("player_process: missing --socket <name>", file=sys.stderr)
         sys.exit(2)
 
+    app_name = f"{APP}-player"
     app = QApplication(sys.argv)
+    QApplication.setOrganizationName(ORG)
+    QApplication.setApplicationName(app_name)
+    set_app_identity("GMAssistant.Player", app_name)
+
     dp = DisplayState(is_receiver=True)
     win = PlayerWindow(display_state=dp)
+
     client = PlayerClient(name, win)
     dp.socket = client
-    # Show by default; main can immediately resize/move as desired.
+
     win.show()
     sys.exit(app.exec())
 

@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=GM Assistant (Player)
+Icon=gm-assistant-player
+StartupWMClass=gm-assistant-player
+Exec=true
