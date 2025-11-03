@@ -44,13 +44,14 @@ class PlayerWindow(QWidget):
         self._display_state.imageChanged.connect(self.set_image_bytes)
         self._display_state.blackoutChanged.connect(self._canvas.blackout)
         self._display_state.initiativeChanged.connect(self._on_initiative_changed)
-
+        self._display_state.bringToFront.connect(self.bring_to_front)
 
         # Apply current window mode on start
         self.setWindowFlag(Qt.WindowDoesNotAcceptFocus, True)
         self.setAttribute(Qt.WA_ShowWithoutActivating, True)
+        self.setAttribute(Qt.WA_OpaquePaintEvent, True)
+        self.setAutoFillBackground(False)
         self._apply_window_mode(self._display_state.windowed())
-        self.make_companion_tool()
 
     # ---- public proxies for convenience ----
     def set_image_qimage(self, img):
@@ -116,34 +117,25 @@ class PlayerWindow(QWidget):
             self.setGeometry(target.geometry())
             self.showFullScreen()
 
-    def make_companion_tool(self):
-        # preserve current position/size
-        g = self.geometry()
-
-        # Normal chrome + tool behaviour, but independent
-        self.setWindowFlags(
-            Qt.Tool | Qt.Window |
-            Qt.WindowTitleHint |
-            Qt.WindowSystemMenuHint |
-            Qt.WindowMinMaxButtonsHint |
-            Qt.WindowCloseButtonHint
-        )
-
-        # Optional: smoother painting on Windows
-        self.setAttribute(Qt.WA_OpaquePaintEvent, True)
-        self.setAutoFillBackground(False)
-
-        self.show()  # reapply flags
-        self.setGeometry(g)  # restore exact position
 
     def bring_to_front(self, focus=False):
         """ Small function to bring to front without resetting geometry, since its a tool window. """
-        geom = self.geometry()
-        self.show()
-        self.raise_()
-        self.setGeometry(geom)
+        g = self.geometry()
+
+        # if minimized/hidden, restore to normal first
+        self.setWindowState(self.windowState() & ~Qt.WindowMinimized)
+        self.showNormal()  # ensures it's visible (also clears Hidden)
+        self.raise_()  # raise in Z-order
+
+        # restore geometry (Qt can change it on showNormal)
+        if g.isValid():
+            self.setGeometry(g)
+
         if focus:
+            # request focus explicitly
+            self.setWindowState(self.windowState() | Qt.WindowActive)
             self.activateWindow()
+            QApplication.setActiveWindow(self)
 
     # ---- overrides ----
     def resizeEvent(self, e):

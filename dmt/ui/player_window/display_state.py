@@ -87,8 +87,7 @@ class DisplayState(QObject):
     imageChanged = Signal(Any)
     transitionModeChanged = Signal(TransitionMode)
     initiativeChanged = Signal(list, int, int, bool)
-
-
+    bringToFront = Signal()
 
     def __init__(self, on_persist: Callable[[dict], None] | None = None, is_receiver: bool = False,
                  parent: QObject | None = None, autosave_debounce_ms: int = 250,
@@ -195,6 +194,11 @@ class DisplayState(QObject):
             "initiativeIndex": self._initiative_current,
             "initiativeRound": self._initiative_round,
         }
+
+    # --- general api ---
+    @remote_op
+    def bring_to_front(self):
+        self.bringToFront.emit()
 
     @remote_op
     def load_state(self, state: Dict[str, Any]) -> None:

@@ -35,6 +35,7 @@ class MainWindow(QMainWindow):
         self.dbm = dbm
         self.display_state: DisplayState = display_state
         self.player = player
+        self.player_open = False
 
         self._tabs = QTabWidget()
         self.setCentralWidget(self._tabs)
@@ -57,11 +58,23 @@ class MainWindow(QMainWindow):
 
         # Player window controls
         act_open_player = QAction("Open Player Window", self)
-        act_open_player.triggered.connect(self.player.start)
+        act_open_player.triggered.connect(self.open_player_window)
         tb.addAction(act_open_player)
         act_close_player = QAction("Close Player Window", self)
-        act_close_player.triggered.connect(self.player.stop)
+        act_close_player.triggered.connect(self.close_player_window)
         tb.addAction(act_close_player)
+
+    def open_player_window(self):
+        if self.player_open:
+            self.display_state.bring_to_front()
+        else:
+            self.player.start()
+            self.player_open = True
+
+    def close_player_window(self):
+        if self.player_open:
+            self.player.stop()
+            self.player_open = False
 
     def closeEvent(self, event, /):
         """ Make sure the player window closes too. """

@@ -45,7 +45,6 @@ class PlayerController(QtCore.QObject):
         self._socket = self._server.nextPendingConnection()
         self._socket.disconnected.connect(self._on_disconnect)
         self.connected.emit()
-        print("connected")
 
     def _on_disconnect(self):
         self._socket = None
