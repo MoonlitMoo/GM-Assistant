@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QSpinBox,
     QGroupBox,
-    QFormLayout, QLineEdit, QPushButton, QHBoxLayout, QFileDialog, QMessageBox,
+    QFormLayout, QLineEdit, QPushButton, QHBoxLayout, QFileDialog, QMessageBox, QComboBox,
 )
 
 from dmt.db.manager import DatabaseManager
@@ -117,6 +117,98 @@ class DatabaseSelectorWidget(QWidget):
         self.databaseCreated.emit(str(p))
 
 
+class InitiativeParamsBar(QWidget):
+    """
+    Horizontal controls for InitiativeOverlay:
+      - Margin (px)
+      - Alignment (topleft/top/…/bottomright)
+      - Scale (%)
+    Emits paramsChanged(margin:int, alignment:str, scale:int) on any change.
+    """
+    paramsChanged = Signal(int, str, int)  # margin, alignment, scale
+
+    ALIGNMENTS = [
+        "topleft", "top", "topright",
+        "left", "center", "right",
+        "bottomleft", "bottom", "bottomright",
+    ]
+
+    def __init__(self, parent=None, *, margin=24, alignment="topright", scale=100):
+        super().__init__(parent)
+
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(10)
+
+        # Margin (px)
+        lay.addWidget(QLabel("Margin", self))
+        self.marginSpin = QSpinBox(self)
+        self.marginSpin.setRange(0, 1000)
+        self.marginSpin.setSingleStep(2)
+        self.marginSpin.setValue(int(margin))
+        self.marginSpin.setToolTip("Distance from the window edge (pixels).")
+        lay.addWidget(self.marginSpin)
+
+        # Alignment
+        lay.addWidget(QLabel("Alignment", self))
+        self.alignmentBox = QComboBox(self)
+        self.alignmentBox.addItems(self.ALIGNMENTS)
+        # try to select provided alignment; default to 'topright'
+        idx = max(0, self.ALIGNMENTS.index(alignment) if alignment in self.ALIGNMENTS else self.ALIGNMENTS.index("topright"))
+        self.alignmentBox.setCurrentIndex(idx)
+        self.alignmentBox.setToolTip("Anchor corner/edge for the overlay.")
+        lay.addWidget(self.alignmentBox)
+
+        # Scale (%)
+        lay.addWidget(QLabel("Scale", self))
+        self.scaleSpin = QSpinBox(self)
+        self.scaleSpin.setRange(10, 400)   # 10–400%
+        self.scaleSpin.setSingleStep(5)
+        self.scaleSpin.setSuffix(" %")
+        self.scaleSpin.setValue(int(scale))
+        self.scaleSpin.setToolTip("Overall overlay scale (percentage).")
+        lay.addWidget(self.scaleSpin)
+
+        lay.addStretch(1)
+
+        # Wire up change propagation
+        self.marginSpin.valueChanged.connect(self._emit_params)
+        self.alignmentBox.currentTextChanged.connect(self._emit_params)
+        self.scaleSpin.valueChanged.connect(self._emit_params)
+
+    # --- Public API ---
+    def values(self) -> tuple[int, str, int]:
+        """Return (margin, alignment, scale)."""
+        return self.marginSpin.value(), self.alignmentBox.currentText(), self.scaleSpin.value()
+
+    def set_values(self, *, margin: int | None = None, alignment: str | None = None, scale: int | None = None):
+        """Programmatically update without spurious signals."""
+        bs1, bs2, bs3 = self.marginSpin.blockSignals(True), self.alignmentBox.blockSignals(True), self.scaleSpin.blockSignals(True)
+        try:
+            if margin is not None:
+                self.marginSpin.setValue(int(margin))
+            if alignment is not None and alignment in self.ALIGNMENTS:
+                self.alignmentBox.setCurrentText(alignment)
+            if scale is not None:
+                self.scaleSpin.setValue(int(scale))
+        finally:
+            self.marginSpin.blockSignals(bs1)
+            self.alignmentBox.blockSignals(bs2)
+            self.scaleSpin.blockSignals(bs3)
+        self._emit_params()
+
+    def connect_display_state(self, overlay) -> None:
+        self.paramsChanged.connect(
+            lambda m, a, s: overlay.set_initiative_overlay_params(margin=m, alignment=a, scale=s)
+        )
+
+    # --- Internals ---
+    def _emit_params(self, *args):
+        m, a, s = self.values()
+        self.paramsChanged.emit(m, a, s)
+
+
+
 class SettingsTab(QWidget):
     """ Settings screen for all global options. """
     reloadedDatabase = Signal()
@@ -147,8 +239,16 @@ class SettingsTab(QWidget):
         self.chk_windowed.setChecked(self._display_state.windowed())
         self.chk_windowed.stateChanged.connect(self._display_state.set_windowed)
         form.addRow(self.chk_windowed)
-
         root.addWidget(grp_player)
+
+        # Initiative overlay settings
+        grp_initiative = QGroupBox("Initiative Overlay")
+        form = QFormLayout(grp_initiative)
+        init_widget = InitiativeParamsBar(self)
+        init_widget.connect_display_state(self._display_state)
+        form.addWidget(init_widget)
+        root.addWidget(grp_initiative)
+
         root.addStretch(1)
 
     def _on_db_selected(self, path: str) -> None:

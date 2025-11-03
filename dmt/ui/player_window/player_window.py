@@ -44,6 +44,7 @@ class PlayerWindow(QWidget):
         self._display_state.imageChanged.connect(self.set_image_bytes)
         self._display_state.blackoutChanged.connect(self._canvas.blackout)
         self._display_state.initiativeChanged.connect(self._on_initiative_changed)
+        self._display_state.initiativeOverlayChanged.connect(lambda *args, **kwargs: self._init_overlay.set_overlay_params(*args, **kwargs))
         self._display_state.bringToFront.connect(self.bring_to_front)
 
         # Apply current window mode on start

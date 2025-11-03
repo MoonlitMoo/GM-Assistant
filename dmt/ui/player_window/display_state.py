@@ -79,15 +79,19 @@ class DisplayState(QObject):
     As such a command done to the main window display state will be propagated to the player window process, with signals
     emitted in both processes for syncing of state.
     """
-    # Signals
+    # General Signals
     displayIndexChanged = Signal(int)
     windowedChanged = Signal(bool)
+    bringToFront = Signal()
+    # Blackout signal
     blackoutChanged = Signal(bool)
+    # Image signals
     scaleModeChanged = Signal(ScaleMode)
     imageChanged = Signal(Any)
     transitionModeChanged = Signal(TransitionMode)
+    # initiative overlay signals
     initiativeChanged = Signal(list, int, int, bool)
-    bringToFront = Signal()
+    initiativeOverlayChanged = Signal(int, str, int)
 
     def __init__(self, on_persist: Callable[[dict], None] | None = None, is_receiver: bool = False,
                  parent: QObject | None = None, autosave_debounce_ms: int = 250,
@@ -181,6 +185,10 @@ class DisplayState(QObject):
     def hide_initiative(self) -> None:
         self._initiative_visible = False
         self.initiativeChanged.emit([], -1, 0, False)
+
+    @remote_op
+    def set_initiative_overlay_params(self, margin: int, alignment: str, scale: int):
+        self.initiativeOverlayChanged.emit(margin, alignment, scale)
 
     # --- persistence bridge ---
     def snapshot(self) -> dict:
