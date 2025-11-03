@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from importlib.metadata import version
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt, QCoreApplication
 
@@ -32,6 +33,7 @@ def main() -> None:
     QCoreApplication.setOrganizationName(ORG)
     QCoreApplication.setApplicationName(APP)
     QCoreApplication.setApplicationVersion(version("gm-assistant"))
+    QApplication.setWindowIcon(QIcon("dmt/icons/gm-assistant-dm.ico"))
 
     # Load user prefs (QSettings-backed)
     cfg = load_config()
