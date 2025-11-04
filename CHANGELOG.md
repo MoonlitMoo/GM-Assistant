@@ -2,6 +2,54 @@
 
 <!-- version list -->
 
+## v1.2.0 (2025-11-04)
+
+### Bug Fixes
+
+- Add persistence for initiative overlay ui
+  ([`2db301a`](https://github.com/MoonlitMoo/GM-Assistant/commit/2db301a317495cd05843ca26af47fa3b7cdc9fad))
+
+- Adding icon for the window
+  ([`b6c0dfb`](https://github.com/MoonlitMoo/GM-Assistant/commit/b6c0dfb19664fde3a2a419539c454206ceea874e))
+
+- Correctly reopens after spontaneous close
+  ([`1a26d9c`](https://github.com/MoonlitMoo/GM-Assistant/commit/1a26d9c5f965348dfe32185f25d6921b9a7f35b2))
+
+- Initiative overlay scales correctly from settings
+  ([`912b01c`](https://github.com/MoonlitMoo/GM-Assistant/commit/912b01c1df3e8e53ee5b2175765887c4e022e9f6))
+
+- Pass bring to front via display state
+  ([`b0f88b8`](https://github.com/MoonlitMoo/GM-Assistant/commit/b0f88b848927651f611732dc07a30167dd01f575))
+
+- Run the subprocess correctly while packaged
+  ([`fa93fc5`](https://github.com/MoonlitMoo/GM-Assistant/commit/fa93fc5af1efdceb54f72781ed87adef0094f798))
+
+- Show initiative persistence on player window
+  ([`483443d`](https://github.com/MoonlitMoo/GM-Assistant/commit/483443d98284e051020a4e96178c1c7cfbe3b9d3))
+
+### Features
+
+- Adding initiative overlay params to settings
+  ([`3e6d967`](https://github.com/MoonlitMoo/GM-Assistant/commit/3e6d967c29edba9e3c56eb41240a5910aba3057c))
+
+- Adding separate taskbar item for player window
+  ([`fb8c3e9`](https://github.com/MoonlitMoo/GM-Assistant/commit/fb8c3e9ac873b0dd722cfb721e0f681048e7fa1f))
+
+- Run player window as a subprocess
+  ([`6d00c2c`](https://github.com/MoonlitMoo/GM-Assistant/commit/6d00c2c179a14a310f8e90b4aea963efa46d460d))
+
+### Refactoring
+
+- Initiative data into dataclass for ease
+  ([`2980403`](https://github.com/MoonlitMoo/GM-Assistant/commit/298040353b1076a0632f5efc52b5ca03c4588502))
+
+- Move display state to core +
+  ([`d0a55a3`](https://github.com/MoonlitMoo/GM-Assistant/commit/d0a55a3a7db46daa2be6d0d55f0b6923b01120dd))
+
+- Rename display state to specify player
+  ([`7808fe4`](https://github.com/MoonlitMoo/GM-Assistant/commit/7808fe41c75db4aa0abeb39c22a0236efa3418f2))
+
+
 ## v1.1.0 (2025-10-21)
 
 ### Bug Fixes
