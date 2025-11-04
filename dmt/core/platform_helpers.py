@@ -89,7 +89,6 @@ def ensure_linux_desktop_entries() -> dict:
     # If we installed anything, try to refresh caches
     if result["installed"]:
         _best_effort_refresh_caches(apps_dir, hicolor_dir)
-    print(result)
     return result
 
 

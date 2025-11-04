@@ -65,9 +65,10 @@ class MainWindow(QMainWindow):
         tb.addAction(act_close_player)
 
     def open_player_window(self):
-        if self.player_open:
+        if self.player_open and self.player.is_running():
             self.display_state.bring_to_front()
         else:
+            self.player.stop()
             self.player.start()
             self.player_open = True
 

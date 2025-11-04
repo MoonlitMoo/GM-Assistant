@@ -132,15 +132,6 @@ class PlayerWindow(QWidget):
             self.activateWindow()
             QApplication.setActiveWindow(self)
 
-    # ---- overrides ----
-    def resizeEvent(self, e):
-        super().resizeEvent(e)
-
-    def closeEvent(self, event):
-        if event.spontaneous() and self.parent() is not None:
-            self.parent().close_player_window()
-        super().closeEvent(event)
-
 
 class PlayerClient(QtCore.QObject):
     """ The socket to handle receiving the information for the player window display state. """

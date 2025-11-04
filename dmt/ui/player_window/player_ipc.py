@@ -36,6 +36,12 @@ class PlayerController(QtCore.QObject):
         if self._proc and self._proc.poll() is None:
             self._proc.terminate()
 
+    def is_running(self) -> bool:
+        """Return True if the player process is still running."""
+        if self._proc is None:
+            return False
+        return self._proc.poll() is None
+
     def _on_new_conn(self):
         if self._socket:
             # Only accept a single player connection; reject extras.
