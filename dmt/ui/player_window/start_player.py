@@ -10,7 +10,6 @@ from dmt.ui.player_window import PlayerWindow, PlayerClient
 
 
 def main():
-    # argv: player_process.py --socket <name>
     args = sys.argv[1:]
     if len(args) >= 2 and args[0] == "--socket":
         name = args[1]

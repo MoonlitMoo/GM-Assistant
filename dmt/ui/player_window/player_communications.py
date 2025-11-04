@@ -30,12 +30,15 @@ class PlayerController(QtCore.QObject):
             raise RuntimeError("Failed to start QLocalServer")
 
     def start(self):
-        # Launch the helper process
-        args = [sys.executable, self._player_script_path, "--socket", self._name]
-        # For Windows you may prefer creationflags to hide console if using python.exe:
-        # creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-        creationflags = 0
-        self._proc = subprocess.Popen(args, creationflags=creationflags)
+        """ Launch the player process, switching depending on frozen or not."""
+        if getattr(sys, "frozen", False):
+            # We are in a PyInstaller-frozen app.
+            cmd = [sys.executable, "--socket", self._name, "--player"]
+        else:
+            # Normal Python environment; run the helper script.
+            cmd = [sys.executable, self._player_script_path, "--socket", self._name]
+
+        self._proc = subprocess.Popen(cmd, creationflags=0)
 
     def stop(self):
         if self._proc and self._proc.poll() is None:
