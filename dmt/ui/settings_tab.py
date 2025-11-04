@@ -127,13 +127,9 @@ class InitiativeParamsBar(QWidget):
     """
     paramsChanged = Signal(int, str, int)  # margin, alignment, scale
 
-    ALIGNMENTS = [
-        "topleft", "top", "topright",
-        "left", "center", "right",
-        "bottomleft", "bottom", "bottomright",
-    ]
+    ALIGNMENTS = ["top-left", "top-right", "bottom-left", "bottom-right"]
 
-    def __init__(self, parent=None, *, margin=24, alignment="topright", scale=100):
+    def __init__(self, parent=None, *, margin=24, alignment="top-right", scale=100):
         super().__init__(parent)
 
         lay = QHBoxLayout(self)

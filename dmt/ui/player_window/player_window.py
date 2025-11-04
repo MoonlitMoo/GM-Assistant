@@ -32,7 +32,7 @@ class PlayerWindow(QWidget):
         # HUD overlay for initiative tracker
         self._init_overlay = InitiativeOverlay(self)
         self._init_overlay.hide()
-        self._init_overlay.resized.connect(self._position_initiative_overlay)
+        # self._init_overlay.resized.connect(self._position_initiative_overlay)
 
         # Apply initial state
         self._canvas.set_scale_mode(self._display_state.scale_mode())
@@ -90,15 +90,6 @@ class PlayerWindow(QWidget):
         else:
             self.hide_initiative_overlay()
 
-    def _position_initiative_overlay(self):
-        """Anchor overlay in top-right corner of Player window."""
-        m = 16  # margin
-        if not self._init_overlay:
-            return
-        w = self._init_overlay.width()
-        h = self._init_overlay.height()
-        self._init_overlay.move(self.width() - w - m, m)
-
     # ---- window sizing logic ----
     def _apply_window_mode(self, windowed: bool):
         """Switch between normal resizable window and fullscreen on the chosen screen."""
@@ -144,7 +135,6 @@ class PlayerWindow(QWidget):
     # ---- overrides ----
     def resizeEvent(self, e):
         super().resizeEvent(e)
-        self._position_initiative_overlay()
 
     def closeEvent(self, event):
         if event.spontaneous() and self.parent() is not None:
