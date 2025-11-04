@@ -1,1 +1,1 @@
-from .state import DisplayState, TransitionMode, ScaleMode
+from .state import PlayerDisplayState, TransitionMode, ScaleMode

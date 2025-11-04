@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QFormLayout, QLineEdit, QPushButton, QHBoxLayout, QFileDialog, QMessageBox, QComboBox,
 )
 
-from dmt.core import DisplayState
+from dmt.core import PlayerDisplayState
 from dmt.db.manager import DatabaseManager
 
 
@@ -211,7 +211,7 @@ class SettingsTab(QWidget):
     """ Settings screen for all global options. """
     reloadedDatabase = Signal()
 
-    def __init__(self, dbm: DatabaseManager, display_state: DisplayState) -> None:
+    def __init__(self, dbm: DatabaseManager, display_state: PlayerDisplayState) -> None:
         super().__init__()
         self._dbm = dbm
         self._display_state = display_state

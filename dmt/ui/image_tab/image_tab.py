@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QFileDialog, QMessageBox, QStyle
 )
 
-from dmt.core import DisplayState
+from dmt.core import PlayerDisplayState
 from dmt.db.services.library_service import LibraryService
 from dmt.db.services.tagging_service import TaggingService
 
@@ -49,7 +49,7 @@ class ImagesTab(QWidget):
       - Library: rename/delete on groups & collections
       - Thumbnails: rename caption / remove from collection
     """
-    def __init__(self, service: LibraryService, tag_service: TaggingService, display_state: DisplayState) -> None:
+    def __init__(self, service: LibraryService, tag_service: TaggingService, display_state: PlayerDisplayState) -> None:
         super().__init__()
         self._service = service
         self._display_state = display_state

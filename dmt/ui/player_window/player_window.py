@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QApplication
 
-from dmt.core import DisplayState
+from dmt.core import PlayerDisplayState
 from .player_canvas import PlayerCanvas
 from .initiative_overlay import InitiativeOverlay
 
@@ -10,7 +10,7 @@ from .initiative_overlay import InitiativeOverlay
 class PlayerWindow(QWidget):
     """Separate top-level window shown to players."""
 
-    def __init__(self, display_state: DisplayState):
+    def __init__(self, display_state: PlayerDisplayState):
         super().__init__(None)
         self.setWindowTitle("DM Assistant (Player)")
         self._display_state = display_state

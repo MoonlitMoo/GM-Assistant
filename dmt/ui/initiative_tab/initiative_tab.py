@@ -8,13 +8,13 @@ from PySide6.QtWidgets import (
     QPushButton, QTableView, QMessageBox, QHeaderView, QSizePolicy
 )
 
-from dmt.core import DisplayState
+from dmt.core import PlayerDisplayState
 
 from .controller import InitiativeController
 from .table_model import InitiativeTableModel
 
 class InitiativeTab(QWidget):
-    def __init__(self, parent, ctl: InitiativeController, state: DisplayState):
+    def __init__(self, parent, ctl: InitiativeController, state: PlayerDisplayState):
         super().__init__(parent)
         self.state = state
         self.ctl = ctl

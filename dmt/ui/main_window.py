@@ -15,7 +15,7 @@ from dmt.db.manager import DatabaseManager
 
 from .image_tab import ImagesTab
 from .initiative_tab import InitiativeTab, InitiativeController
-from dmt.core.state import DisplayState
+from dmt.core.state import PlayerDisplayState
 from .player_window.player_communications import PlayerController
 from .settings_tab import SettingsTab
 
@@ -24,14 +24,14 @@ class MainWindow(QMainWindow):
     """ The main window for the GM to use the tools from. """
 
     def __init__(self, cfg: Config, dbm: DatabaseManager, player: PlayerController,
-                 display_state: DisplayState, initiative_ctl: InitiativeController) -> None:
+                 display_state: PlayerDisplayState, initiative_ctl: InitiativeController) -> None:
         super().__init__()
         self.setWindowTitle("DM Assistant")
         self.resize(1200, 800)
 
         self.config = cfg
         self.dbm = dbm
-        self.display_state: DisplayState = display_state
+        self.display_state: PlayerDisplayState = display_state
         self.player = player
         self.player_open = False
 

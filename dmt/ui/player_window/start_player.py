@@ -2,7 +2,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from dmt.core import DisplayState
+from dmt.core import PlayerDisplayState
 from dmt.core.config import APP, ORG
 from dmt.core.platform_helpers import set_app_identity
 
@@ -25,7 +25,7 @@ def main():
     set_app_identity("GMAssistant.Player", app_name)
 
     # Create objects
-    dp = DisplayState(is_receiver=True)
+    dp = PlayerDisplayState(is_receiver=True)
     win = PlayerWindow(display_state=dp)
     client = PlayerClient(name, win)
     dp.socket = client

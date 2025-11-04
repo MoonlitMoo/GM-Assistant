@@ -14,7 +14,7 @@ from .core.config import (
 from .core.platform_helpers import set_app_identity, ensure_linux_desktop_entries
 from .ui.main_window import MainWindow
 from .ui.initiative_tab import InitiativeController
-from dmt.core.state import DisplayState
+from dmt.core.state import PlayerDisplayState
 
 from dmt.db.manager import DatabaseManager
 from .ui.player_window.player_communications import PlayerController
@@ -45,7 +45,7 @@ def main() -> None:
     player_controller = PlayerController(helper_path)
 
     # Create necessary states
-    display_state = DisplayState(on_persist=lambda d: setattr(cfg, "displayState", d), is_receiver=True)
+    display_state = PlayerDisplayState(on_persist=lambda d: setattr(cfg, "displayState", d), is_receiver=True)
     display_state.sender = player_controller
     initiative_controller = InitiativeController()
 

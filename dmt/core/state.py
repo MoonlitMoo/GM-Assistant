@@ -62,7 +62,7 @@ def remote_op(method):
 
 
 
-class DisplayState(QObject):
+class PlayerDisplayState(QObject):
     """ The display state for driving the player window. Since we run the player window as a separate process it can be
     configured as the receiver or sender. If sender, then remote_op decorated functions are sent via the sender.send(),
     before being run locally.
