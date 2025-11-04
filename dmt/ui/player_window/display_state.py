@@ -111,6 +111,9 @@ class DisplayState(QObject):
         self._initiative_names: list[str] = []
         self._initiative_current: int = -1
         self._initiative_round: int = 0
+        self._initiative_margin: int = 24
+        self._initiative_alignment: str = "top-right"
+        self._initiative_scale: float = 100
 
         self._on_persist = on_persist
         self._dirty = False
@@ -129,6 +132,9 @@ class DisplayState(QObject):
     def initiative_items(self) -> list: return self._initiative_names
     def initiative_index(self) -> int: return self._initiative_current
     def initiative_round(self) -> int: return self._initiative_round
+    def initiative_margin(self) -> int: return self._initiative_margin
+    def initiative_alignment(self) -> str: return self._initiative_alignment
+    def initiative_scale(self) -> float: return self._initiative_scale
 
     # --- Image overlay API ---
     @remote_op
@@ -188,6 +194,9 @@ class DisplayState(QObject):
 
     @remote_op
     def set_initiative_overlay_params(self, margin: int, alignment: str, scale: int):
+        self._initiative_margin = margin
+        self._initiative_alignment = alignment
+        self._initiative_scale = scale
         self.initiativeOverlayChanged.emit(margin, alignment, scale)
 
     # --- persistence bridge ---
@@ -201,6 +210,9 @@ class DisplayState(QObject):
             "initiativeNames": self._initiative_names,
             "initiativeIndex": self._initiative_current,
             "initiativeRound": self._initiative_round,
+            "initiativeMargin": self._initiative_margin,
+            "initiativeAlignment": self._initiative_alignment,
+            "initiativeScale": self._initiative_scale,
         }
 
     # --- general api ---
@@ -218,6 +230,9 @@ class DisplayState(QObject):
         self._initiative_names = state.get("initiativeNames", [])
         self._initiative_current = state.get("initiativeIndex", -1)
         self._initiative_round = state.get("initiativeRound", 0)
+        self._initiative_margin = state.get("initiativeMargin", 24)
+        self._initiative_alignment = state.get("initiativeAlignment", 'top-right')
+        self._initiative_scale = state.get("initiativeScale", 100)
 
     def _mark_dirty(self):
         self._dirty = True

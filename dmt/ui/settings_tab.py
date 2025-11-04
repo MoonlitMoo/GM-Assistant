@@ -194,6 +194,8 @@ class InitiativeParamsBar(QWidget):
         self._emit_params()
 
     def connect_display_state(self, overlay) -> None:
+        self.set_values(margin=overlay.initiative_margin(), alignment=overlay.initiative_alignment(),
+                        scale=overlay.initiative_scale())
         self.paramsChanged.connect(
             lambda m, a, s: overlay.set_initiative_overlay_params(margin=m, alignment=a, scale=s)
         )

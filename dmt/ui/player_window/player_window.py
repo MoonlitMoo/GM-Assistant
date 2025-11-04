@@ -32,7 +32,6 @@ class PlayerWindow(QWidget):
         # HUD overlay for initiative tracker
         self._init_overlay = InitiativeOverlay(self)
         self._init_overlay.hide()
-        # self._init_overlay.resized.connect(self._position_initiative_overlay)
 
         # Apply initial state
         self._canvas.set_scale_mode(self._display_state.scale_mode())
