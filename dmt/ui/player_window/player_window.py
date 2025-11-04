@@ -33,17 +33,11 @@ class PlayerWindow(QWidget):
         self._init_overlay = InitiativeOverlay(self)
         self._init_overlay.hide()
 
-        # Apply initial state
-        self._canvas.set_scale_mode(self._display_state.scale_mode())
-        self._canvas.set_transition_mode(self._display_state.transition_mode())
-        self._on_initiative_changed(self._display_state.initiative_items(), self._display_state.initiative_index(),
-                                    self._display_state.initiative_round(), self._display_state.initiative_visible())
-
         # Subscribe to state changes
         self._display_state.scaleModeChanged.connect(self._canvas.set_scale_mode)
         self._display_state.transitionModeChanged.connect(self._canvas.set_transition_mode)
         self._display_state.windowedChanged.connect(self._apply_window_mode)
-        self._display_state.imageChanged.connect(self.set_image_bytes)
+        self._display_state.imageChanged.connect(self._canvas.set_image_bytes)
         self._display_state.blackoutChanged.connect(self._canvas.blackout)
         self._display_state.initiativeChanged.connect(self._on_initiative_changed)
         self._display_state.initiativeOverlayChanged.connect(lambda *args, **kwargs: self._init_overlay.set_overlay_params(*args, **kwargs))
@@ -56,18 +50,6 @@ class PlayerWindow(QWidget):
         self.setAutoFillBackground(False)
         self._apply_window_mode(self._display_state.windowed())
 
-    # ---- public proxies for convenience ----
-    def set_image_qimage(self, img):
-        self._canvas.set_image_qimage(img)
-
-    def set_image_bytes(self, *a, **k):
-        return self._canvas.set_image_bytes(*a, **k)
-
-    def set_scale_mode(self, mode: ScaleMode):
-        self._canvas.set_scale_mode(mode)
-
-    def blackout(self, on: bool, *, fade_ms: int | None = None):
-        self._canvas.blackout(on, fade_ms=fade_ms)
 
     # ---- Initiative Overlay API ----
     def show_initiative_overlay(self, names, idx, round_num=None):
@@ -167,9 +149,9 @@ class PlayerClient(QtCore.QObject):
                 self._dispatch(msg)
 
     def _dispatch(self, msg: dict[str, Any]):
+        print("Recieved op", msg['op'])
         method = getattr(self.window._display_state, msg['op'])
         method(*msg['args'], **msg['kwargs'])
-
 
 
 def main():
@@ -187,9 +169,9 @@ def main():
     QApplication.setApplicationName(app_name)
     set_app_identity("GMAssistant.Player", app_name)
 
+    # Create objects
     dp = DisplayState(is_receiver=True)
     win = PlayerWindow(display_state=dp)
-
     client = PlayerClient(name, win)
     dp.socket = client
 

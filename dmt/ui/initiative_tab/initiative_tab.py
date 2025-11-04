@@ -25,6 +25,7 @@ class InitiativeTab(QWidget):
 
         self.btn_show = QPushButton("Show on Player")
         self.btn_show.setCheckable(True)
+        self.btn_show.setChecked(self.state.initiative_visible())
 
         self.btn_reset = QPushButton("Reset")
         self.btn_clear = QPushButton("Clear Table")

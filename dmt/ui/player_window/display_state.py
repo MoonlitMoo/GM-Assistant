@@ -222,17 +222,21 @@ class DisplayState(QObject):
 
     @remote_op
     def load_state(self, state: Dict[str, Any]) -> None:
-        self._display_index = int(state.get("playerDisplay", 0))
-        self._windowed = bool(state.get("playerWindowed", True))
-        self._scale_mode = ScaleMode(state.get("fitMode", "fit"))
-        self._transition_mode = TransitionMode(state.get("transitionMode", "crossfade"))
+        self.set_display_index(int(state.get("playerDisplay", 0)))
+        self.set_windowed(bool(state.get("playerWindowed", True)))
+        self.set_scale_mode(ScaleMode(state.get("fitMode", "fit")))
+        self.set_transition_mode(TransitionMode(state.get("transitionMode", "crossfade")))
         self._initiative_visible = state.get("initiativeVisible", False)
-        self._initiative_names = state.get("initiativeNames", [])
-        self._initiative_current = state.get("initiativeIndex", -1)
-        self._initiative_round = state.get("initiativeRound", 0)
-        self._initiative_margin = state.get("initiativeMargin", 24)
-        self._initiative_alignment = state.get("initiativeAlignment", 'top-right')
-        self._initiative_scale = state.get("initiativeScale", 100)
+        if self.initiative_visible():
+            self.set_initiative(
+                state.get("initiativeNames", []), state.get("initiativeIndex", -1), state.get("initiativeRound", 0)
+            )
+        else:
+            self._initiative_names = state.get("initiativeNames", [])
+            self._initiative_current = state.get("initiativeIndex", -1)
+            self._initiative_round = state.get("initiativeRound", 0)
+        self.set_initiative_overlay_params(
+            state.get("initiativeMargin", 24), state.get("initiativeAlignment", 'top-right'), state.get("initiativeScale", 100))
 
     def _mark_dirty(self):
         self._dirty = True
