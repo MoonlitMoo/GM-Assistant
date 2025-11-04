@@ -8,9 +8,10 @@ from PySide6.QtWidgets import (
     QPushButton, QTableView, QMessageBox, QHeaderView, QSizePolicy
 )
 
+from dmt.core import DisplayState
+
 from .controller import InitiativeController
 from .table_model import InitiativeTableModel
-from dmt.ui.player_window import DisplayState
 
 class InitiativeTab(QWidget):
     def __init__(self, parent, ctl: InitiativeController, state: DisplayState):

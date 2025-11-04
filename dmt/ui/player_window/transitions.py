@@ -1,12 +1,12 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict
 
 from PySide6.QtCore import QEasingCurve, QVariantAnimation, QPointF, QRectF, Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsScene, QGraphicsRectItem, QWidget, QGraphicsItem
 
-from .display_state import TransitionMode
+from dmt.core.state import TransitionMode
 
 @dataclass
 class ViewportSnapshot:

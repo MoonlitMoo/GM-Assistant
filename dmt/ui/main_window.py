@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
@@ -17,8 +15,8 @@ from dmt.db.manager import DatabaseManager
 
 from .image_tab import ImagesTab
 from .initiative_tab import InitiativeTab, InitiativeController
-from .player_window.display_state import DisplayState
-from .player_window.player_ipc import PlayerController
+from dmt.core.state import DisplayState
+from .player_window.player_communications import PlayerController
 from .settings_tab import SettingsTab
 
 

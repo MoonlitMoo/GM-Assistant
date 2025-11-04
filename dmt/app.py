@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 from importlib.metadata import version
 
-from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt, QCoreApplication
 
@@ -15,10 +14,10 @@ from .core.config import (
 from .core.platform_helpers import set_app_identity, ensure_linux_desktop_entries
 from .ui.main_window import MainWindow
 from .ui.initiative_tab import InitiativeController
-from .ui.player_window.display_state import DisplayState
+from dmt.core.state import DisplayState
 
 from dmt.db.manager import DatabaseManager
-from .ui.player_window.player_ipc import PlayerController
+from .ui.player_window.player_communications import PlayerController
 
 DEFAULT_DB = Path.home() / "GMAssistant" / "library.db"
 
@@ -42,7 +41,7 @@ def main() -> None:
     cfg = load_config()
 
     # Set up the player window controller
-    helper_path = os.path.join(os.path.dirname(__file__), "ui", "player_window", "player_window.py")
+    helper_path = os.path.join(os.path.dirname(__file__), "ui", "player_window", "start_player.py")
     player_controller = PlayerController(helper_path)
 
     # Create necessary states

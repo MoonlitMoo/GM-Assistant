@@ -10,9 +10,9 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QFileDialog, QMessageBox, QStyle
 )
 
+from dmt.core import DisplayState
 from dmt.db.services.library_service import LibraryService
 from dmt.db.services.tagging_service import TaggingService
-from dmt.ui.player_window import DisplayState
 
 from .buttons import ScaleModeButton, BlackoutButton, TransitionModeButton
 from .library_items import AlbumItem

@@ -3,11 +3,11 @@ from __future__ import annotations
 import base64
 from typing import Optional, Collection
 
-from PySide6.QtCore import Qt, QByteArray, QVariantAnimation, QEasingCurve, QPointF, QRectF
-from PySide6.QtGui import QImage, QPixmap, QPainter, QTransform, QFont, QFontMetrics
-from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsItem
+from PySide6.QtCore import Qt, QByteArray, QVariantAnimation, QEasingCurve
+from PySide6.QtGui import QImage, QPixmap, QPainter
+from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem
 
-from .display_state import ScaleMode, TransitionMode
+from dmt.core.state import ScaleMode, TransitionMode
 from .transitions import REGISTRY, TransitionAPI, ViewportSnapshot
 
 
@@ -32,7 +32,7 @@ class BlackoutOverlayItem(QGraphicsRectItem):
         self.setVisible(False)     # toggled by animation driver
 
 
-class DisplayView(QGraphicsView):
+class PlayerCanvas(QGraphicsView):
     """
     GraphicsView-based display with:
       - Base image item (pixmap)

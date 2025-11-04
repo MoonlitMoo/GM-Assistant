@@ -1,7 +1,12 @@
 from __future__ import annotations
 import json, os, sys, subprocess, uuid
+from typing import Any
+
 from PySide6 import QtCore
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
+from PySide6.QtWidgets import QApplication
+
+from dmt.ui.player_window import PlayerWindow
 
 
 class PlayerController(QtCore.QObject):
@@ -63,3 +68,42 @@ class PlayerController(QtCore.QObject):
         data = (json.dumps(obj) + "\n").encode("utf-8")
         self._socket.write(data)
         self._socket.flush()
+
+
+class PlayerClient(QtCore.QObject):
+    """ The socket to handle receiving the information for the player window display state. """
+
+    def __init__(self, name: str, window: PlayerWindow):
+        super().__init__()
+        self.sock = QLocalSocket(self)
+        self.window = window
+        self._buffer = ""
+        self.sock.readyRead.connect(self._read)
+        self.sock.disconnected.connect(QApplication.quit)
+        self.sock.errorOccurred.connect(lambda *_: QApplication.quit())
+        self.sock.connectToServer(name)
+
+    def _read(self):
+        while self.sock.bytesAvailable():
+            chunk = bytes(self.sock.readAll()).decode("utf-8", errors="ignore")
+            self._buffer += chunk
+            lines = self._buffer.splitlines(keepends=True)
+            complete, rest = [], ""
+            for ln in lines:
+                if ln.endswith("\n"):
+                    complete.append(ln.rstrip("\n"))
+                else:
+                    rest += ln
+            self._buffer = rest
+            for line in complete:
+                if not line.strip():
+                    continue
+                try:
+                    msg = json.loads(line)
+                except Exception:
+                    continue
+                self._dispatch(msg)
+
+    def _dispatch(self, msg: dict[str, Any]):
+        method = getattr(self.window._display_state, msg['op'])
+        method(*msg['args'], **msg['kwargs'])

@@ -22,16 +22,6 @@ class ScaleMode(Enum):
     ACTUAL = "actual"
 
 
-def parse_scale_mode(s: str) -> ScaleMode:
-    s = (s or "fit").lower()
-    return {
-        "fit": ScaleMode.FIT,
-        "fit nav": ScaleMode.FIT_NAV,
-        "stretch": ScaleMode.STRETCH,
-        "actual": ScaleMode.ACTUAL,
-    }.get(s, ScaleMode.FIT)
-
-
 def remote_op(method):
     """
     Decorator for remote operation methods of the display state.
