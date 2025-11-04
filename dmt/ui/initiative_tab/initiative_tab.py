@@ -8,12 +8,13 @@ from PySide6.QtWidgets import (
     QPushButton, QTableView, QMessageBox, QHeaderView, QSizePolicy
 )
 
+from dmt.core import PlayerDisplayState
+
 from .controller import InitiativeController
 from .table_model import InitiativeTableModel
-from dmt.ui.player_window import DisplayState
 
 class InitiativeTab(QWidget):
-    def __init__(self, parent, ctl: InitiativeController, state: DisplayState):
+    def __init__(self, parent, ctl: InitiativeController, state: PlayerDisplayState):
         super().__init__(parent)
         self.state = state
         self.ctl = ctl
@@ -25,6 +26,7 @@ class InitiativeTab(QWidget):
 
         self.btn_show = QPushButton("Show on Player")
         self.btn_show.setCheckable(True)
+        self.btn_show.setChecked(self.state.initiative_visible())
 
         self.btn_reset = QPushButton("Reset")
         self.btn_clear = QPushButton("Clear Table")

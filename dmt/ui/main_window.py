@@ -13,26 +13,27 @@ from dmt.db.services.tagging_service import TaggingService
 from dmt.core.config import Config
 from dmt.db.manager import DatabaseManager
 
-from .player_window import PlayerWindow
 from .image_tab import ImagesTab
 from .initiative_tab import InitiativeTab, InitiativeController
-from .player_window.display_state import DisplayState
+from dmt.core.state import PlayerDisplayState
+from .player_window.player_communications import PlayerController
 from .settings_tab import SettingsTab
 
 
 class MainWindow(QMainWindow):
     """ The main window for the GM to use the tools from. """
 
-    def __init__(self, cfg: Config, dbm: DatabaseManager,
-                 display_state: DisplayState, initiative_ctl: InitiativeController) -> None:
+    def __init__(self, cfg: Config, dbm: DatabaseManager, player: PlayerController,
+                 display_state: PlayerDisplayState, initiative_ctl: InitiativeController) -> None:
         super().__init__()
         self.setWindowTitle("DM Assistant")
         self.resize(1200, 800)
 
         self.config = cfg
         self.dbm = dbm
-        self.display_state: DisplayState = display_state
-        self.playerWindow: PlayerWindow | None = None
+        self.display_state: PlayerDisplayState = display_state
+        self.player = player
+        self.player_open = False
 
         self._tabs = QTabWidget()
         self.setCentralWidget(self._tabs)
@@ -61,21 +62,20 @@ class MainWindow(QMainWindow):
         act_close_player.triggered.connect(self.close_player_window)
         tb.addAction(act_close_player)
 
-    def open_player_window(self) -> None:
-        """ Create the player window. """
-        if self.playerWindow is None:
-            self.playerWindow = PlayerWindow(self.display_state)
+    def open_player_window(self):
+        if self.player_open and self.player.is_running():
+            self.display_state.bring_to_front()
         else:
-            self.playerWindow.bring_to_front()
+            self.player.stop()
+            self.player.start()
+            self.player_open = True
 
-    def close_player_window(self) -> None:
-        """ Destroy the player window. """
-        if self.playerWindow is not None:
-            self.playerWindow = self.playerWindow.close()
-            self.playerWindow = None
+    def close_player_window(self):
+        if self.player_open:
+            self.player.stop()
+            self.player_open = False
 
     def closeEvent(self, event, /):
         """ Make sure the player window closes too. """
-        if self.playerWindow is not None:
-            self.close_player_window()
+        self.player.stop()
         super().closeEvent(event)

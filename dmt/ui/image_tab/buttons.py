@@ -2,8 +2,8 @@ from __future__ import annotations
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QPushButton, QComboBox
 
-from dmt.ui.player_window import ScaleMode
-from dmt.ui.player_window.display_state import TransitionMode
+from dmt.core import ScaleMode
+from dmt.core.state import TransitionMode
 
 
 class ScaleModeButton(QComboBox):
