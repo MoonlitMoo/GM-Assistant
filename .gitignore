@@ -5,3 +5,4 @@
 /dmt/_version.py
 /.env
 /dist/
+/.venv/
