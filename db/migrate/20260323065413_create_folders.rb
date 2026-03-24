@@ -10,9 +10,6 @@ class CreateFolders < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :folders, :parent_id
-    add_index :folders, :campaign_id
-
     add_index :folders, [ :campaign_id ], unique: true, where: "is_root = 1", name: "index_folders_one_root_per_campaign"
   end
 end

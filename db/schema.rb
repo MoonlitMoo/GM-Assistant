@@ -40,18 +40,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_23_231549) do
   end
 
   create_table "albums", force: :cascade do |t|
+    t.integer "campaign_id", null: false
     t.datetime "created_at", null: false
+    t.text "description"
+    t.integer "folder_id", null: false
+    t.string "name"
     t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_albums_on_campaign_id"
+    t.index ["folder_id"], name: "index_albums_on_folder_id"
   end
 
   create_table "campaigns", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.text "description"
+    t.string "name", null: false
     t.datetime "updated_at", null: false
   end
 
   create_table "folders", force: :cascade do |t|
+    t.integer "campaign_id", null: false
     t.datetime "created_at", null: false
+    t.boolean "is_root", default: false, null: false
+    t.string "name", null: false
+    t.integer "parent_id"
     t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_folders_on_campaign_id"
+    t.index ["campaign_id"], name: "index_folders_one_root_per_campaign", unique: true, where: "is_root = 1"
+    t.index ["parent_id"], name: "index_folders_on_parent_id"
   end
 
   create_table "images", force: :cascade do |t|
@@ -67,6 +82,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_23_231549) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "albums", "campaigns"
+  add_foreign_key "albums", "folders"
+  add_foreign_key "folders", "campaigns"
+  add_foreign_key "folders", "folders", column: "parent_id"
   add_foreign_key "images", "albums"
   add_foreign_key "images", "campaigns"
 end
