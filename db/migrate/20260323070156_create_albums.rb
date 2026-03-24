@@ -9,8 +9,5 @@ class CreateAlbums < ActiveRecord::Migration[8.1]
 
       t.timestamps
     end
-
-    add_index :albums, :campaign_id
-    add_index :albums, :folder_id
   end
 end
