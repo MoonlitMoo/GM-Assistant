@@ -1,0 +1,26 @@
+<%= form_with model: @album do |form| %>
+  <% if @album.errors.any? %>
+    <div>
+      <h2><%= pluralize(@album.errors.count, "error") %> prevented this album from being saved:</h2>
+      <ul>
+        <% @album.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :name %><br>
+    <%= form.text_field :name %>
+  </div>
+
+  <div>
+    <%= form.label :description %><br>
+    <%= form.text_area :description %>
+  </div>
+
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>
