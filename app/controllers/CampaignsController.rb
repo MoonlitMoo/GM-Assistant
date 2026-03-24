@@ -1,0 +1,50 @@
+class CampaignsController < ApplicationController
+  before_action :set_campaign, only: [ :show, :edit, :update, :destroy ]
+
+  def index
+    @campaigns = Campaign.order(created_at: :desc)
+  end
+
+  def show
+    @root_folder = @campaign.root_folder
+  end
+
+  def new
+    @campaign = Campaign.new
+  end
+
+  def create
+    @campaign = Campaign.new(campaign_params)
+    if @campaign.save
+      redirect_to @campaign, notice: "Campaign created successfully"
+    else
+      render :new, status: :unprocessable_entity
+    end
+  end
+
+  def edit
+  end
+
+  def update
+    if @campaign.update(campaign_params)
+      redirect_to @campaign, notice: "Campaign updated successfully"
+    else
+      render :edit, status: :unprocessable_entity
+    end
+  end
+
+  def destroy
+    @campaign.destroy
+    redirect_to campaigns_path, notice: "Campaign deleted successfully"
+  end
+
+  private
+
+  def set_campaign
+    @campaign = Campaign.find(params[:id])
+  end
+
+  def campaign_params
+    params.expect(campaign: [ :name, :description ])
+  end
+end
