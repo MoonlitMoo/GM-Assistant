@@ -1,0 +1,29 @@
+<h1><%= @image.title %></h1>
+
+<% if @image.notes.present? %>
+  <p><%= @image.notes %></p>
+<% end %>
+
+<p>
+  Album:
+  <%= link_to @image.album.name, album_path(@image.album) %>
+</p>
+
+<p>
+  <%= link_to "Edit image", edit_image_path(@image) %>
+</p>
+
+<p>
+  <%= button_to "Delete image",
+                image_path(@image),
+                method: :delete,
+                data: { turbo_confirm: "Delete this image?" } %>
+</p>
+
+<% if @image.file.attached? %>
+  <div>
+    <%= image_tag @image.file, style: "max-width: 100%; height: auto;" %>
+  </div>
+<% else %>
+  <p>No file attached.</p>
+<% end %>

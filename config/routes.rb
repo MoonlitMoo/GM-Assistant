@@ -22,6 +22,8 @@ Rails.application.routes.draw do
     resources :albums, only: [ :new, :create ], shallow: true
   end
 
-  resources :albums, only: [ :show, :edit, :update, :destroy ]
+  resources :albums, only: [ :show, :edit, :update, :destroy ] do
+    resources :images, only: [ :new, :create ]
+  end
   resources :images, only: [ :show, :edit, :update, :destroy ]
 end
