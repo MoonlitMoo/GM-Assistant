@@ -13,11 +13,15 @@ Rails.application.routes.draw do
   # root "posts#index"
   root "campaigns#index"
 
-  resources :campaigns do
-    resources :folders, shallow: true do
-      resources :albums, shallow: true do
-        resources :images, shallow: true
-      end
-    end
+  resources :campaigns
+
+  # Don't need to create folders base since root is base.
+  resources :folders, only: [ :show, :edit, :update, :destroy ] do
+    # From folders we can create folders and albums
+    resources :folders, only: [ :new, :create ], shallow: true
+    resources :albums, only: [ :new, :create ], shallow: true
   end
+
+  resources :albums, only: [ :show, :edit, :update, :destroy ]
+  resources :images, only: [ :show, :edit, :update, :destroy ]
 end
