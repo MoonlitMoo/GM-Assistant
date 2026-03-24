@@ -1,0 +1,9 @@
+<h1>Edit Campaign</h1>
+
+<%= render "form" %>
+
+<p>
+  <%= link_to "Show campaign", campaign_path(@campaign) %> |
+  <%= link_to "Back", campaigns_path %> |
+  <%= button_to "Delete", @campaign, method: :delete, data: { turbo_confirm: "Are you sure?" } %>
+</p>
