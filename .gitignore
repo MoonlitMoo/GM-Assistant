@@ -1,3 +1,4 @@
+# Ignore prev files
 /.venv/
 /.idea/
 **/__pycache__/
@@ -35,3 +36,6 @@
 
 # Ignore key files for decrypting credentials and more.
 /config/*.key
+
+# Ignore coverage from tests
+/coverage
