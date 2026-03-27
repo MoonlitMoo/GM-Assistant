@@ -16,7 +16,7 @@ class ImagesController < ApplicationController
     if @image.save
       redirect_to @album, notice: "Image uploaded successfully"
     else
-      redirect_to :new, status: :unprocessable_entity
+      render :new, status: :unprocessable_entity
     end
   end
 
@@ -27,7 +27,7 @@ class ImagesController < ApplicationController
     if @image.update(image_params)
       redirect_to @image, notice: "Image updated successfully"
     else
-      redirect_to :edit, notice: :unprocessable_entity
+      render :edit, status: :unprocessable_entity
     end
   end
 
