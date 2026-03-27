@@ -1,0 +1,78 @@
+require "test_helper"
+
+class CampaignsControllerTest < ActionDispatch::IntegrationTest
+  test "shows the campaign index" do
+    create(:campaign, name: "North Reach")
+    create(:campaign, name: "Southern Isles")
+
+    get campaigns_path
+
+    assert_response :success
+    assert_includes response.body, "Campaigns"
+    assert_includes response.body, "North Reach"
+    assert_includes response.body, "Southern Isles"
+  end
+
+  test "shows the new campaign form" do
+    get new_campaign_path
+
+    assert_response :success
+    assert_includes response.body, "New Campaign"
+  end
+
+  test "re-renders the new campaign form when creation is invalid" do
+    assert_no_difference("Campaign.count") do
+      post campaigns_path, params: {
+        campaign: {
+          name: nil,
+          description: "Missing a name"
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "New Campaign"
+    assert_includes html_response_body, "Name can't be blank"
+  end
+
+  test "updates a campaign" do
+    campaign = create(:campaign, name: "Old Name", description: "Old notes")
+
+    patch campaign_path(campaign), params: {
+      campaign: {
+        name: "New Name",
+        description: "Fresh notes"
+      }
+    }
+
+    assert_redirected_to campaign_path(campaign)
+    campaign.reload
+    assert_equal "New Name", campaign.name
+    assert_equal "Fresh notes", campaign.description
+  end
+
+  test "re-renders the edit campaign form when the update is invalid" do
+    campaign = create(:campaign)
+
+    patch campaign_path(campaign), params: {
+      campaign: {
+        name: nil
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Edit Campaign"
+    assert_includes html_response_body, "Name can't be blank"
+  end
+
+  test "destroys a campaign" do
+    campaign = create(:campaign)
+
+    assert_difference("Campaign.count", -1) do
+      delete campaign_path(campaign)
+    end
+
+    assert_redirected_to campaigns_path
+    assert_nil Campaign.find_by(id: campaign.id)
+  end
+end
