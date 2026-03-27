@@ -17,12 +17,13 @@ class Folder < ApplicationRecord
   private
   def folder_parent_from_same_campaign
     return if parent.blank?
-    return if parent.campaign_id == campaign.id
+    return if campaign.blank?
+    return if parent.campaign_id == campaign_id
     errors.add(:parent_id, "must belong to same campaign.")
   end
 
   def root_folder_has_no_parent
-    return unless is_root? && parent_id.present?
+    return unless is_root? && parent.present?
     errors.add(:parent_id, "must be nil for the root folder.")
   end
 end
