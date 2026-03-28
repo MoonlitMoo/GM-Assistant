@@ -26,7 +26,7 @@ class FoldersController < ApplicationController
     @folder.campaign = @parent.campaign
 
     if @folder.save
-      redirect_to @parent, notice: "Folder created successfully"
+      redirect_to @parent, notice: "Folder created successfully", flash: { tree_refresh: true }
     else
       render :new, status: :unprocessable_entity
     end
@@ -37,7 +37,7 @@ class FoldersController < ApplicationController
 
   def update
     if @folder.update(folder_params)
-      redirect_to @folder, notice: "Folder updated successfully"
+      redirect_to @folder, notice: "Folder updated successfully", flash: { tree_refresh: true }
     else
       render :edit, status: :unprocessable_entity
     end
@@ -46,7 +46,7 @@ class FoldersController < ApplicationController
   def destroy
     parent = @folder.parent || @folder.campaign
     @folder.destroy
-    redirect_to parent, notice: "Folder destroyed successfully"
+    redirect_to parent, notice: "Folder destroyed successfully", flash: { tree_refresh: true }
   end
 
   private
