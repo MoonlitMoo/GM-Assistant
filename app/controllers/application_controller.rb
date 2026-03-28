@@ -34,7 +34,7 @@ class ApplicationController < ActionController::Base
     current = folder
 
     while current.present?
-      lineage.unshift([ current.name, folder_path(current) ])
+      lineage.unshift([ current.name, folder_path(current) ]) unless current.is_root?
       current = current.parent
     end
 
