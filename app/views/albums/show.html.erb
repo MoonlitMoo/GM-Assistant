@@ -1,36 +1,38 @@
-<h1><%= @album.name %></h1>
+<%= turbo_frame_tag "content-body" do %>
+  <h1><%= @album.name %></h1>
 
-<% if @album.description.present? %>
-  <p><%= @album.description %></p>
-<% end %>
+  <% if @album.description.present? %>
+    <p><%= @album.description %></p>
+  <% end %>
 
-<p>
-  Folder:
-  <%= link_to @album.folder.name, folder_path(@album.folder) %>
-</p>
+  <p>
+    Folder:
+    <%= link_to @album.folder.name, folder_path(@album.folder) %>
+  </p>
 
-<p>
-  <%= link_to "Edit album", edit_album_path(@album) %> |
-  <%= link_to "Upload image", new_album_image_path(@album) %>
-</p>
+  <p>
+    <%= link_to "Edit album", edit_album_path(@album) %> |
+    <%= link_to "Upload image", new_album_image_path(@album) %>
+  </p>
 
-<p>
-  <%= button_to "Delete album",
-                album_path(@album),
-                method: :delete,
-                data: { turbo_confirm: "Delete this album and all images in it?" } %>
-</p>
+  <p>
+    <%= button_to "Delete album",
+                  album_path(@album),
+                  method: :delete,
+                  data: { turbo_confirm: "Delete this album and all images in it?" } %>
+  </p>
 
-<h2>Images</h2>
+  <h2>Images</h2>
 
-<% if @images.any? %>
-  <ul>
-    <% @images.each do |image| %>
-      <li>
-        <%= link_to image.title, image_path(image) %>
-      </li>
-    <% end %>
-  </ul>
-<% else %>
-  <p>No images in this album.</p>
+  <% if @images.any? %>
+    <ul>
+      <% @images.each do |image| %>
+        <li>
+          <%= link_to image.title, image_path(image) %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p>No images in this album.</p>
+  <% end %>
 <% end %>

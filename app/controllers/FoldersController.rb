@@ -1,6 +1,12 @@
 class FoldersController < ApplicationController
+  layout "campaign"
   before_action :set_folder, only: [ :show, :edit, :update, :destroy ]
+  before_action :set_campaign, only: [ :index, :show ]
   before_action :set_parent_from_folder, only: [ :new, :create ], if: -> { params[:folder_id].present? }
+
+  def index
+    @folders = @campaign.folders.order(:name)
+  end
 
   def show
     @child_folders = @folder.child_folders.order(:name)
@@ -44,6 +50,10 @@ class FoldersController < ApplicationController
 
   def set_folder
     @folder = Folder.find(params[:id])
+  end
+
+  def set_campaign
+    @campaign = @folder.campaign
   end
 
   def set_parent_from_folder

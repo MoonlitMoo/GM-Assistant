@@ -1,20 +1,22 @@
-<h1><%= @campaign.name %></h1>
+<%= turbo_frame_tag "content-body" do %>
+  <h1><%= @campaign.name %></h1>
 
-<% if @campaign.description.present? %>
-  <p><%= @campaign.description %></p>
-<% end %>
+  <% if @campaign.description.present? %>
+    <p><%= @campaign.description %></p>
+  <% end %>
 
-<p>
-  <%= link_to "Edit campaign", edit_campaign_path(@campaign) %> |
-  <%= link_to "Back to campaigns", campaigns_path %>
-</p>
-
-<h2>Library</h2>
-
-<% if @root_folder.present? %>
   <p>
-    <%= link_to "Open root folder", folder_path(@root_folder) %>
+    <%= link_to "Edit campaign", edit_campaign_path(@campaign) %> |
+    <%= link_to "Back to campaigns", campaigns_path %>
   </p>
-<% else %>
-  <p>No root folder found.</p>
+
+  <h2>Library</h2>
+
+  <% if @root_folder.present? %>
+    <p>
+      <%= link_to "Open root folder", folder_path(@root_folder) %>
+    </p>
+  <% else %>
+    <p>No root folder found.</p>
+<% end %>
 <% end %>

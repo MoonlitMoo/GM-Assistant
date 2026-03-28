@@ -1,48 +1,50 @@
-<h1><%= @folder.name %></h1>
+<%= turbo_frame_tag "content-body" do %>
+  <h1><%= @folder.name %></h1>
 
-<p>
-  <% if @folder.parent.present? %>
-    Parent:
-    <%= link_to @folder.parent.name, folder_path(@folder.parent) %>
-  <% else %>
-    Campaign:
-    <%= link_to @folder.campaign.name, campaign_path(@folder.campaign) %>
-  <% end %>
-</p>
-
-<p>
-  <%= link_to "New subfolder", new_folder_folder_path(@folder) %> |
-  <%= link_to "New album", new_folder_album_path(@folder) %> |
-  <%= link_to "Edit folder", edit_folder_path(@folder) %>
-</p>
-
-<% unless @folder.is_root? %>
   <p>
-    <%= button_to "Delete folder",
-                  folder_path(@folder),
-                  method: :delete,
-                  data: { turbo_confirm: "Delete this folder and everything inside it?" } %>
+    <% if @folder.parent.present? %>
+      Parent:
+      <%= link_to @folder.parent.name, folder_path(@folder.parent) %>
+    <% else %>
+      Campaign:
+      <%= link_to @folder.campaign.name, campaign_path(@folder.campaign) %>
+    <% end %>
   </p>
-<% end %>
 
-<h2>Folders</h2>
-<% if @child_folders.any? %>
-  <ul>
-    <% @child_folders.each do |folder| %>
-      <li><%= link_to folder.name, folder_path(folder) %></li>
-    <% end %>
-  </ul>
-<% else %>
-  <p>No child folders.</p>
-<% end %>
+  <p>
+    <%= link_to "New subfolder", new_folder_folder_path(@folder) %> |
+    <%= link_to "New album", new_folder_album_path(@folder) %> |
+    <%= link_to "Edit folder", edit_folder_path(@folder) %>
+  </p>
 
-<h2>Albums</h2>
-<% if @albums.any? %>
-  <ul>
-    <% @albums.each do |album| %>
-      <li><%= link_to album.name, album_path(album) %></li>
-    <% end %>
-  </ul>
-<% else %>
-  <p>No albums in this folder.</p>
+  <% unless @folder.is_root? %>
+    <p>
+      <%= button_to "Delete folder",
+                    folder_path(@folder),
+                    method: :delete,
+                    data: { turbo_confirm: "Delete this folder and everything inside it?" } %>
+    </p>
+  <% end %>
+
+  <h2>Folders</h2>
+  <% if @child_folders.any? %>
+    <ul>
+      <% @child_folders.each do |folder| %>
+        <li><%= link_to folder.name, folder_path(folder) %></li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p>No child folders.</p>
+  <% end %>
+
+  <h2>Albums</h2>
+  <% if @albums.any? %>
+    <ul>
+      <% @albums.each do |album| %>
+        <li><%= link_to album.name, album_path(album) %></li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p>No albums in this folder.</p>
+  <% end %>
 <% end %>

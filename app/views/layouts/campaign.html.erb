@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= @campaign.name %> — GM Assistant</title>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "application" %>
+    <%= javascript_importmap_tags %>
+  </head>
+  <body>
+
+    <!-- Top bar -->
+    <div id="top-bar">
+      <%= link_to "⚔ GM Assistant", campaigns_path %>
+      <span><%= @campaign.name %></span>
+      <span>⚙</span>
+    </div>
+
+    <div id="main-wrapper">
+
+      <!-- Sidebar -->
+      <div id="sidebar"
+           data-controller="campaign-tree"
+           data-campaign-tree-url-value="<%= tree_campaign_path(@campaign) %>">
+        <div id="tree-container">Loading...</div>
+      </div>
+
+      <!-- Main content -->
+        <div id="main-content">
+        <div id="breadcrumbs">
+            <%= render "shared/breadcrumbs" %>
+        </div>
+        <%= turbo_frame_tag "content-body" do %>
+            <%= yield %>
+        <% end %>
+        </div>
+    </div>
+
+  </body>
+</html>
