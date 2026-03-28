@@ -38,6 +38,12 @@ class CampaignsController < ApplicationController
     redirect_to campaigns_path, notice: "Campaign deleted successfully"
   end
 
+  def tree
+    @campaign = Campaign.find(params[:id])
+    root = @campaign.root_folder
+    render json: build_folder_tree(root)
+  end
+
   private
 
   def set_campaign
@@ -46,5 +52,15 @@ class CampaignsController < ApplicationController
 
   def campaign_params
     params.expect(campaign: [ :name, :description ])
+  end
+
+  def build_folder_tree(folder)
+    {
+      id: folder.id,
+      name: folder.name,
+      url: folder_path(folder),
+      folders: folder.child_folders.map { |f| build_folder_tree(f) },
+      albums: folder.albums.map { |a| { id: a.id, name: a.name, url: album_path(a) } }
+    }
   end
 end
