@@ -1,6 +1,27 @@
 require "test_helper"
 
 class ImagesControllerTest < ActionDispatch::IntegrationTest
+  test "shows an image" do
+    image = create(:image, title: "Beacon Cliffs", notes: "Windy and bright")
+
+    get image_path(image)
+
+    assert_response :success
+    assert_includes response.body, "Beacon Cliffs"
+    assert_includes response.body, image.album.name
+  end
+
+  test "shows an image inside the content frame for turbo frame requests" do
+    image = create(:image, title: "Beacon Cliffs")
+
+    get image_path(image), headers: { "Turbo-Frame" => "content-body" }
+
+    assert_response :success
+    assert_match(/<turbo-frame[^>]*id="content-body"/, response.body)
+    assert_includes response.body, 'data-turbo-action="advance"'
+    assert_includes response.body, "Beacon Cliffs"
+  end
+
   test "shows the new image form" do
     album = create(:album, name: "Weathered Maps")
 
