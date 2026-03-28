@@ -68,6 +68,7 @@ class CampaignsController < ApplicationController
   def build_folder_tree(folder)
     {
       id: folder.id,
+      campaignId: folder.campaign_id,
       name: folder.name,
       url: folder_path(folder),
       folders: folder.child_folders.map { |f| build_folder_tree(f) },
