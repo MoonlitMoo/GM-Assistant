@@ -28,6 +28,16 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_includes html_response_body, "Name can't be blank"
   end
 
+  test "shows the edit album form" do
+    album = create(:album, name: "Gallery")
+
+    get edit_album_path(album)
+
+    assert_response :success
+    assert_includes response.body, "Edit Album"
+    assert_includes response.body, "Gallery"
+  end
+
   test "updates an album" do
     album = create(:album, name: "Old Gallery", description: "Old notes")
 
