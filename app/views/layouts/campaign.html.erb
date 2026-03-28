@@ -20,10 +20,8 @@
     <div id="main-wrapper">
 
       <!-- Sidebar -->
-      <div id="sidebar"
-           data-controller="campaign-tree"
-           data-campaign-tree-url-value="<%= tree_campaign_path(@campaign) %>">
-        <div id="tree-container" data-campaign-tree-target="container">Loading...</div>
+      <div id="sidebar">
+        <div id="campaign-tree" data-tree-url="<%= tree_campaign_path(@campaign) %>"></div>
       </div>
 
       <!-- Main content -->
