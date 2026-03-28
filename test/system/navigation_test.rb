@@ -53,8 +53,8 @@ class NavigationTest < ApplicationSystemTestCase
 
     within "#breadcrumbs" do
       assert_text @campaign.name
-      assert_text @root_folder.name
       assert_text @folder.name
+      assert_no_text @root_folder.name
     end
   end
 end
