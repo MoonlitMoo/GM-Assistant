@@ -38,7 +38,9 @@ class NavigationTest < ApplicationSystemTestCase
   test "navigates from an album to an image" do
     visit album_path(@album)
 
-    click_link @image.title
+    within ".image-card__title" do
+      click_link @image.title
+    end
 
     assert_current_path Rails.application.routes.url_helpers.image_path(@image)
     assert_text @image.title
@@ -55,6 +57,30 @@ class NavigationTest < ApplicationSystemTestCase
       assert_text @campaign.name
       assert_text @folder.name
       assert_no_text @root_folder.name
+    end
+  end
+
+  test "persists expanded sidebar folders across campaign page visits" do
+    visit folder_path(@root_folder)
+
+    within "#sidebar" do
+      assert_selector ".tree-folder .tree-label", text: @folder.name
+      assert_no_selector ".tree-album .tree-label", text: @album.name
+
+      find(".tree-folder", text: @folder.name).find(".tree-toggle").click
+
+      assert_selector ".tree-album .tree-label", text: @album.name
+      assert_selector ".tree-album i", text: @album.name
+    end
+
+    storage_key = "campaign-tree:#{@campaign.id}:expanded"
+    expanded_state = page.evaluate_script("JSON.parse(sessionStorage.getItem('#{storage_key}'))")
+    assert_equal({ @folder.id.to_s => true }, expanded_state)
+
+    visit album_path(@album)
+
+    within "#sidebar" do
+      assert_selector ".tree-album .tree-label", text: @album.name
     end
   end
 end

@@ -42,6 +42,7 @@ class CrudTest < ApplicationSystemTestCase
 
     assert_current_path folder_path(root_folder)
     assert_link folder.name
+    assert_selector "#sidebar .tree-label", text: folder.name
   end
 
   test "creates an album beneath a folder and shows it in the folder list" do
@@ -69,7 +70,7 @@ class CrudTest < ApplicationSystemTestCase
     assert_current_path album_path(album)
     assert_selector "#sidebar .tree-label", text: album.name
 
-    within "turbo-frame#content-body" do
+    within "#breadcrumbs" do
       click_link folder.name
     end
 
@@ -84,7 +85,10 @@ class CrudTest < ApplicationSystemTestCase
     image_title = "Breakwater at Dawn"
 
     visit album_path(album)
-    click_link "Upload image"
+
+    within ".record-actions" do
+      click_link "Upload image"
+    end
 
     fill_in "Title", with: image_title
     fill_in "Notes", with: "Soft light over the water."
@@ -99,7 +103,9 @@ class CrudTest < ApplicationSystemTestCase
     assert_current_path album_path(album)
     assert_link image.title
 
-    click_link image.title
+    within ".image-card__title" do
+      click_link image.title
+    end
 
     assert_current_path Rails.application.routes.url_helpers.image_path(image)
     assert_text image.title
