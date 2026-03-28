@@ -1,6 +1,8 @@
 class CampaignsController < ApplicationController
   layout "campaign", only: [ :show, :edit, :update ]
   before_action :set_campaign, only: [ :show, :edit, :update, :destroy ]
+  before_action :set_campaign_show_breadcrumbs, only: [ :show ]
+  before_action :set_campaign_edit_breadcrumbs, only: [ :edit, :update ]
 
   def index
     @campaigns = Campaign.order(created_at: :desc)
@@ -53,6 +55,14 @@ class CampaignsController < ApplicationController
 
   def campaign_params
     params.expect(campaign: [ :name, :description ])
+  end
+
+  def set_campaign_show_breadcrumbs
+    @breadcrumbs = campaign_breadcrumbs(@campaign)
+  end
+
+  def set_campaign_edit_breadcrumbs
+    @breadcrumbs = campaign_breadcrumbs(@campaign) + [ [ "Edit Campaign", edit_campaign_path(@campaign) ] ]
   end
 
   def build_folder_tree(folder)

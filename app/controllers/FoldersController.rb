@@ -3,6 +3,9 @@ class FoldersController < ApplicationController
   before_action :set_folder, only: [ :show, :edit, :update, :destroy ]
   before_action :set_parent_from_folder, only: [ :new, :create ], if: -> { params[:folder_id].present? }
   before_action :set_campaign, only: [ :show, :edit, :update, :new, :create ]
+  before_action :set_folder_show_breadcrumbs, only: [ :show ]
+  before_action :set_folder_new_breadcrumbs, only: [ :new, :create ]
+  before_action :set_folder_edit_breadcrumbs, only: [ :edit, :update ]
 
   def index
     @folders = @campaign.folders.order(:name)
@@ -62,5 +65,17 @@ class FoldersController < ApplicationController
 
   def folder_params
     params.expect(folder: [ :name, :description ])
+  end
+
+  def set_folder_show_breadcrumbs
+    @breadcrumbs = folder_breadcrumbs(@folder)
+  end
+
+  def set_folder_new_breadcrumbs
+    @breadcrumbs = folder_breadcrumbs(@parent) + [ [ "New Folder", new_folder_folder_path(@parent) ] ]
+  end
+
+  def set_folder_edit_breadcrumbs
+    @breadcrumbs = folder_breadcrumbs(@folder) + [ [ "Edit Folder", edit_folder_path(@folder) ] ]
   end
 end
