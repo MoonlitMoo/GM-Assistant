@@ -3,6 +3,9 @@ class AlbumsController < ApplicationController
   before_action :set_album, only: [ :show, :edit, :update, :destroy ]
   before_action :set_folder, only: [ :new, :create ], if: -> { params[:folder_id].present? }
   before_action :set_campaign, only: [ :show, :edit, :update, :new, :create ]
+  before_action :set_album_show_breadcrumbs, only: [ :show ]
+  before_action :set_album_new_breadcrumbs, only: [ :new, :create ]
+  before_action :set_album_edit_breadcrumbs, only: [ :edit, :update ]
 
   def show
     @images = @album.images.with_attached_file.order(created_at: :desc)
@@ -55,5 +58,17 @@ class AlbumsController < ApplicationController
 
   def album_params
     params.expect(album: [ :name, :description ])
+  end
+
+  def set_album_show_breadcrumbs
+    @breadcrumbs = album_breadcrumbs(@album)
+  end
+
+  def set_album_new_breadcrumbs
+    @breadcrumbs = folder_breadcrumbs(@folder) + [ [ "New Album", new_folder_album_path(@folder) ] ]
+  end
+
+  def set_album_edit_breadcrumbs
+    @breadcrumbs = album_breadcrumbs(@album) + [ [ "Edit Album", edit_album_path(@album) ] ]
   end
 end

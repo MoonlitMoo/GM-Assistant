@@ -3,6 +3,9 @@ class ImagesController < ApplicationController
   before_action :set_image, only: [ :show, :edit, :update, :destroy ]
   before_action :set_album, only: [ :new, :create ]
   before_action :set_campaign, only: [ :show, :edit, :update, :new, :create ]
+  before_action :set_image_show_breadcrumbs, only: [ :show ]
+  before_action :set_image_new_breadcrumbs, only: [ :new, :create ]
+  before_action :set_image_edit_breadcrumbs, only: [ :edit, :update ]
 
   def show
   end
@@ -55,5 +58,17 @@ class ImagesController < ApplicationController
 
   def set_campaign
     @campaign = @image&.campaign || @album&.campaign
+  end
+
+  def set_image_show_breadcrumbs
+    @breadcrumbs = image_breadcrumbs(@image)
+  end
+
+  def set_image_new_breadcrumbs
+    @breadcrumbs = album_breadcrumbs(@album) + [ [ "Upload Image", new_album_image_path(@album) ] ]
+  end
+
+  def set_image_edit_breadcrumbs
+    @breadcrumbs = image_breadcrumbs(@image) + [ [ "Edit Image", edit_image_path(@image) ] ]
   end
 end

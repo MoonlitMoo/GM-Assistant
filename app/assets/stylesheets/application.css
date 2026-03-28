@@ -127,6 +127,24 @@ body {
   overflow: hidden;
 }
 
+#breadcrumbs {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--parchment-border);
+  background-color: var(--parchment);
+  color: var(--ink-light);
+  font-family: 'Cinzel', serif;
+}
+
+#breadcrumbs a {
+  color: var(--leather);
+  text-decoration: none;
+}
+
+#breadcrumbs a:hover {
+  color: var(--accent);
+}
+
 #content-body {
   flex: 1;
   overflow-y: auto;
