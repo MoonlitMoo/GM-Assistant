@@ -1,7 +1,9 @@
-<h1>Edit Image</h1>
+<%= content_body_frame do %>
+  <h1>Edit Image</h1>
 
-<%= render "form" %>
+  <%= render "form" %>
 
-<p>
-  <%= link_to "Back to image", image_path(@image) %>
-</p>
+  <p>
+    <%= link_to "Back to image", image_path(@image) %>
+  </p>
+<% end %>

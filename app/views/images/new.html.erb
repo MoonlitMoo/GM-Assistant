@@ -1,38 +1,40 @@
-<h1>Upload Image</h1>
+<%= content_body_frame do %>
+  <h1>Upload Image</h1>
 
-<p>
-  Album:
-  <%= link_to @album.name, album_path(@album) %>
-</p>
+  <p>
+    Album:
+    <%= link_to @album.name, album_path(@album) %>
+  </p>
 
-<%= form_with model: [@album, @image] do |form| %>
-  <% if @image.errors.any? %>
+  <%= form_with model: [@album, @image] do |form| %>
+    <% if @image.errors.any? %>
+      <div>
+        <h2><%= pluralize(@image.errors.count, "error") %> prevented this image from being saved:</h2>
+        <ul>
+          <% @image.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
     <div>
-      <h2><%= pluralize(@image.errors.count, "error") %> prevented this image from being saved:</h2>
-      <ul>
-        <% @image.errors.full_messages.each do |message| %>
-          <li><%= message %></li>
-        <% end %>
-      </ul>
+      <%= form.label :title %><br>
+      <%= form.text_field :title %>
+    </div>
+
+    <div>
+      <%= form.label :notes %><br>
+      <%= form.text_area :notes %>
+    </div>
+
+    <div>
+      <%= form.label :file %><br>
+      <%= form.file_field :file %>
+    </div>
+
+    <div>
+      <%= form.submit "Upload Image" %>
     </div>
   <% end %>
-
-  <div>
-    <%= form.label :title %><br>
-    <%= form.text_field :title %>
-  </div>
-
-  <div>
-    <%= form.label :notes %><br>
-    <%= form.text_area :notes %>
-  </div>
-
-  <div>
-    <%= form.label :file %><br>
-    <%= form.file_field :file %>
-  </div>
-
-  <div>
-    <%= form.submit "Upload Image" %>
-  </div>
 <% end %>

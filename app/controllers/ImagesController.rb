@@ -1,6 +1,8 @@
 class ImagesController < ApplicationController
+  layout "campaign"
   before_action :set_image, only: [ :show, :edit, :update, :destroy ]
   before_action :set_album, only: [ :new, :create ]
+  before_action :set_campaign, only: [ :show, :edit, :update, :new, :create ]
 
   def show
   end
@@ -49,5 +51,9 @@ class ImagesController < ApplicationController
 
   def image_params
     params.expect(image: [ :title, :notes, :file ])
+  end
+
+  def set_campaign
+    @campaign = @image&.campaign || @album&.campaign
   end
 end
