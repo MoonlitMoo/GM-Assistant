@@ -20,6 +20,29 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "New Campaign"
   end
 
+  test "returns the campaign tree as nested json" do
+    campaign = create(:campaign, name: "North Reach")
+    root_folder = campaign.root_folder
+    child_folder = create(:folder, campaign: campaign, parent: root_folder, name: "Locations")
+    create(:album, campaign: campaign, folder: child_folder, name: "Harbour Sketches")
+
+    get tree_campaign_path(campaign)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+
+    assert_equal root_folder.id, payload["id"]
+    assert_equal campaign.id, payload["campaignId"]
+    assert_equal root_folder.name, payload["name"]
+    assert_equal folder_path(root_folder), payload["url"]
+
+    child_payload = payload.fetch("folders").find { |folder| folder["id"] == child_folder.id }
+    assert_equal child_folder.name, child_payload["name"]
+    assert_equal folder_path(child_folder), child_payload["url"]
+    assert_equal "Harbour Sketches", child_payload.dig("albums", 0, "name")
+    assert_equal album_path(child_folder.albums.first), child_payload.dig("albums", 0, "url")
+  end
+
   test "re-renders the new campaign form when creation is invalid" do
     assert_no_difference("Campaign.count") do
       post campaigns_path, params: {
