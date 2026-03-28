@@ -30,7 +30,7 @@
         <div id="breadcrumbs">
             <%= render "shared/breadcrumbs" %>
         </div>
-        <%= turbo_frame_tag "content-body" do %>
+        <%= turbo_frame_tag "content-body", target: "_top" do %>
             <%= yield %>
         <% end %>
         </div>
