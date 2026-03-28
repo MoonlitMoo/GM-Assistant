@@ -36,4 +36,13 @@ class AlbumTest < ActiveSupport::TestCase
 
     assert_nil Image.find_by(id: image.id)
   end
+
+  test "images are ordered by position ascending" do
+    album = create(:album)
+    image_two = create(:image, campaign: album.campaign, album: album, position: 2)
+    image_one = create(:image, campaign: album.campaign, album: album, position: 1)
+    image_three = create(:image, campaign: album.campaign, album: album, position: 3)
+
+    assert_equal [ image_one, image_two, image_three ], album.images.to_a
+  end
 end

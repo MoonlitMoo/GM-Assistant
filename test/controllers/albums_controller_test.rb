@@ -1,6 +1,43 @@
 require "test_helper"
 
 class AlbumsControllerTest < ActionDispatch::IntegrationTest
+  test "shows an album with breadcrumb context, actions, and thumbnail grid" do
+    campaign = create(:campaign, name: "Shattered Coast")
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Harbour")
+    album = create(:album, campaign: campaign, folder: folder, name: "Storm Sketches")
+    first_image = create(:image, campaign: campaign, album: album, title: "Anchor Watch", position: 1)
+    second_image = create(:image, campaign: campaign, album: album, title: "Breakwater", position: 2)
+
+    get album_path(album)
+
+    assert_response :success
+    assert_includes response.body, "Storm Sketches"
+    assert_includes response.body, "Upload image"
+    assert_includes response.body, "Edit album"
+    assert_includes response.body, "Delete album"
+    assert_includes response.body, "Shattered Coast"
+    assert_includes response.body, "Harbour"
+    assert_includes response.body, first_image.title
+    assert_includes response.body, second_image.title
+    assert_match(%r{href="#{image_path(first_image)}"}, response.body)
+    assert_match(%r{href="#{image_path(second_image)}"}, response.body)
+    assert_match(%r{rails/active_storage/representations}, response.body)
+    assert_operator response.body.index(first_image.title), :<, response.body.index(second_image.title)
+    assert_no_match(%r{aria-label="Breadcrumbs".*Root}m, response.body)
+  end
+
+  test "shows an album inside the content frame for turbo frame requests" do
+    album = create(:album, name: "Storm Sketches")
+
+    get album_path(album), headers: { "Turbo-Frame" => "content-body" }
+
+    assert_response :success
+    assert_match(/<turbo-frame[^>]*id="content-body"/, response.body)
+    assert_includes response.body, 'data-turbo-action="advance"'
+    assert_includes response.body, "Storm Sketches"
+    assert_includes response.body, "Upload image"
+  end
+
   test "shows the new album form" do
     folder = create(:folder, name: "Landmarks")
 

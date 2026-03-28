@@ -35,6 +35,28 @@ class ImageTest < ActiveSupport::TestCase
     assert_includes image.errors[:file], "can't be blank"
   end
 
+  test "is valid without notes" do
+    image = build(:image, notes: nil)
+
+    assert image.valid?
+  end
+
+  test "is valid without a position" do
+    image = build(:image, position: nil)
+
+    assert image.valid?
+  end
+
+  test "thumbnail representation can be processed" do
+    image = create(:image)
+
+    representation = image.file.representation(resize_to_fill: [ 480, 360 ])
+
+    assert_nothing_raised do
+      representation.processed
+    end
+  end
+
   test "is invalid when album belongs to another campaign" do
     image = build(:image, campaign: create(:campaign), album: create(:album))
 

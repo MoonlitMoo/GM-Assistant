@@ -8,7 +8,7 @@ class AlbumsController < ApplicationController
   before_action :set_album_edit_breadcrumbs, only: [ :edit, :update ]
 
   def show
-    @images = @album.images.with_attached_file.order(created_at: :desc)
+    @images = @album.images.with_attached_file
   end
 
   def new
