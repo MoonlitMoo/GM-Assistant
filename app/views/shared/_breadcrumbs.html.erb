@@ -1,0 +1,11 @@
+<% if local_assigns[:breadcrumbs].present? %>
+  <nav id="breadcrumbs">
+    <% breadcrumbs.each_with_index do |(label, url), i| %>
+      <% if i < breadcrumbs.length - 1 %>
+        <%= link_to label, url %> &rsaquo;
+      <% else %>
+        <span><%= label %></span>
+      <% end %>
+    <% end %>
+  </nav>
+<% end %>
