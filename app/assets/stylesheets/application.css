@@ -1,10 +1,138 @@
-/*
- * This is a manifest file that'll be compiled into application.css.
- *
- * With Propshaft, assets are served efficiently without preprocessing steps. You can still include
- * application-wide styles in this file, but keep in mind that CSS precedence will follow the standard
- * cascading order, meaning styles declared later in the document or manifest will override earlier ones,
- * depending on specificity.
- *
- * Consider organizing styles into separate files for maintainability.
- */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+:root {
+  --parchment: #f2e8d5;
+  --parchment-dark: #e0d0b0;
+  --parchment-border: #c8b89a;
+  --ink: #2c1f0e;
+  --ink-light: #5c4a2a;
+  --leather: #8b5e3c;
+  --leather-dark: #6b3f1f;
+  --accent: #a0391a;
+  --sidebar-width: 260px;
+  --topbar-height: 48px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Crimson Text', Georgia, serif;
+  background-color: var(--parchment);
+  color: var(--ink);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Top bar ── */
+#top-bar {
+  height: var(--topbar-height);
+  background-color: var(--leather-dark);
+  color: var(--parchment);
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 1rem;
+  border-bottom: 2px solid var(--leather);
+  font-family: 'Cinzel', serif;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+#top-bar a {
+  color: var(--parchment);
+  text-decoration: none;
+  opacity: 0.85;
+}
+
+#top-bar a:hover {
+  opacity: 1;
+}
+
+#top-bar span:last-child {
+  margin-left: auto;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+/* ── Main wrapper ── */
+#main-wrapper {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+#sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--parchment-dark);
+  border-right: 2px solid var(--parchment-border);
+  overflow-y: auto;
+  flex-shrink: 0;
+  padding: 0.75rem 0;
+}
+
+#tree-container ul {
+  list-style: none;
+  padding-left: 1rem;
+}
+
+#tree-container > ul {
+  padding-left: 0.5rem;
+}
+
+.tree-folder,
+.tree-album {
+  padding: 0.2rem 0;
+}
+
+.tree-toggle {
+  display: inline-block;
+  width: 1.2rem;
+  cursor: pointer;
+  color: var(--ink-light);
+  font-size: 0.8rem;
+  user-select: none;
+}
+
+.tree-label {
+  font-family: 'Crimson Text', serif;
+  font-size: 1rem;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  transition: background-color 0.15s;
+}
+
+.tree-label:hover {
+  background-color: var(--parchment-border);
+  color: var(--ink);
+}
+
+.tree-album .tree-label {
+  color: var(--ink-light);
+  font-style: italic;
+}
+
+/* ── Main content ── */
+#main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#content-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+turbo-frame {
+  display: contents;
+}
