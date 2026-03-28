@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_23_231549) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_28_001000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -74,6 +74,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_23_231549) do
     t.integer "campaign_id", null: false
     t.datetime "created_at", null: false
     t.text "notes"
+    t.integer "position"
     t.string "title"
     t.datetime "updated_at", null: false
     t.index ["album_id"], name: "index_images_on_album_id"

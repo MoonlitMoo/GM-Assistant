@@ -1,38 +1,67 @@
 <%= content_body_frame do %>
-  <h1><%= @album.name %></h1>
+  <section class="record-shell">
+    <div class="record-panel">
+      <div class="record-header">
+        <div class="record-copy">
+          <p class="record-kicker">Album</p>
+          <h1 class="record-title"><%= @album.name %></h1>
 
-  <% if @album.description.present? %>
-    <p><%= @album.description %></p>
-  <% end %>
+          <% if @album.description.present? %>
+            <p class="record-description"><%= @album.description %></p>
+          <% end %>
 
-  <p>
-    Folder:
-    <%= link_to @album.folder.name, folder_path(@album.folder) %>
-  </p>
+        </div>
 
-  <p>
-    <%= link_to "Edit album", edit_album_path(@album) %> |
-    <%= link_to "Upload image", new_album_image_path(@album) %>
-  </p>
+        <div class="record-actions">
+          <%= link_to "Upload image", new_album_image_path(@album), class: "fantasy-button fantasy-button--primary" %>
+          <%= link_to "Edit album", edit_album_path(@album), class: "fantasy-button" %>
+          <%= link_to "Delete album",
+                      album_path(@album),
+                      class: "fantasy-button fantasy-button--danger",
+                      data: {
+                        turbo_method: :delete,
+                        turbo_confirm: "Delete this album and all images in it?"
+                      } %>
+        </div>
+      </div>
+    </div>
 
-  <p>
-    <%= button_to "Delete album",
-                  album_path(@album),
-                  method: :delete,
-                  data: { turbo_confirm: "Delete this album and all images in it?" } %>
-  </p>
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Images</h2>
+        <span><%= pluralize(@images.size, "image") %></span>
+      </div>
 
-  <h2>Images</h2>
+      <% if @images.any? %>
+        <div class="album-grid">
+          <% @images.each do |image| %>
+            <article class="image-card">
+              <%= link_to image_path(image), class: "image-card__thumb-link" do %>
+                <div class="image-card__thumbnail">
+                  <% if image.file.attached? && image.file.representable? %>
+                    <%= image_tag image.file.representation(resize_to_fill: [ 480, 360 ]),
+                                  alt: image.title,
+                                  class: "image-card__preview",
+                                  loading: "lazy",
+                                  decoding: "async" %>
+                  <% else %>
+                    <div class="image-card__placeholder">No preview available</div>
+                  <% end %>
+                </div>
+              <% end %>
 
-  <% if @images.any? %>
-    <ul>
-      <% @images.each do |image| %>
-        <li>
-          <%= link_to image.title, image_path(image) %>
-        </li>
+              <h3 class="image-card__title">
+                <%= link_to image.title, image_path(image) %>
+              </h3>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="album-empty-state">
+          <p>This album is still waiting for its first illustration.</p>
+          <%= link_to "Upload image", new_album_image_path(@album), class: "fantasy-button fantasy-button--primary" %>
+        </div>
       <% end %>
-    </ul>
-  <% else %>
-    <p>No images in this album.</p>
-  <% end %>
+    </div>
+  </section>
 <% end %>
