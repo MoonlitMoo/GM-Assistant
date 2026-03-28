@@ -6,7 +6,13 @@ export default class extends Controller {
 
   connect() {
     this.expanded = {}
+    this.refreshTree = this.fetchTree.bind(this)
+    document.addEventListener("tree:refresh", this.refreshTree)
     this.fetchTree()
+  }
+
+  disconnect() {
+    document.removeEventListener("tree:refresh", this.refreshTree)
   }
 
   fetchTree() {
@@ -14,14 +20,16 @@ export default class extends Controller {
       .then(r => r.json())
       .then(data => {
         this.treeData = data
+        this.campaignId = data.campaignId
+        this.expanded = this.loadExpandedState()
         this.render()
       })
   }
 
   render() {
-    document.getElementById("tree-container").innerHTML = ""
+    this.containerTarget.innerHTML = ""
     const ul = this.buildFolderContents(this.treeData)
-    document.getElementById("tree-container").appendChild(ul)
+    this.containerTarget.appendChild(ul)
   }
 
   buildFolderContents(folder) {
@@ -52,7 +60,13 @@ export default class extends Controller {
     label.addEventListener("click", () => this.navigateTo(folder.url))
 
     toggle.addEventListener("click", () => {
-      this.expanded[folder.id] = !this.expanded[folder.id]
+      if (this.expanded[folder.id]) {
+        delete this.expanded[folder.id]
+      } else {
+        this.expanded[folder.id] = true
+      }
+
+      this.saveExpandedState()
       this.render()
     })
 
@@ -81,5 +95,25 @@ export default class extends Controller {
 
   navigateTo(url) {
     Turbo.visit(url, { frame: "content-body" })
+  }
+
+  loadExpandedState() {
+    if (!this.storageKey) return {}
+
+    try {
+      return JSON.parse(sessionStorage.getItem(this.storageKey) || "{}")
+    } catch {
+      return {}
+    }
+  }
+
+  saveExpandedState() {
+    if (!this.storageKey) return
+
+    sessionStorage.setItem(this.storageKey, JSON.stringify(this.expanded))
+  }
+
+  get storageKey() {
+    return this.campaignId ? `campaign-tree:${this.campaignId}:expanded` : null
   }
 }

@@ -19,7 +19,7 @@ class AlbumsController < ApplicationController
     @album = @folder.albums.build(album_params)
     @album.campaign = @folder.campaign
     if @album.save
-      redirect_to @album, notice: "Album created successfully"
+      redirect_to @album, notice: "Album created successfully", flash: { tree_refresh: true }
     else
       render :new, status: :unprocessable_entity
     end
@@ -30,7 +30,7 @@ class AlbumsController < ApplicationController
 
   def update
     if @album.update(album_params)
-      redirect_to @album, notice: "Album updated successfully"
+      redirect_to @album, notice: "Album updated successfully", flash: { tree_refresh: true }
     else
       render :edit, status: :unprocessable_entity
     end
@@ -39,7 +39,7 @@ class AlbumsController < ApplicationController
   def destroy
     parent = @album.folder
     @album.destroy
-    redirect_to parent, notice: "Album destroyed successfully"
+    redirect_to parent, notice: "Album destroyed successfully", flash: { tree_refresh: true }
   end
 
   private

@@ -50,6 +50,11 @@ class CrudTest < ApplicationSystemTestCase
     album_name = "Harbour Evenings"
 
     visit folder_path(folder)
+
+    within "#sidebar" do
+      find(".tree-folder", text: folder.name).find(".tree-toggle").click
+    end
+
     click_link "New album"
 
     fill_in "Name", with: album_name
@@ -62,6 +67,7 @@ class CrudTest < ApplicationSystemTestCase
     album = Album.find_by!(name: album_name, folder: folder)
 
     assert_current_path album_path(album)
+    assert_selector "#sidebar .tree-label", text: album.name
 
     within "turbo-frame#content-body" do
       click_link folder.name
