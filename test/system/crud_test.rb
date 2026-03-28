@@ -63,7 +63,9 @@ class CrudTest < ApplicationSystemTestCase
 
     assert_current_path album_path(album)
 
-    click_link folder.name
+    within "turbo-frame#content-body" do
+      click_link folder.name
+    end
 
     assert_current_path folder_path(folder)
     assert_link album.name

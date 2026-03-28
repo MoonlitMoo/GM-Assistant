@@ -44,12 +44,17 @@ class NavigationTest < ApplicationSystemTestCase
     assert_text @image.title
   end
 
-  test "navigates from the sidebar tree" do
+  test "navigates from the sidebar tree and refreshes breadcrumbs" do
     visit folder_path(@root_folder)
 
     find("#sidebar .tree-label", text: @folder.name).click
 
     assert_current_path folder_path(@folder)
-    assert_text @folder.name
+
+    within "#breadcrumbs" do
+      assert_text @campaign.name
+      assert_text @root_folder.name
+      assert_text @folder.name
+    end
   end
 end
