@@ -26,14 +26,18 @@
       </div>
 
       <!-- Main content -->
-        <div id="main-content">
+      <div id="main-content">
         <div id="breadcrumbs">
-            <%= render "shared/breadcrumbs" %>
+          <%= render "shared/breadcrumbs" %>
         </div>
-        <%= turbo_frame_tag "content-body", target: "_top" do %>
+        <% if turbo_frame_request? %>
+          <%= yield %>
+        <% else %>
+          <%= turbo_frame_tag "content-body", **content_body_frame_options do %>
             <%= yield %>
+          <% end %>
         <% end %>
-        </div>
+      </div>
     </div>
 
   </body>

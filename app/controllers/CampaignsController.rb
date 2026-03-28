@@ -1,4 +1,5 @@
 class CampaignsController < ApplicationController
+  layout "campaign", only: [ :show, :edit, :update ]
   before_action :set_campaign, only: [ :show, :edit, :update, :destroy ]
 
   def index

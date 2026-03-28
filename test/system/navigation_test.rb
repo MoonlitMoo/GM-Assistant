@@ -43,4 +43,13 @@ class NavigationTest < ApplicationSystemTestCase
     assert_current_path Rails.application.routes.url_helpers.image_path(@image)
     assert_text @image.title
   end
+
+  test "navigates from the sidebar tree" do
+    visit folder_path(@root_folder)
+
+    find("#sidebar .tree-label", text: @folder.name).click
+
+    assert_current_path folder_path(@folder)
+    assert_text @folder.name
+  end
 end

@@ -1,9 +1,14 @@
-<h1>Edit Campaign</h1>
+<%= content_body_frame do %>
+  <h1>Edit Campaign</h1>
 
-<%= render "form" %>
+  <%= render "form" %>
 
-<p>
-  <%= link_to "Show campaign", campaign_path(@campaign) %> |
-  <%= link_to "Back", campaigns_path %> |
-  <%= button_to "Delete", @campaign, method: :delete, data: { turbo_confirm: "Are you sure?" } %>
-</p>
+  <p>
+    <%= link_to "Show campaign", campaign_path(@campaign) %> |
+    <%= link_to "Back", campaigns_path, data: { turbo_frame: "_top" } %> |
+    <%= button_to "Delete",
+                  @campaign,
+                  method: :delete,
+                  form: { data: { turbo_confirm: "Are you sure?", turbo_frame: "_top" } } %>
+  </p>
+<% end %>
