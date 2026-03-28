@@ -29,6 +29,16 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_includes html_response_body, "Name can't be blank"
   end
 
+  test "shows the edit folder form" do
+    folder = create(:folder, name: "Villagers")
+
+    get edit_folder_path(folder)
+
+    assert_response :success
+    assert_includes response.body, "Edit Folder"
+    assert_includes response.body, "Villagers"
+  end
+
   test "updates a folder" do
     folder = create(:folder, name: "Villagers")
 

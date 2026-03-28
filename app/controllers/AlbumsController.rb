@@ -2,7 +2,7 @@ class AlbumsController < ApplicationController
   layout "campaign"
   before_action :set_album, only: [ :show, :edit, :update, :destroy ]
   before_action :set_folder, only: [ :new, :create ], if: -> { params[:folder_id].present? }
-  before_action :set_campaign, only: [ :show ]
+  before_action :set_campaign, only: [ :show, :edit, :update, :new, :create ]
 
   def show
     @images = @album.images.with_attached_file.order(created_at: :desc)
@@ -50,7 +50,7 @@ class AlbumsController < ApplicationController
   end
 
   def set_campaign
-    @campaign = @album.campaign
+    @campaign = @album&.campaign || @folder&.campaign
   end
 
   def album_params
