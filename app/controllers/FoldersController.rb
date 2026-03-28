@@ -7,10 +7,6 @@ class FoldersController < ApplicationController
   before_action :set_folder_new_breadcrumbs, only: [ :new, :create ]
   before_action :set_folder_edit_breadcrumbs, only: [ :edit, :update ]
 
-  def index
-    @folders = @campaign.folders.order(:name)
-  end
-
   def show
     @child_folders = @folder.child_folders.order(:name)
     @albums = @folder.albums.order(:name)
