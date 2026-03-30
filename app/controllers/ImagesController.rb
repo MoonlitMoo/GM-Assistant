@@ -10,6 +10,7 @@ class ImagesController < ApplicationController
   before_action :set_image_edit_breadcrumbs, only: [ :edit, :update ]
 
   def show
+    @presenting_image_id = @campaign.player_display&.current_image_id.to_i
   end
 
   def new
