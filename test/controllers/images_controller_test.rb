@@ -2,13 +2,25 @@ require "test_helper"
 
 class ImagesControllerTest < ActionDispatch::IntegrationTest
   test "shows an image" do
-    image = create(:image, title: "Beacon Cliffs", notes: "Windy and bright")
+    campaign = create(:campaign, name: "Shoreline Atlas")
+    campaign.root_folder.update!(name: "Deep Vault")
+    parent_folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Cliffside Sketches")
+    folder = create(:folder, campaign: campaign, parent: parent_folder, name: "Sea Caves")
+    album = create(:album, campaign: campaign, folder: folder, name: "Tidewall Studies")
+    image = create(:image, campaign: campaign, album: album, title: "Beacon Cliffs", notes: "Windy and bright")
 
     get image_path(image)
 
     assert_response :success
     assert_includes response.body, "Beacon Cliffs"
-    assert_includes response.body, image.album.name
+    assert_includes response.body, "Windy and bright"
+    assert_includes response.body, "Edit image"
+    assert_includes response.body, "Delete image"
+    assert_match(
+      /Shoreline Atlas<\/a>\s*&rsaquo;\s*<a[^>]*>Cliffside Sketches<\/a>\s*&rsaquo;\s*<a[^>]*>Sea Caves<\/a>\s*&rsaquo;\s*<a[^>]*>Tidewall Studies<\/a>\s*&rsaquo;\s*<span>Beacon Cliffs<\/span>/,
+      response.body
+    )
+    assert_no_match(/Deep Vault/, response.body)
   end
 
   test "shows an image inside the content frame for turbo frame requests" do
