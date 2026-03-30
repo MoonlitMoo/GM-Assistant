@@ -3,14 +3,15 @@ require "test_helper"
 class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
   include ActionCable::TestHelper
 
-  test "present creates the campaign player display, broadcasts the image, and returns json" do
+  test "present with a valid image sets current image id and returns json" do
     image = create(:image)
+    player_display = create(:player_display, campaign: image.campaign)
     expected_payload = {
       "image_url" => rails_blob_url(image.file, host: "www.example.com"),
       "image_id" => image.id
     }
 
-    assert_difference("PlayerDisplay.count", 1) do
+    assert_no_difference("PlayerDisplay.count") do
       assert_broadcast_on("player_display_#{image.campaign_id}", expected_payload) do
         patch present_campaign_player_display_path(image.campaign),
               params: { current_image_id: image.id },
@@ -20,6 +21,21 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal expected_payload, JSON.parse(response.body)
+    assert_equal image.id, player_display.reload.current_image_id
+  end
+
+  test "present lazily creates the player display if one does not exist" do
+    image = create(:image)
+
+    assert_nil image.campaign.player_display
+
+    assert_difference("PlayerDisplay.count", 1) do
+      patch present_campaign_player_display_path(image.campaign),
+            params: { current_image_id: image.id },
+            as: :json
+    end
+
+    assert_response :success
 
     player_display = image.campaign.reload.player_display
     assert_not_nil player_display
@@ -52,5 +68,29 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal({ "cleared" => true }, JSON.parse(response.body))
     assert_nil player_display.reload.current_image
+  end
+
+  test "clear when no player display exists does not crash" do
+    campaign = create(:campaign)
+
+    assert_no_difference("PlayerDisplay.count") do
+      assert_broadcast_on("player_display_#{campaign.id}", { "cleared" => true }) do
+        patch clear_campaign_player_display_path(campaign), as: :json
+      end
+    end
+
+    assert_response :success
+    assert_equal({ "cleared" => true }, JSON.parse(response.body))
+    assert_nil campaign.reload.player_display
+  end
+
+  test "player show returns 200 for a valid campaign" do
+    campaign = create(:campaign)
+
+    get player_campaign_path(campaign)
+
+    assert_response :success
+    assert_includes response.body, 'id="player-screen"'
+    assert_includes response.body, %(data-campaign-id="#{campaign.id}")
   end
 end
