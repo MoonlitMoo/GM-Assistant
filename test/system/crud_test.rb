@@ -5,7 +5,7 @@ class CrudTest < ApplicationSystemTestCase
     campaign_name = "Cook Strait Chronicle"
 
     visit campaigns_path
-    click_link "New campaign"
+    click_link "New Campaign"
 
     fill_in "Name", with: campaign_name
     fill_in "Description", with: "Notes from a breezy harbour crossing."
@@ -121,12 +121,12 @@ class CrudTest < ApplicationSystemTestCase
     doomed_campaign = create(:campaign, name: "Fading Coast")
 
     visit campaigns_path
-    click_link doomed_campaign.name
-    click_link "Edit campaign"
 
-    assert_difference("Campaign.count", -1) do
-      accept_confirm do
-        click_button "Delete"
+    within find(".campaign-card", text: doomed_campaign.name) do
+      assert_difference("Campaign.count", -1) do
+        accept_confirm do
+          click_link "Delete"
+        end
       end
     end
 

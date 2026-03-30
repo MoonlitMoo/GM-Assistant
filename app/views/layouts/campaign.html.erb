@@ -8,40 +8,48 @@
     <%= vite_client_tag %>
     <%= vite_javascript_tag 'application' %>
   </head>
+  <% standalone_layout = content_for?(:standalone_campaign_layout) %>
   <body>
 
     <!-- Top bar -->
     <div id="top-bar">
       <%= link_to "⚔ GM Assistant", campaigns_path %>
-      <span><%= @campaign.name %></span>
+      <span><%= content_for?(:topbar_title) ? yield(:topbar_title) : @campaign.name %></span>
       <span>⚙</span>
     </div>
 
-    <div id="main-wrapper">
+    <% if standalone_layout %>
+      <main class="standalone-main standalone-main--campaign">
+        <%= yield %>
+      </main>
+    <% else %>
+      <div id="main-wrapper">
 
-      <!-- Sidebar -->
-      <div id="sidebar">
-        <div id="campaign-tree" data-tree-url="<%= tree_campaign_path(@campaign) %>"></div>
-      </div>
-
-      <!-- Main content -->
-        <div id="main-content">
-        <div id="main-content"
-             data-controller="content-panel"
-             data-action="turbo:frame-load->content-panel#syncBreadcrumbs">
-          <div id="breadcrumbs" data-content-panel-target="breadcrumbs">
-            <%= render "shared/breadcrumbs", breadcrumbs: breadcrumbs %>
-          </div>
-          <% if turbo_frame_request? %>
-            <%= yield %>
-          <% else %>
-            <%= turbo_frame_tag "content-body", **content_body_frame_options do %>
-              <%= breadcrumbs_payload_tag %>
-              <%= yield %>
-            <% end %>
-          <% end %>
+        <!-- Sidebar -->
+        <div id="sidebar">
+          <div id="campaign-tree" data-tree-url="<%= tree_campaign_path(@campaign) %>"></div>
         </div>
-    </div>
+
+        <!-- Main content -->
+          <div id="main-content">
+          <div id="main-content"
+               data-controller="content-panel"
+               data-action="turbo:frame-load->content-panel#syncBreadcrumbs">
+            <div id="breadcrumbs" data-content-panel-target="breadcrumbs">
+              <%= render "shared/breadcrumbs", breadcrumbs: breadcrumbs %>
+            </div>
+            <% if turbo_frame_request? %>
+              <%= yield %>
+            <% else %>
+              <%= turbo_frame_tag "content-body", **content_body_frame_options do %>
+                <%= breadcrumbs_payload_tag %>
+                <%= yield %>
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
 
   </body>
 </html>

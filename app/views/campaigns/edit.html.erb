@@ -1,14 +1,6 @@
+<% provide :standalone_campaign_layout, "1" %>
+<% provide :topbar_title, @campaign.name %>
+
 <%= content_body_frame do %>
-  <h1>Edit Campaign</h1>
-
-  <%= render "form" %>
-
-  <p>
-    <%= link_to "Show campaign", campaign_path(@campaign) %> |
-    <%= link_to "Back", campaigns_path, data: { turbo_frame: "_top" } %> |
-    <%= button_to "Delete",
-                  @campaign,
-                  method: :delete,
-                  form: { data: { turbo_confirm: "Are you sure?", turbo_frame: "_top" } } %>
-  </p>
+  <%= render "form", cancel_path: @campaign %>
 <% end %>
