@@ -16,14 +16,24 @@ class NavigationTest < ApplicationSystemTestCase
     assert_link @campaign.name
   end
 
-  test "navigates from the campaign index to the campaign's root folder" do
+  test "navigates from the campaign index to the campaign dashboard" do
     visit campaigns_path
 
     click_link @campaign.name
-    click_link "Open root folder"
 
-    assert_current_path folder_path(@root_folder)
-    assert_text @root_folder.name
+    assert_current_path campaign_path(@campaign)
+    assert_text "Recently Added"
+    assert_text @folder.name
+    assert_text @album.name
+  end
+
+  test "navigates from the campaign dashboard to a top-level folder" do
+    visit campaign_path(@campaign)
+
+    click_link @folder.name
+
+    assert_current_path folder_path(@folder)
+    assert_text @folder.name
   end
 
   test "navigates from a folder to an album" do
