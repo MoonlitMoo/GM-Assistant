@@ -24,7 +24,7 @@ class CampaignFlowsTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_response :success
     assert_includes response.body, "The Southern Wilds"
-    assert_includes response.body, "Open root folder"
+    assert_includes response.body, "No folders at the top level yet."
   end
 
   test "creating a child folder keeps it inside the same campaign" do
