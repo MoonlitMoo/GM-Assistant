@@ -868,11 +868,3 @@ turbo-frame {
     align-items: flex-start;
   }
 }
-
-@media (hover: none) {
-  .image-card__present-button {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
-  }
-}

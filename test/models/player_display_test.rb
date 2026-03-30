@@ -35,4 +35,13 @@ class PlayerDisplayTest < ActiveSupport::TestCase
     assert_not player_display.valid?
     assert_includes player_display.errors[:current_image_id], "must belong to same campaign"
   end
+
+  test "destroying a campaign destroys its player display" do
+    campaign = create(:campaign)
+    player_display = create(:player_display, :with_current_image, campaign: campaign)
+
+    campaign.destroy
+
+    assert_nil PlayerDisplay.find_by(id: player_display.id)
+  end
 end
