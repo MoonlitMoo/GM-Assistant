@@ -1,4 +1,6 @@
 class AlbumsController < ApplicationController
+  include Breadcrumbable
+
   layout "campaign"
   before_action :set_album, only: [ :show, :edit, :update, :destroy ]
   before_action :set_folder, only: [ :new, :create ], if: -> { params[:folder_id].present? }
@@ -61,14 +63,14 @@ class AlbumsController < ApplicationController
   end
 
   def set_album_show_breadcrumbs
-    @breadcrumbs = album_breadcrumbs(@album)
+    build_breadcrumbs(@album)
   end
 
   def set_album_new_breadcrumbs
-    @breadcrumbs = folder_breadcrumbs(@folder) + [ [ "New Album", new_folder_album_path(@folder) ] ]
+    @breadcrumbs = build_breadcrumbs(@folder) + [ [ "New Album", new_folder_album_path(@folder) ] ]
   end
 
   def set_album_edit_breadcrumbs
-    @breadcrumbs = album_breadcrumbs(@album) + [ [ "Edit Album", edit_album_path(@album) ] ]
+    @breadcrumbs = build_breadcrumbs(@album) + [ [ "Edit Album", edit_album_path(@album) ] ]
   end
 end

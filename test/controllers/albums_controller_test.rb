@@ -3,7 +3,9 @@ require "test_helper"
 class AlbumsControllerTest < ActionDispatch::IntegrationTest
   test "shows an album with breadcrumb context, actions, and thumbnail grid" do
     campaign = create(:campaign, name: "Shattered Coast")
-    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Harbour")
+    campaign.root_folder.update!(name: "Archive Root")
+    parent_folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Harbour")
+    folder = create(:folder, campaign: campaign, parent: parent_folder, name: "Tide Charts")
     album = create(:album, campaign: campaign, folder: folder, name: "Storm Sketches")
     first_image = create(:image, campaign: campaign, album: album, title: "Anchor Watch", position: 1)
     second_image = create(:image, campaign: campaign, album: album, title: "Breakwater", position: 2)
@@ -15,15 +17,17 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Upload image"
     assert_includes response.body, "Edit album"
     assert_includes response.body, "Delete album"
-    assert_includes response.body, "Shattered Coast"
-    assert_includes response.body, "Harbour"
     assert_includes response.body, first_image.title
     assert_includes response.body, second_image.title
     assert_match(%r{href="#{image_path(first_image)}"}, response.body)
     assert_match(%r{href="#{image_path(second_image)}"}, response.body)
     assert_match(%r{rails/active_storage/representations}, response.body)
     assert_operator response.body.index(first_image.title), :<, response.body.index(second_image.title)
-    assert_no_match(%r{aria-label="Breadcrumbs".*Root}m, response.body)
+    assert_match(
+      /Shattered Coast<\/a>\s*&rsaquo;\s*<a[^>]*>Harbour<\/a>\s*&rsaquo;\s*<a[^>]*>Tide Charts<\/a>\s*&rsaquo;\s*<span>Storm Sketches<\/span>/,
+      response.body
+    )
+    assert_no_match(/Archive Root/, response.body)
   end
 
   test "shows an album inside the content frame for turbo frame requests" do

@@ -1,4 +1,6 @@
 class CampaignsController < ApplicationController
+  include Breadcrumbable
+
   layout "campaign", only: [ :show, :edit, :update ]
   before_action :set_campaign, only: [ :show, :edit, :update, :destroy ]
   before_action :set_campaign_show_breadcrumbs, only: [ :show ]
@@ -58,11 +60,11 @@ class CampaignsController < ApplicationController
   end
 
   def set_campaign_show_breadcrumbs
-    @breadcrumbs = campaign_breadcrumbs(@campaign)
+    build_breadcrumbs(@campaign)
   end
 
   def set_campaign_edit_breadcrumbs
-    @breadcrumbs = campaign_breadcrumbs(@campaign) + [ [ "Edit Campaign", edit_campaign_path(@campaign) ] ]
+    @breadcrumbs = build_breadcrumbs(@campaign) + [ [ "Edit Campaign", edit_campaign_path(@campaign) ] ]
   end
 
   def build_folder_tree(folder)

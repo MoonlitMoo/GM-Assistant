@@ -1,4 +1,6 @@
 class ImagesController < ApplicationController
+  include Breadcrumbable
+
   layout "campaign"
   before_action :set_image, only: [ :show, :edit, :update, :destroy ]
   before_action :set_album, only: [ :new, :create ]
@@ -61,14 +63,14 @@ class ImagesController < ApplicationController
   end
 
   def set_image_show_breadcrumbs
-    @breadcrumbs = image_breadcrumbs(@image)
+    build_breadcrumbs(@image)
   end
 
   def set_image_new_breadcrumbs
-    @breadcrumbs = album_breadcrumbs(@album) + [ [ "Upload Image", new_album_image_path(@album) ] ]
+    @breadcrumbs = build_breadcrumbs(@album) + [ [ "Upload Image", new_album_image_path(@album) ] ]
   end
 
   def set_image_edit_breadcrumbs
-    @breadcrumbs = image_breadcrumbs(@image) + [ [ "Edit Image", edit_image_path(@image) ] ]
+    @breadcrumbs = build_breadcrumbs(@image) + [ [ "Edit Image", edit_image_path(@image) ] ]
   end
 end
