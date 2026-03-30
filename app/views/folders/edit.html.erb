@@ -1,9 +1,5 @@
 <%= content_body_frame do %>
-  <h1>Edit Folder</h1>
-
-  <%= render "form" %>
-
-  <p>
-    <%= link_to "Back to folder", folder_path(@folder) %>
-  </p>
+  <%= render "form",
+             form_model: @folder,
+             cancel_path: @folder %>
 <% end %>

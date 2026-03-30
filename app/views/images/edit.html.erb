@@ -1,9 +1,5 @@
 <%= content_body_frame do %>
-  <h1>Edit Image</h1>
-
-  <%= render "form" %>
-
-  <p>
-    <%= link_to "Back to image", image_path(@image) %>
-  </p>
+  <%= render "form",
+             form_model: @image,
+             cancel_path: @image.album %>
 <% end %>

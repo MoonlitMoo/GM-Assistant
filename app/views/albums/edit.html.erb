@@ -1,9 +1,5 @@
 <%= content_body_frame do %>
-  <h1>Edit Album</h1>
-
-  <%= render "form" %>
-
-  <p>
-    <%= link_to "Back to album", album_path(@album) %>
-  </p>
+  <%= render "form",
+             form_model: @album,
+             cancel_path: @album %>
 <% end %>
