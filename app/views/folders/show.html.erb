@@ -1,50 +1,92 @@
 <%= content_body_frame do %>
-  <h1><%= @folder.name %></h1>
+  <section class="record-shell">
+    <div class="record-panel">
+      <div class="record-header">
+        <div class="record-copy">
+          <p class="record-kicker"><%= @folder.is_root? ? "Campaign Library" : "Folder" %></p>
+          <h1 class="record-title"><%= @folder.name %></h1>
 
-  <p>
-    <% if @folder.parent.present? %>
-      Parent:
-      <%= link_to @folder.parent.name, folder_path(@folder.parent) %>
-    <% else %>
-      Campaign:
-      <%= link_to @folder.campaign.name, campaign_path(@folder.campaign) %>
-    <% end %>
-  </p>
+          <p class="record-description">
+            <%= pluralize(@child_folders.size, "child folder") %> and
+            <%= pluralize(@albums.size, "album") %> within this chapter of the archive.
+          </p>
+        </div>
 
-  <p>
-    <%= link_to "New subfolder", new_folder_folder_path(@folder) %> |
-    <%= link_to "New album", new_folder_album_path(@folder) %> |
-    <%= link_to "Edit folder", edit_folder_path(@folder) %>
-  </p>
+        <div class="record-actions">
+          <%= link_to "New Folder", new_folder_folder_path(@folder), class: "fantasy-button fantasy-button--primary" %>
+          <%= link_to "New Album", new_folder_album_path(@folder), class: "fantasy-button fantasy-button--primary" %>
+          <%= link_to "Edit folder", edit_folder_path(@folder), class: "fantasy-button" %>
+          <% unless @folder.is_root? %>
+            <%= link_to "Delete folder",
+                        folder_path(@folder),
+                        class: "fantasy-button fantasy-button--danger",
+                        data: {
+                          turbo_method: :delete,
+                          turbo_confirm: "Delete this folder and everything inside it?"
+                        } %>
+          <% end %>
+        </div>
+      </div>
+    </div>
 
-  <% unless @folder.is_root? %>
-    <p>
-      <%= button_to "Delete folder",
-                    folder_path(@folder),
-                    method: :delete,
-                    data: { turbo_confirm: "Delete this folder and everything inside it?" } %>
-    </p>
-  <% end %>
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Folders</h2>
+        <span><%= pluralize(@child_folders.size, "folder") %></span>
+      </div>
 
-  <h2>Folders</h2>
-  <% if @child_folders.any? %>
-    <ul>
-      <% @child_folders.each do |folder| %>
-        <li><%= link_to folder.name, folder_path(folder) %></li>
+      <% if @child_folders.any? %>
+        <div class="library-grid">
+          <% @child_folders.each do |folder| %>
+            <article class="library-card library-card--folder">
+              <p class="library-card__kicker">Folder</p>
+              <h3 class="library-card__title">
+                <%= link_to folder.name, folder_path(folder) %>
+              </h3>
+              <p class="library-card__meta">
+                <%= pluralize(folder.child_folders.size, "child folder") %> ·
+                <%= pluralize(folder.albums.size, "album") %>
+              </p>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="album-empty-state">
+          <p>No child folders here yet.</p>
+          <%= link_to "New Folder", new_folder_folder_path(@folder), class: "fantasy-button fantasy-button--primary" %>
+        </div>
       <% end %>
-    </ul>
-  <% else %>
-    <p>No child folders.</p>
-  <% end %>
+    </div>
 
-  <h2>Albums</h2>
-  <% if @albums.any? %>
-    <ul>
-      <% @albums.each do |album| %>
-        <li><%= link_to album.name, album_path(album) %></li>
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Albums</h2>
+        <span><%= pluralize(@albums.size, "album") %></span>
+      </div>
+
+      <% if @albums.any? %>
+        <div class="library-grid">
+          <% @albums.each do |album| %>
+            <article class="library-card library-card--album">
+              <p class="library-card__kicker">Album</p>
+              <h3 class="library-card__title">
+                <%= link_to album.name, album_path(album) %>
+              </h3>
+
+              <% if album.description.present? %>
+                <p class="library-card__description"><%= album.description %></p>
+              <% end %>
+
+              <p class="library-card__meta"><%= pluralize(album.images.size, "image") %></p>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="album-empty-state">
+          <p>No albums in this folder yet.</p>
+          <%= link_to "New Album", new_folder_album_path(@folder), class: "fantasy-button fantasy-button--primary" %>
+        </div>
       <% end %>
-    </ul>
-  <% else %>
-    <p>No albums in this folder.</p>
-  <% end %>
+    </div>
+  </section>
 <% end %>
