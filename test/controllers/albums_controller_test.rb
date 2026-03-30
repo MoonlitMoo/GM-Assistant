@@ -77,6 +77,7 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Edit Album"
     assert_includes response.body, "Gallery"
+    assert_match(%r{href="#{album_path(album)}"[^>]*>Cancel<}, response.body)
   end
 
   test "updates an album" do

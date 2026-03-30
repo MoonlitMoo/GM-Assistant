@@ -40,7 +40,8 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     get new_album_image_path(album)
 
     assert_response :success
-    assert_includes response.body, "Upload Image"
+    assert_includes response.body, "New Image"
+    assert_includes response.body, "Description"
     assert_includes response.body, "Weathered Maps"
   end
 
@@ -58,7 +59,7 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
-    assert_includes response.body, "Upload Image"
+    assert_includes response.body, "New Image"
     assert_includes html_response_body, "Title can't be blank"
   end
 
@@ -90,6 +91,16 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_includes response.body, "Edit Image"
     assert_includes html_response_body, "Title can't be blank"
+  end
+
+  test "shows the current attachment filename when editing an image" do
+    image = create(:image, title: "Beacon Cliffs")
+
+    get edit_image_path(image)
+
+    assert_response :success
+    assert_includes response.body, "Current file:"
+    assert_includes response.body, image.file.filename.to_s
   end
 
   test "destroys an image and returns to its album" do

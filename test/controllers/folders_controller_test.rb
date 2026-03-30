@@ -49,7 +49,7 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "New Folder"
-    assert_includes response.body, parent.name
+    assert_match(%r{href="#{folder_path(parent)}"[^>]*>Cancel<}, response.body)
   end
 
   test "re-renders the new folder form when creation is invalid" do
@@ -77,6 +77,7 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Edit Folder"
     assert_includes response.body, "Villagers"
+    assert_match(%r{href="#{folder_path(folder)}"[^>]*>Cancel<}, response.body)
   end
 
   test "updates a folder" do
