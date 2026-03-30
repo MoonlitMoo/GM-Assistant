@@ -6,16 +6,39 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     campaign.root_folder.update!(name: "Archive Root")
     parent = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Districts")
     folder = create(:folder, campaign: campaign, parent: parent, name: "Villagers")
+    create(:folder, campaign: campaign, parent: folder, name: "Market Square")
+    create(:album, campaign: campaign, folder: folder, name: "Faces of the Ward", description: "Reference portraits")
 
     get folder_path(folder)
 
     assert_response :success
     assert_includes response.body, "Villagers"
+    assert_includes response.body, "New Folder"
+    assert_includes response.body, "New Album"
+    assert_includes response.body, "Market Square"
+    assert_includes response.body, "Faces of the Ward"
+    assert_match(%r{href="#{new_folder_folder_path(folder)}"}, response.body)
+    assert_match(%r{href="#{new_folder_album_path(folder)}"}, response.body)
     assert_match(
       /Moonwake Atlas<\/a>\s*&rsaquo;\s*<a[^>]*>Districts<\/a>\s*&rsaquo;\s*<span>Villagers<\/span>/,
       response.body
     )
     assert_no_match(/Archive Root/, response.body)
+  end
+
+  test "shows the root folder with only the campaign in breadcrumbs" do
+    campaign = create(:campaign, name: "Moonwake Atlas")
+
+    get folder_path(campaign.root_folder)
+
+    assert_response :success
+    breadcrumb_nav = response.body[/<nav aria-label="Breadcrumbs">.*?<\/nav>/m]
+
+    assert_match(
+      /<nav aria-label="Breadcrumbs">\s*<span>Moonwake Atlas<\/span>\s*<\/nav>/,
+      breadcrumb_nav
+    )
+    assert_no_match(/>\s*Root\s*</, breadcrumb_nav)
   end
 
   test "shows the new folder form" do

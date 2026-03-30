@@ -30,7 +30,10 @@ class CrudTest < ApplicationSystemTestCase
     folder_name = "Wharf Sketches"
 
     visit folder_path(root_folder)
-    click_link "New subfolder"
+
+    within ".record-actions" do
+      click_link "New Folder"
+    end
 
     fill_in "Name", with: folder_name
 
@@ -56,7 +59,9 @@ class CrudTest < ApplicationSystemTestCase
       find(".tree-folder", text: folder.name).find(".tree-toggle").click
     end
 
-    click_link "New album"
+    within ".record-actions" do
+      click_link "New Album"
+    end
 
     fill_in "Name", with: album_name
     fill_in "Description", with: "A tidy set of waterfront references."
