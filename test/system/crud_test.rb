@@ -96,11 +96,11 @@ class CrudTest < ApplicationSystemTestCase
     end
 
     fill_in "Title", with: image_title
-    fill_in "Notes", with: "Soft light over the water."
-    attach_file "File", test_image_path
+    fill_in "Description", with: "Soft light over the water."
+    attach_file "Image File", test_image_path
 
     assert_difference("Image.count", 1) do
-      click_button "Upload Image"
+      click_button "Create Image"
     end
 
     image = Image.find_by!(title: image_title, album: album)

@@ -1,21 +1,32 @@
-<%= form_with model: @folder do |form| %>
-  <% if @folder.errors.any? %>
-    <div>
-      <h2><%= pluralize(@folder.errors.count, "error") %> prevented this folder from being saved:</h2>
-      <ul>
-        <% @folder.errors.full_messages.each do |message| %>
-          <li><%= message %></li>
-        <% end %>
-      </ul>
+<section class="record-shell form-shell">
+  <div class="record-panel form-panel">
+    <div class="form-panel__header">
+      <p class="record-kicker">Folder</p>
+      <h1 class="record-title"><%= @folder.persisted? ? "Edit Folder" : "New Folder" %></h1>
     </div>
-  <% end %>
 
-  <div>
-    <%= form.label :name %><br>
-    <%= form.text_field :name %>
-  </div>
+    <%= form_with model: form_model, class: "resource-form" do |form| %>
+      <% if @folder.errors.any? %>
+        <div class="form-errors">
+          <h2><%= pluralize(@folder.errors.count, "error") %> prevented this folder from being saved:</h2>
+          <ul>
+            <% @folder.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
 
-  <div>
-    <%= form.submit %>
+      <div class="resource-form__field">
+        <%= form.label :name %>
+        <%= form.text_field :name, class: "resource-form__input", autofocus: true %>
+      </div>
+
+      <div class="resource-form__actions">
+        <%= form.submit(@folder.persisted? ? "Save Folder" : "Create Folder",
+                        class: "fantasy-button fantasy-button--primary") %>
+        <%= link_to "Cancel", cancel_path, class: "resource-form__cancel" %>
+      </div>
+    <% end %>
   </div>
-<% end %>
+</section>
