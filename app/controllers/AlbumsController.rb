@@ -11,6 +11,7 @@ class AlbumsController < ApplicationController
 
   def show
     @images = @album.images.with_attached_file
+    @presenting_image_id = @campaign.player_display&.current_image_id.to_i
   end
 
   def new
