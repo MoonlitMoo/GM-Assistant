@@ -1,4 +1,6 @@
 class FoldersController < ApplicationController
+  include Breadcrumbable
+
   layout "campaign"
   before_action :set_folder, only: [ :show, :edit, :update, :destroy ]
   before_action :set_parent_from_folder, only: [ :new, :create ], if: -> { params[:folder_id].present? }
@@ -64,14 +66,14 @@ class FoldersController < ApplicationController
   end
 
   def set_folder_show_breadcrumbs
-    @breadcrumbs = folder_breadcrumbs(@folder)
+    build_breadcrumbs(@folder)
   end
 
   def set_folder_new_breadcrumbs
-    @breadcrumbs = folder_breadcrumbs(@parent) + [ [ "New Folder", new_folder_folder_path(@parent) ] ]
+    @breadcrumbs = build_breadcrumbs(@parent) + [ [ "New Folder", new_folder_folder_path(@parent) ] ]
   end
 
   def set_folder_edit_breadcrumbs
-    @breadcrumbs = folder_breadcrumbs(@folder) + [ [ "Edit Folder", edit_folder_path(@folder) ] ]
+    @breadcrumbs = build_breadcrumbs(@folder) + [ [ "Edit Folder", edit_folder_path(@folder) ] ]
   end
 end

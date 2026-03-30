@@ -1,6 +1,23 @@
 require "test_helper"
 
 class FoldersControllerTest < ActionDispatch::IntegrationTest
+  test "shows a folder with breadcrumb context and omits the root folder" do
+    campaign = create(:campaign, name: "Moonwake Atlas")
+    campaign.root_folder.update!(name: "Archive Root")
+    parent = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Districts")
+    folder = create(:folder, campaign: campaign, parent: parent, name: "Villagers")
+
+    get folder_path(folder)
+
+    assert_response :success
+    assert_includes response.body, "Villagers"
+    assert_match(
+      /Moonwake Atlas<\/a>\s*&rsaquo;\s*<a[^>]*>Districts<\/a>\s*&rsaquo;\s*<span>Villagers<\/span>/,
+      response.body
+    )
+    assert_no_match(/Archive Root/, response.body)
+  end
+
   test "shows the new folder form" do
     campaign = create(:campaign)
     parent = campaign.root_folder
