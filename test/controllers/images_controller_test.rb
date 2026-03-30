@@ -8,14 +8,20 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     folder = create(:folder, campaign: campaign, parent: parent_folder, name: "Sea Caves")
     album = create(:album, campaign: campaign, folder: folder, name: "Tidewall Studies")
     image = create(:image, campaign: campaign, album: album, title: "Beacon Cliffs", notes: "Windy and bright")
+    create(:player_display, campaign: campaign, current_image: image)
 
     get image_path(image)
 
     assert_response :success
     assert_includes response.body, "Beacon Cliffs"
     assert_includes response.body, "Windy and bright"
+    assert_includes response.body, "Presenting"
+    assert_includes response.body, "Clear display"
     assert_includes response.body, "Edit image"
     assert_includes response.body, "Delete image"
+    assert_match(%r{data-controller="player-display"}, response.body)
+    assert_match(%r{#{present_campaign_player_display_path(campaign)}}, response.body)
+    assert_match(%r{#{clear_campaign_player_display_path(campaign)}}, response.body)
     assert_match(
       /Shoreline Atlas<\/a>\s*&rsaquo;\s*<a[^>]*>Cliffside Sketches<\/a>\s*&rsaquo;\s*<a[^>]*>Sea Caves<\/a>\s*&rsaquo;\s*<a[^>]*>Tidewall Studies<\/a>\s*&rsaquo;\s*<span>Beacon Cliffs<\/span>/,
       response.body

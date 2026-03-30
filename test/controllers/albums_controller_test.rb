@@ -9,6 +9,7 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     album = create(:album, campaign: campaign, folder: folder, name: "Storm Sketches")
     first_image = create(:image, campaign: campaign, album: album, title: "Anchor Watch", position: 1)
     second_image = create(:image, campaign: campaign, album: album, title: "Breakwater", position: 2)
+    create(:player_display, campaign: campaign, current_image: first_image)
 
     get album_path(album)
 
@@ -19,8 +20,13 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Delete album"
     assert_includes response.body, first_image.title
     assert_includes response.body, second_image.title
+    assert_includes response.body, "Presenting"
     assert_match(%r{href="#{image_path(first_image)}"}, response.body)
     assert_match(%r{href="#{image_path(second_image)}"}, response.body)
+    assert_match(%r{data-controller="player-display"}, response.body)
+    assert_match(%r{#{present_campaign_player_display_path(campaign)}}, response.body)
+    assert_match(%r{data-player-display-image-id="#{first_image.id}"}, response.body)
+    assert_match(%r{data-player-display-image-id="#{second_image.id}"}, response.body)
     assert_match(%r{rails/active_storage/representations}, response.body)
     assert_operator response.body.index(first_image.title), :<, response.body.index(second_image.title)
     assert_match(
