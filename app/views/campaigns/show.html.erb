@@ -1,22 +1,126 @@
 <%= content_body_frame do %>
-  <h1><%= @campaign.name %></h1>
+  <% child_folders = @root_folder.present? ? @root_folder.child_folders.order(:name) : [] %>
+  <% root_albums = @root_folder.present? ? @root_folder.albums.order(:name) : [] %>
+  <% recent_images = @campaign.images.includes(:album).order(created_at: :desc).limit(5) %>
+  <% album_count = @campaign.albums.count %>
+  <% image_count = @campaign.images.count %>
 
-  <% if @campaign.description.present? %>
-    <p><%= @campaign.description %></p>
-  <% end %>
+  <section class="record-shell campaign-dashboard">
+    <div class="record-panel">
+      <div class="record-header">
+        <div class="record-copy">
+          <p class="record-kicker">Campaign</p>
+          <h1 class="record-title"><%= @campaign.name %></h1>
 
-  <p>
-    <%= link_to "Edit campaign", edit_campaign_path(@campaign) %> |
-    <%= link_to "Back to campaigns", campaigns_path, data: { turbo_frame: "_top" } %>
-  </p>
+          <% if @campaign.description.present? %>
+            <p class="record-description"><%= @campaign.description %></p>
+          <% end %>
+        </div>
 
-  <h2>Library</h2>
+        <div class="record-actions">
+          <%= link_to "Edit campaign", edit_campaign_path(@campaign), class: "fantasy-button" %>
+          <%= link_to "Back to campaigns", campaigns_path, class: "fantasy-button", data: { turbo_frame: "_top" } %>
+        </div>
+      </div>
+    </div>
 
-  <% if @root_folder.present? %>
-    <p>
-      <%= link_to "Open root folder", folder_path(@root_folder) %>
-    </p>
-  <% else %>
-    <p>No root folder found.</p>
-  <% end %>
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Overview</h2>
+        <span>Campaign totals</span>
+      </div>
+
+      <div class="stats-grid">
+        <article class="stat-card">
+          <p class="stat-card__label">Total albums</p>
+          <p class="stat-card__value"><%= album_count %></p>
+        </article>
+
+        <article class="stat-card">
+          <p class="stat-card__label">Total images</p>
+          <p class="stat-card__value"><%= image_count %></p>
+        </article>
+      </div>
+    </div>
+
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Recently Added</h2>
+        <span>Latest 5 images</span>
+      </div>
+
+      <% if recent_images.any? %>
+        <div class="recent-list">
+          <% recent_images.each do |image| %>
+            <article class="recent-item">
+              <h3 class="recent-item__title"><%= link_to image.title, image_path(image) %></h3>
+              <p class="recent-item__subtitle"><%= image.album.name %></p>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="album-empty-state">
+          <p>No images have been added to this campaign yet.</p>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Folders</h2>
+        <span><%= pluralize(child_folders.size, "folder") %></span>
+      </div>
+
+      <% if child_folders.any? %>
+        <div class="library-grid">
+          <% child_folders.each do |folder| %>
+            <article class="library-card library-card--folder">
+              <p class="library-card__kicker">Folder</p>
+              <h3 class="library-card__title">
+                <%= link_to folder.name, folder_path(folder) %>
+              </h3>
+              <p class="library-card__meta">
+                <%= pluralize(folder.child_folders.size, "child folder") %> ·
+                <%= pluralize(folder.albums.size, "album") %>
+              </p>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="album-empty-state">
+          <p>No folders at the top level yet.</p>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Albums</h2>
+        <span><%= pluralize(root_albums.size, "album") %></span>
+      </div>
+
+      <% if root_albums.any? %>
+        <div class="library-grid">
+          <% root_albums.each do |album| %>
+            <article class="library-card library-card--album">
+              <p class="library-card__kicker">Album</p>
+              <h3 class="library-card__title">
+                <%= link_to album.name, album_path(album) %>
+              </h3>
+
+              <% if album.description.present? %>
+                <p class="library-card__description"><%= album.description %></p>
+              <% end %>
+
+              <p class="library-card__meta"><%= pluralize(album.images.size, "image") %></p>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="album-empty-state">
+          <p>No albums at the top level yet.</p>
+        </div>
+      <% end %>
+    </div>
+  </section>
 <% end %>

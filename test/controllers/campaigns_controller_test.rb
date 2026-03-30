@@ -2,13 +2,32 @@ require "test_helper"
 
 class CampaignsControllerTest < ActionDispatch::IntegrationTest
   test "shows a campaign with breadcrumb context" do
-    campaign = create(:campaign, name: "North Reach")
+    campaign = create(:campaign, name: "North Reach", description: "A weathered coastal frontier.")
+    root_folder = campaign.root_folder
+    create(:folder, campaign: campaign, parent: root_folder, name: "Locations")
+    album = create(:album, campaign: campaign, folder: root_folder, name: "Harbour Sketches")
+    oldest_image = create(:image, campaign: campaign, album: album, title: "Old Lantern")
+    oldest_image.update_columns(created_at: 6.days.ago)
+
+    5.times do |index|
+      image = create(:image, campaign: campaign, album: album, title: "Recent Image #{index + 1}")
+      image.update_columns(created_at: (5 - index).days.ago)
+    end
 
     get campaign_path(campaign)
 
     assert_response :success
     assert_includes response.body, "North Reach"
-    assert_includes response.body, "Open root folder"
+    assert_includes response.body, "A weathered coastal frontier."
+    assert_includes response.body, "Total albums"
+    assert_includes response.body, "Total images"
+    assert_includes response.body, "Recently Added"
+    assert_includes response.body, "Locations"
+    assert_includes response.body, "Harbour Sketches"
+    assert_includes response.body, "Recent Image 1"
+    assert_includes response.body, "Recent Image 5"
+    assert_no_match(/Old Lantern/, response.body)
+    assert_no_match(%r{href="#{folder_path(root_folder)}"}, response.body)
     assert_match(
       /<nav aria-label="Breadcrumbs">\s*<span>North Reach<\/span>\s*<\/nav>/,
       response.body
