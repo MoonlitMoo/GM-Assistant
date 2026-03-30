@@ -1,31 +1,37 @@
 <%= content_body_frame do %>
-  <h1><%= @image.title %></h1>
+  <section class="image-show">
+    <% if @image.file.attached? %>
+      <%= image_tag @image.file.representation(resize_to_limit: [ 1800, 1800 ]),
+                    alt: @image.title,
+                    class: "image-show__asset" %>
+    <% else %>
+      <div class="image-show__empty">
+        <p>No image file is attached to this record yet.</p>
+      </div>
+    <% end %>
 
-  <% if @image.notes.present? %>
-    <p><%= @image.notes %></p>
-  <% end %>
+    <div class="image-show-copy">
+      <p class="record-kicker">Image</p>
+      <h1 class="record-title"><%= @image.title %></h1>
 
-  <p>
-    Album:
-    <%= link_to @image.album.name, album_path(@image.album) %>
-  </p>
-
-  <p>
-    <%= link_to "Edit image", edit_image_path(@image) %>
-  </p>
-
-  <p>
-    <%= button_to "Delete image",
-                  image_path(@image),
-                  method: :delete,
-                  data: { turbo_confirm: "Delete this image?" } %>
-  </p>
-
-  <% if @image.file.attached? %>
-    <div>
-      <%= image_tag @image.file, style: "max-width: 100%; height: auto;" %>
+      <% if @image.notes.present? %>
+        <div class="record-description record-description--rich">
+          <%= simple_format(@image.notes) %>
+        </div>
+      <% else %>
+        <p class="record-description record-description--empty">No description recorded for this image yet.</p>
+      <% end %>
     </div>
-  <% else %>
-    <p>No file attached.</p>
-  <% end %>
+
+    <div class="record-actions image-show-actions">
+      <%= link_to "Edit image", edit_image_path(@image), class: "fantasy-button" %>
+      <%= link_to "Delete image",
+                  image_path(@image),
+                  class: "fantasy-button fantasy-button--danger",
+                  data: {
+                    turbo_method: :delete,
+                    turbo_confirm: "Delete this image?"
+                  } %>
+    </div>
+  </section>
 <% end %>
