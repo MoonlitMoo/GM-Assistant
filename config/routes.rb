@@ -17,6 +17,11 @@ Rails.application.routes.draw do
     member do
       get :tree
     end
+
+    resource :player_display, only: [], shallow: true do
+      patch :present
+      patch :clear
+    end
   end
 
   # Don't need to create folders outside of a folder, since the root folder is automatically created.
