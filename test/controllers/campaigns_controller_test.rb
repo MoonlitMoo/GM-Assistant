@@ -1,6 +1,20 @@
 require "test_helper"
 
 class CampaignsControllerTest < ActionDispatch::IntegrationTest
+  test "shows a campaign with breadcrumb context" do
+    campaign = create(:campaign, name: "North Reach")
+
+    get campaign_path(campaign)
+
+    assert_response :success
+    assert_includes response.body, "North Reach"
+    assert_includes response.body, "Open root folder"
+    assert_match(
+      /<nav aria-label="Breadcrumbs">\s*<span>North Reach<\/span>\s*<\/nav>/,
+      response.body
+    )
+  end
+
   test "shows the campaign index" do
     create(:campaign, name: "North Reach")
     create(:campaign, name: "Southern Isles")
