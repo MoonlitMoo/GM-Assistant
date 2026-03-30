@@ -33,4 +33,13 @@ class CampaignTest < ActiveSupport::TestCase
     campaign.destroy
     assert_nil Folder.find_by(id: folder_id)
   end
+
+  test "destroying a campaign destroys its player display" do
+    campaign = create(:campaign)
+    player_display = create(:player_display, :with_current_image, campaign: campaign)
+
+    campaign.destroy
+
+    assert_nil PlayerDisplay.find_by(id: player_display.id)
+  end
 end
