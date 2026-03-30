@@ -1,5 +1,4 @@
-<h1>New Campaign</h1>
+<% provide :title, "New Campaign — GM Assistant" %>
+<% provide :topbar_title, "Campaigns" %>
 
-<%= render "form" %>
-
-<p><%= link_to "Back", campaigns_path %></p>
+<%= render "form", cancel_path: campaigns_path %>

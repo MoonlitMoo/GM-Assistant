@@ -1,17 +1,55 @@
-<h1>Campaigns</h1>
+<% provide :title, "Campaigns — GM Assistant" %>
+<% provide :topbar_title, "Campaigns" %>
 
-<p><%= link_to "New campaign", new_campaign_path %></p>
+<section class="record-shell campaign-hub">
+  <div class="record-panel">
+    <div class="record-header">
+      <div class="record-copy">
+        <p class="record-kicker">Campaign Archive</p>
+        <h1 class="record-title">Campaigns</h1>
+        <p class="record-description">Choose a world to continue exploring, editing, or removing from the archive.</p>
+      </div>
 
-<% if @campaigns.any? %>
-  <ul>
-    <% @campaigns.each do |campaign| %>
-      <li>
-        <%= link_to campaign.name, campaign_path(campaign) %>
-        -
-        <%= link_to "Edit", edit_campaign_path(campaign) %>
-      </li>
+      <div class="record-actions">
+        <%= link_to "New Campaign", new_campaign_path, class: "fantasy-button fantasy-button--primary" %>
+      </div>
+    </div>
+  </div>
+
+  <div class="record-panel">
+    <div class="section-heading">
+      <h2>All Campaigns</h2>
+      <span><%= pluralize(@campaigns.size, "campaign") %></span>
+    </div>
+
+    <% if @campaigns.any? %>
+      <div class="campaign-grid">
+        <% @campaigns.each do |campaign| %>
+          <article class="campaign-card">
+            <div class="campaign-card__copy">
+              <p class="campaign-card__kicker">Campaign</p>
+              <h3 class="campaign-card__title">
+                <%= link_to campaign.name, campaign_path(campaign) %>
+              </h3>
+            </div>
+
+            <div class="campaign-card__actions">
+              <%= link_to "Edit campaign", edit_campaign_path(campaign), class: "fantasy-button" %>
+              <%= link_to "Delete",
+                          campaign_path(campaign),
+                          class: "fantasy-button fantasy-button--danger",
+                          data: {
+                            turbo_method: :delete,
+                            turbo_confirm: "Delete this campaign?"
+                          } %>
+            </div>
+          </article>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="album-empty-state">
+        <p>No campaigns yet.</p>
+      </div>
     <% end %>
-  </ul>
-<% else %>
-  <p>No campaigns yet.</p>
-<% end %>
+  </div>
+</section>

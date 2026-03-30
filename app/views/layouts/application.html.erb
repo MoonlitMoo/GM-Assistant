@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for(:title) || "Gm Assistant" %></title>
+    <title><%= content_for?(:title) ? yield(:title) : "GM Assistant" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Gm Assistant">
@@ -18,14 +18,21 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application" %>
     <%= vite_client_tag %>
     <%= vite_javascript_tag 'application' %>
 
   </head>
 
   <body>
-    <%= yield %>
+    <div id="top-bar">
+      <%= link_to "⚔ GM Assistant", campaigns_path %>
+      <span><%= content_for?(:topbar_title) ? yield(:topbar_title) : "Campaigns" %></span>
+      <span>✦</span>
+    </div>
+
+    <main class="standalone-main">
+      <%= yield %>
+    </main>
   </body>
 </html>
