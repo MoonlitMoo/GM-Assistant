@@ -3,7 +3,11 @@ class PlayerDisplaysController < ApplicationController
 
   def present
     if params[:current_image_id].blank?
-      render json: { errors: [ "current_image_id is required" ] }, status: :unprocessable_entity
+      respond_to do |format|
+        format.json { render json: { errors: [ "current_image_id is required" ] }, status: :unprocessable_entity }
+        format.turbo_stream { head :unprocessable_entity }
+        format.html { head :unprocessable_entity }
+      end
       return
     end
 
@@ -17,21 +21,40 @@ class PlayerDisplaysController < ApplicationController
       }
 
       ActionCable.server.broadcast(player_display_stream_name, payload)
-      render json: payload
+
+      respond_to do |format|
+        format.json { render json: payload }
+        format.turbo_stream { render_gm_panel_turbo_stream(@player_display) }
+        format.html { render_gm_panel_turbo_stream(@player_display) }
+      end
     else
-      render json: { errors: @player_display.errors.full_messages }, status: :unprocessable_entity
+      respond_to do |format|
+        format.json { render json: { errors: @player_display.errors.full_messages }, status: :unprocessable_entity }
+        format.turbo_stream { head :unprocessable_entity }
+        format.html { head :unprocessable_entity }
+      end
     end
   rescue ActiveRecord::InvalidForeignKey
-    render json: { errors: [ "Current image must exist" ] }, status: :unprocessable_entity
+    respond_to do |format|
+      format.json { render json: { errors: [ "Current image must exist" ] }, status: :unprocessable_entity }
+      format.turbo_stream { head :unprocessable_entity }
+      format.html { head :unprocessable_entity }
+    end
   end
 
   def clear
-    @campaign.player_display&.update!(current_image: nil)
+    player_display = @campaign.player_display
+    player_display&.update!(current_image: nil)
 
     payload = { cleared: true }
 
     ActionCable.server.broadcast(player_display_stream_name, payload)
-    render json: payload
+
+    respond_to do |format|
+      format.json { render json: payload }
+      format.turbo_stream { render_gm_panel_turbo_stream(player_display) }
+      format.html { render_gm_panel_turbo_stream(player_display) }
+    end
   end
 
   private
@@ -47,5 +70,20 @@ class PlayerDisplaysController < ApplicationController
 
   def player_display_stream_name
     "player_display_#{@campaign.id}"
+  end
+
+  def render_gm_panel_turbo_stream(player_display)
+    render turbo_stream: [
+      turbo_stream.replace(
+        "gm-panel-header",
+        partial: "player_displays/gm_panel_header",
+        locals: { player_display: player_display }
+      ),
+      turbo_stream.replace(
+        "gm-status",
+        partial: "player_displays/gm_status",
+        locals: { player_display: player_display }
+      )
+    ]
   end
 end

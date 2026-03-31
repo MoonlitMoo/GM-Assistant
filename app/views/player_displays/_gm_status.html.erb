@@ -1,0 +1,41 @@
+<%= turbo_frame_tag "gm-status" do %>
+  <% current_image = player_display&.current_image %>
+
+  <% if current_image.present? %>
+    <div class="gm-status-card">
+      <div class="gm-status-card__thumb">
+        <% if current_image.file.attached? && current_image.file.representable? %>
+          <%= image_tag current_image.file.representation(resize_to_fill: [ 96, 96 ]),
+                        alt: current_image.title,
+                        class: "gm-status-card__image" %>
+        <% else %>
+          <div class="gm-status-card__placeholder">No preview</div>
+        <% end %>
+      </div>
+
+      <div class="gm-status-card__copy">
+        <p class="gm-status-card__kicker">Now showing</p>
+        <p class="gm-status-card__title"><%= current_image.title %></p>
+
+        <% if gm_panel_breadcrumb(current_image).present? %>
+          <p class="gm-status-card__breadcrumb"><%= gm_panel_breadcrumb(current_image) %></p>
+        <% end %>
+      </div>
+
+      <div class="gm-status-card__actions">
+        <%= link_to "Jump to image",
+                    image_path(current_image),
+                    class: "fantasy-button",
+                    data: { turbo_frame: "content-body" } %>
+        <%= link_to "Clear display",
+                    clear_campaign_player_display_path(current_image.campaign),
+                    class: "fantasy-button fantasy-button--danger",
+                    data: { turbo_method: :patch } %>
+      </div>
+    </div>
+  <% else %>
+    <div class="gm-status-placeholder">
+      <p>Nothing is currently being shown to players.</p>
+    </div>
+  <% end %>
+<% end %>
