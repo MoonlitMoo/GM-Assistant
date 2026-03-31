@@ -19,8 +19,8 @@ export default class extends Controller {
 
     if (!imageId) return
 
-    await this.submit(button, this.presentUrlValue, { current_image_id: imageId }, (payload) => {
-      this.presentingImageIdValue = payload.image_id || 0
+    await this.submit(button, this.presentUrlValue, { current_image_id: imageId }, () => {
+      this.presentingImageIdValue = imageId
     })
   }
 
@@ -44,7 +44,7 @@ export default class extends Controller {
       const response = await fetch(url, {
         method: "PATCH",
         headers: {
-          "Accept": "application/json",
+          "Accept": "text/vnd.turbo-stream.html",
           "Content-Type": "application/json",
           "X-CSRF-Token": this.csrfToken,
           "X-Requested-With": "XMLHttpRequest"
@@ -53,14 +53,18 @@ export default class extends Controller {
         body: JSON.stringify(payload)
       })
 
-      const data = await response.json().catch(() => ({}))
+      const responseText = await response.text()
 
       if (!response.ok) {
-        window.console.error("Player display update failed", data.errors || response.statusText)
+        window.console.error("Player display update failed", responseText || response.statusText)
         return
       }
 
-      onSuccess(data)
+      if (responseText.trim().length > 0) {
+        window.Turbo.renderStreamMessage(responseText)
+      }
+
+      onSuccess()
     } catch (error) {
       window.console.error("Player display update failed", error)
     } finally {

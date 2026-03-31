@@ -28,6 +28,30 @@
         <!-- Sidebar -->
         <div id="sidebar">
           <div id="campaign-tree" data-tree-url="<%= tree_campaign_path(@campaign) %>"></div>
+          <details id="gm-panel" class="gm-panel">
+            <summary>
+              <%= render "player_displays/gm_panel_header", player_display: @campaign.player_display %>
+            </summary>
+            <%= render "player_displays/gm_status", player_display: @campaign.player_display %>
+          </details>
+          <script>
+            (() => {
+              function syncGmPanelState() {
+                const gmPanel = document.getElementById("gm-panel")
+                if (!gmPanel || gmPanel.dataset.stateBound === "true") return
+
+                gmPanel.open = sessionStorage.getItem("gm-panel-open") === "true"
+                gmPanel.addEventListener("toggle", () => {
+                  sessionStorage.setItem("gm-panel-open", gmPanel.open ? "true" : "false")
+                })
+                gmPanel.dataset.stateBound = "true"
+              }
+
+              document.addEventListener("turbo:load", syncGmPanelState)
+              document.addEventListener("DOMContentLoaded", syncGmPanelState)
+              syncGmPanelState()
+            })()
+          </script>
         </div>
 
         <!-- Main content -->
