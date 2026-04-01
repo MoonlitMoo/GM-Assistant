@@ -1,0 +1,13 @@
+<% current_image = player_display&.current_image %>
+
+<%= turbo_frame_tag "topbar-status",
+                    class: class_names("topbar-status-frame", { "is-empty": current_image.blank? }) do %>
+  <% if current_image.present? %>
+    <%= link_to image_path(current_image),
+                class: "topbar-status-link",
+                data: { turbo_frame: "content-body" } do %>
+      <span class="gm-status-dot is-active"></span>
+      <span class="topbar-status-title"><%= current_image.title %></span>
+    <% end %>
+  <% end %>
+<% end %>
