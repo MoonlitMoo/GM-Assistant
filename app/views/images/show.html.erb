@@ -44,7 +44,7 @@
                      class: "fantasy-button",
                      disabled: @presenting_image_id.zero?,
                      data: { action: "click->player-display#clear", player_display_clear: true } %>
-      <%= link_to "Edit image", edit_image_path(@image), class: "fantasy-button" %>
+      <%= link_to "Edit image", edit_image_path(@image, form_navigation_params), class: "fantasy-button" %>
       <%= link_to "Delete image",
                   image_path(@image),
                   class: "fantasy-button fantasy-button--danger",

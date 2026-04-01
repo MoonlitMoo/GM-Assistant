@@ -6,6 +6,8 @@
     </div>
 
     <%= form_with model: @campaign, class: "resource-form" do |form| %>
+      <%= form_return_to_field %>
+
       <% if @campaign.errors.any? %>
         <div class="form-errors">
           <h2><%= pluralize(@campaign.errors.count, "error") %> prevented this campaign from being saved:</h2>

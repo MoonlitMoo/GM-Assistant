@@ -6,6 +6,8 @@
     </div>
 
     <%= form_with model: form_model, class: "resource-form" do |form| %>
+      <%= form_return_to_field %>
+
       <% if @image.errors.any? %>
         <div class="form-errors">
           <h2><%= pluralize(@image.errors.count, "error") %> prevented this image from being saved:</h2>

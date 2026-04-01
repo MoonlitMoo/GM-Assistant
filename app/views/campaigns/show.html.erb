@@ -18,7 +18,7 @@
         </div>
 
         <div class="record-actions">
-          <%= link_to "Edit campaign", edit_campaign_path(@campaign), class: "fantasy-button" %>
+          <%= link_to "Edit campaign", edit_campaign_path(@campaign, form_navigation_params), class: "fantasy-button" %>
           <%= link_to "Back to campaigns", campaigns_path, class: "fantasy-button", data: { turbo_frame: "_top" } %>
         </div>
       </div>
