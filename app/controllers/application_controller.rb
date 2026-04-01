@@ -9,4 +9,12 @@ class ApplicationController < ActionController::Base
   def breadcrumbs
     @breadcrumbs || []
   end
+
+  def touch_campaign_activity
+    return if @campaign.blank?
+    return if @campaign.destroyed?
+    return if response.status >= 400
+
+    @campaign.touch
+  end
 end

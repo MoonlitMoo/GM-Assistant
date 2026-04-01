@@ -64,6 +64,29 @@ class PlayerDisplayTest < ApplicationSystemTestCase
     assert_equal @image.id, @campaign.reload.player_display.current_image_id
   end
 
+  test "clearing the display updates the active album overlay", :js do
+    create(:player_display, campaign: @campaign, current_image: @image)
+
+    visit album_path(@album)
+    assert_selector ".image-card__present-button.fantasy-button--active", text: "Presenting"
+
+    find("#gm-panel summary").click
+
+    within "#gm-status" do
+      click_link "Clear display"
+    end
+
+    image_card = find(".image-card", text: @image.title)
+
+    assert_no_selector ".image-card__present-button.fantasy-button--active"
+
+    image_card.hover
+
+    within image_card do
+      assert_selector ".image-card__present-button", text: "Present"
+    end
+  end
+
   test "navigating to the player page returns a page with the minimal player layout", :js do
     visit route_helpers.player_campaign_path(@campaign)
 
