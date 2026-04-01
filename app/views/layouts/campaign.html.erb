@@ -26,6 +26,10 @@
         <%= yield %>
       </main>
     <% else %>
+      <% recent_events = PresentationEvent.recent_for_panel(
+           @campaign,
+           excluding_image: @campaign.player_display&.current_image
+         ) %>
       <div id="main-wrapper">
 
         <!-- Sidebar -->
@@ -35,7 +39,9 @@
             <summary>
               <%= render "player_displays/gm_panel_header", player_display: @campaign.player_display %>
             </summary>
-            <%= render "player_displays/gm_status", player_display: @campaign.player_display %>
+            <%= render "player_displays/gm_status",
+                       player_display: @campaign.player_display,
+                       recent_events: recent_events %>
           </details>
           <script>
             (() => {

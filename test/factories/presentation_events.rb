@@ -5,7 +5,7 @@ FactoryBot.define do
     image { association(:image, campaign: campaign) }
     image_title { image.title }
 
-    trait :cleared do
+    trait :cleared_event do
       event_type { :cleared }
       image { nil }
       image_title { nil }

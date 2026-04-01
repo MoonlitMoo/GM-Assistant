@@ -8,6 +8,7 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     album = create(:album, campaign: campaign, folder: root_folder, name: "Harbour Sketches")
     oldest_image = create(:image, campaign: campaign, album: album, title: "Old Lantern")
     oldest_image.update_columns(created_at: 6.days.ago)
+    create(:presentation_event, campaign: campaign, image: oldest_image, image_title: oldest_image.title)
 
     5.times do |index|
       image = create(:image, campaign: campaign, album: album, title: "Recent Image #{index + 1}")
@@ -21,12 +22,14 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "A weathered coastal frontier."
     assert_includes response.body, "Total albums"
     assert_includes response.body, "Total images"
+    assert_includes response.body, "Recently shown"
     assert_includes response.body, "Recently Added"
     assert_includes response.body, "Locations"
     assert_includes response.body, "Harbour Sketches"
+    assert_includes response.body, "Old Lantern"
     assert_includes response.body, "Recent Image 1"
     assert_includes response.body, "Recent Image 5"
-    assert_no_match(/Old Lantern/, response.body)
+    assert_no_match(/<div class="recent-list">.*Old Lantern/m, response.body)
     assert_no_match(%r{href="#{folder_path(root_folder)}"}, response.body)
     assert_match(
       /<nav aria-label="Breadcrumbs">\s*<span>North Reach<\/span>\s*<\/nav>/,
