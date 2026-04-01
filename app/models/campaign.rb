@@ -1,6 +1,7 @@
 class Campaign < ApplicationRecord
   has_one :root_folder, -> { where(is_root: true) }, class_name: "Folder", dependent: :destroy
   has_one :player_display, dependent: :destroy
+  has_many :presentation_events, dependent: :destroy
   has_many :folders, dependent: :destroy
   has_many :albums, dependent: :destroy
   has_many :images, dependent: :destroy

@@ -3,6 +3,7 @@ class Image < ApplicationRecord
   belongs_to :album
 
   has_one_attached :file
+  has_many :presentation_events, dependent: :nullify
 
   validates :title, presence: true
   validates :file, presence: true, on: :create
