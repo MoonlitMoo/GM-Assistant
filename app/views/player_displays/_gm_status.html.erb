@@ -38,4 +38,30 @@
       <p>Nothing is currently being shown to players.</p>
     </div>
   <% end %>
+
+  <section class="gm-recent">
+    <p class="gm-status-card__kicker">Recently shown</p>
+
+    <% if recent_events.any? %>
+      <ul class="gm-recent-list">
+        <% recent_events.each do |event| %>
+          <li class="gm-recent-item">
+            <p class="gm-recent-item__title"><%= event.image_title %></p>
+
+            <% if event.image.present? %>
+              <%= button_to "Present again",
+                            present_campaign_player_display_path(event.campaign),
+                            method: :patch,
+                            params: { current_image_id: event.image_id },
+                            class: "fantasy-button fantasy-button--primary gm-recent-item__action" %>
+            <% else %>
+              <p class="gm-recent-item__missing">Image no longer available.</p>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="gm-recent__empty">Nothing has been shown recently.</p>
+    <% end %>
+  </section>
 <% end %>

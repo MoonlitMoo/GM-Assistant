@@ -12,26 +12,22 @@ class PlayerDisplaysController < ApplicationController
     end
 
     @player_display = @campaign.player_display || @campaign.build_player_display
+    previous_image = @player_display.current_image
+
+    if previous_image&.id.to_s == params[:current_image_id].to_s
+      respond_with_player_display(@player_display, broadcast: false)
+      return
+    end
+
     @player_display.current_image_id = params[:current_image_id]
 
     if @player_display.valid?
       PlayerDisplay.transaction do
+        record_presented_event!(previous_image) if previous_image.present?
         @player_display.save!
-        record_presented_event!(@player_display.current_image)
       end
 
-      payload = {
-        image_url: image_url_for(@player_display.current_image),
-        image_id: @player_display.current_image_id
-      }
-
-      ActionCable.server.broadcast(player_display_stream_name, payload)
-
-      respond_to do |format|
-        format.json { render json: payload }
-        format.turbo_stream { render_gm_panel_turbo_stream(@player_display) }
-        format.html { render_gm_panel_turbo_stream(@player_display) }
-      end
+      respond_with_player_display(@player_display)
     else
       respond_to do |format|
         format.json { render json: { errors: @player_display.errors.full_messages }, status: :unprocessable_entity }
@@ -55,7 +51,10 @@ class PlayerDisplaysController < ApplicationController
 
   def clear
     player_display = @campaign.player_display
+    previous_image = player_display&.current_image
+
     PlayerDisplay.transaction do
+      record_presented_event!(previous_image) if previous_image.present?
       player_display&.update!(current_image: nil)
       record_cleared_event!
     end
@@ -102,6 +101,13 @@ class PlayerDisplaysController < ApplicationController
     )
   end
 
+  def recent_presentation_events(player_display)
+    PresentationEvent.recent_for_panel(
+      @campaign,
+      excluding_image: player_display&.current_image
+    )
+  end
+
   def render_gm_panel_turbo_stream(player_display)
     render turbo_stream: [
       turbo_stream.replace(
@@ -112,7 +118,10 @@ class PlayerDisplaysController < ApplicationController
       turbo_stream.replace(
         "gm-status",
         partial: "player_displays/gm_status",
-        locals: { player_display: player_display }
+        locals: {
+          player_display: player_display,
+          recent_events: recent_presentation_events(player_display)
+        }
       ),
       turbo_stream.replace(
         "topbar-status",
@@ -120,5 +129,20 @@ class PlayerDisplaysController < ApplicationController
         locals: { player_display: player_display }
       )
     ]
+  end
+
+  def respond_with_player_display(player_display, broadcast: true)
+    payload = {
+      image_url: image_url_for(player_display.current_image),
+      image_id: player_display.current_image_id
+    }
+
+    ActionCable.server.broadcast(player_display_stream_name, payload) if broadcast
+
+    respond_to do |format|
+      format.json { render json: payload }
+      format.turbo_stream { render_gm_panel_turbo_stream(player_display) }
+      format.html { render_gm_panel_turbo_stream(player_display) }
+    end
   end
 end
