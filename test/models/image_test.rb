@@ -47,6 +47,10 @@ class ImageTest < ActiveSupport::TestCase
     assert image.valid?
   end
 
+  test "show title defaults to false" do
+    assert_equal false, build(:image).show_title
+  end
+
   test "thumbnail representation can be processed" do
     image = create(:image)
 

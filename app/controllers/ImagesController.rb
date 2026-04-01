@@ -57,7 +57,7 @@ class ImagesController < ApplicationController
   end
 
   def image_params
-    params.expect(image: [ :title, :notes, :file ])
+    params.expect(image: [ :title, :notes, :file, :show_title ])
   end
 
   def set_campaign

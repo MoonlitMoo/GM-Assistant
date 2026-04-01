@@ -4,11 +4,14 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
   include ActionCable::TestHelper
 
   test "present with a valid image sets current image id and returns json" do
-    image = create(:image)
-    player_display = create(:player_display, campaign: image.campaign)
+    image = create(:image, show_title: false)
+    player_display = create(:player_display, campaign: image.campaign, transition_type: :instant)
     expected_payload = {
       "image_url" => rails_blob_url(image.file, host: "www.example.com"),
-      "image_id" => image.id
+      "image_id" => image.id,
+      "image_title" => image.title,
+      "show_title" => false,
+      "transition_type" => "instant"
     }
 
     assert_no_difference("PresentationEvent.count") do
@@ -24,6 +27,19 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal expected_payload, JSON.parse(response.body)
     assert_equal image.id, player_display.reload.current_image_id
+    assert_equal false, player_display.show_title
+  end
+
+  test "present sets player display show title from image show title" do
+    image = create(:image, show_title: false)
+    player_display = create(:player_display, campaign: image.campaign, show_title: true)
+
+    patch present_campaign_player_display_path(image.campaign),
+          params: { current_image_id: image.id },
+          as: :json
+
+    assert_response :success
+    assert_equal false, player_display.reload.show_title
   end
 
   test "present changing the image creates a presentation event for the previously shown image" do
@@ -71,7 +87,10 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     image = player_display.current_image
     expected_payload = {
       "image_url" => rails_blob_url(image.file, host: "www.example.com"),
-      "image_id" => image.id
+      "image_id" => image.id,
+      "image_title" => image.title,
+      "show_title" => false,
+      "transition_type" => "crossfade"
     }
 
     assert_no_difference("PresentationEvent.count") do
@@ -161,6 +180,34 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     assert_nil presentation_event.image_title
   end
 
+  test "toggle title flips show title and returns turbo stream" do
+    player_display = create(:player_display, :with_current_image, show_title: true)
+
+    assert_broadcast_on("player_display_#{player_display.campaign_id}", { "show_title" => false }) do
+      patch toggle_title_campaign_path(player_display.campaign),
+            headers: { "Accept" => Mime[:turbo_stream].to_s }
+    end
+
+    assert_response :success
+    assert_equal Mime[:turbo_stream].to_s, response.media_type
+    assert_equal false, player_display.reload.show_title
+    assert_includes response.body, 'target="gm-panel-header"'
+    assert_includes response.body, 'target="gm-status"'
+  end
+
+  test "update transition updates transition type and returns turbo stream" do
+    player_display = create(:player_display, :with_current_image, transition_type: :crossfade)
+
+    patch update_transition_campaign_path(player_display.campaign),
+          params: { transition_type: "instant" },
+          headers: { "Accept" => Mime[:turbo_stream].to_s }
+
+    assert_response :success
+    assert_equal Mime[:turbo_stream].to_s, response.media_type
+    assert_equal "instant", player_display.reload.transition_type
+    assert_includes response.body, 'target="gm-status"'
+  end
+
   test "clear turbo stream clears the topbar status" do
     player_display = create(:player_display, :with_current_image)
 
@@ -201,5 +248,7 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, 'id="player-screen"'
     assert_includes response.body, %(data-campaign-id="#{campaign.id}")
+    assert_includes response.body, 'data-show-title="false"'
+    assert_includes response.body, 'data-transition-type="crossfade"'
   end
 end

@@ -1,13 +1,61 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 import consumer from "../channels/consumer"
 
-export default function PlayerScreen({ campaignId, initialImageUrl }) {
-  const [imageUrl, setImageUrl] = useState(initialImageUrl)
+const CROSSFADE_DURATION = 400
+
+function buildImage(url, title) {
+  if (!url) return null
+
+  return {
+    url,
+    title: title || ""
+  }
+}
+
+function normalizeTransitionType(value) {
+  return value === "instant" ? "instant" : "crossfade"
+}
+
+function hasOwnKey(payload, key) {
+  return Object.prototype.hasOwnProperty.call(payload, key)
+}
+
+export default function PlayerScreen({
+  campaignId,
+  initialImageUrl,
+  initialImageTitle,
+  initialShowTitle,
+  initialTransitionType
+}) {
+  const [image, setImage] = useState(buildImage(initialImageUrl, initialImageTitle))
+  const [showTitle, setShowTitle] = useState(initialShowTitle)
+  const [transitionType, setTransitionType] = useState(normalizeTransitionType(initialTransitionType))
+  const [isTransitioning, setIsTransitioning] = useState(false)
+
+  const imageRef = useRef(image)
+  const transitionTypeRef = useRef(transitionType)
+  const timeoutRef = useRef(null)
 
   useEffect(() => {
-    setImageUrl(initialImageUrl)
-  }, [initialImageUrl])
+    imageRef.current = image
+  }, [image])
+
+  useEffect(() => {
+    transitionTypeRef.current = transitionType
+  }, [transitionType])
+
+  useEffect(() => {
+    clearPendingTransition()
+    setImage(buildImage(initialImageUrl, initialImageTitle))
+    setShowTitle(initialShowTitle)
+    setTransitionType(normalizeTransitionType(initialTransitionType))
+    setIsTransitioning(false)
+  }, [initialImageTitle, initialImageUrl, initialShowTitle, initialTransitionType])
+
+  useEffect(() => () => {
+    clearPendingTransition()
+  }, [])
 
   useEffect(() => {
     if (!campaignId) return undefined
@@ -17,11 +65,18 @@ export default function PlayerScreen({ campaignId, initialImageUrl }) {
       {
         received(data) {
           if (data.cleared) {
-            setImageUrl(null)
+            handleClear()
             return
           }
 
-          setImageUrl(data.image_url || null)
+          if (hasOwnKey(data, "image_url")) {
+            handlePresent(data)
+            return
+          }
+
+          if (hasOwnKey(data, "show_title")) {
+            setShowTitle(Boolean(data.show_title))
+          }
         }
       }
     )
@@ -31,17 +86,86 @@ export default function PlayerScreen({ campaignId, initialImageUrl }) {
     }
   }, [campaignId])
 
+  function clearPendingTransition() {
+    if (!timeoutRef.current) return
+
+    window.clearTimeout(timeoutRef.current)
+    timeoutRef.current = null
+  }
+
+  function finishTransition(afterUpdate) {
+    clearPendingTransition()
+    setIsTransitioning(true)
+
+    timeoutRef.current = window.setTimeout(() => {
+      afterUpdate()
+      timeoutRef.current = null
+      window.requestAnimationFrame(() => {
+        setIsTransitioning(false)
+      })
+    }, CROSSFADE_DURATION)
+  }
+
+  function handlePresent(data) {
+    const nextImage = buildImage(data.image_url, data.image_title)
+    const nextShowTitle = Boolean(data.show_title)
+    const nextTransitionType = normalizeTransitionType(data.transition_type)
+
+    const applyUpdate = () => {
+      setImage(nextImage)
+      setShowTitle(nextShowTitle)
+      setTransitionType(nextTransitionType)
+    }
+
+    if (nextTransitionType === "crossfade") {
+      if (imageRef.current) {
+        finishTransition(applyUpdate)
+      } else {
+        clearPendingTransition()
+        applyUpdate()
+        setIsTransitioning(true)
+        window.requestAnimationFrame(() => {
+          setIsTransitioning(false)
+        })
+      }
+      return
+    }
+
+    clearPendingTransition()
+    setIsTransitioning(false)
+    applyUpdate()
+  }
+
+  function handleClear() {
+    if (transitionTypeRef.current === "crossfade" && imageRef.current) {
+      finishTransition(() => {
+        setImage(null)
+      })
+      return
+    }
+
+    clearPendingTransition()
+    setIsTransitioning(false)
+    setImage(null)
+  }
+
   return (
     <div className="player-screen">
-      {imageUrl ? (
+      {image ? (
         <img
-          src={imageUrl}
+          src={image.url}
           alt="Presented artwork"
-          className="player-screen__image"
+          className={`player-screen__image player-image${isTransitioning ? " transitioning" : ""}`}
         />
       ) : (
         <div className="player-screen__blank" />
       )}
+
+      {image ? (
+        <div className={`player-title-overlay${showTitle && !isTransitioning ? " is-visible" : ""}`}>
+          {image.title}
+        </div>
+      ) : null}
     </div>
   )
 }

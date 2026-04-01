@@ -3,6 +3,8 @@ class PlayerController < ApplicationController
   before_action :set_campaign
 
   def show
+    @player_display = @campaign.player_display || @campaign.build_player_display
+    @current_image = @player_display.current_image
     @current_image_url = current_image_url
   end
 
@@ -13,8 +15,7 @@ class PlayerController < ApplicationController
   end
 
   def current_image_url
-    current_image = @campaign.player_display&.current_image
-    return nil unless current_image&.file&.attached?
-    url_for(current_image.file)
+    return nil unless @current_image&.file&.attached?
+    url_for(@current_image.file)
   end
 end

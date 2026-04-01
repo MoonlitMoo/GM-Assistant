@@ -1,4 +1,7 @@
 <div id="player-screen"
      class="player-screen-root"
      data-campaign-id="<%= @campaign.id %>"
-     data-image-url="<%= @current_image_url %>"></div>
+     data-initial-image="<%= @current_image_url %>"
+     data-image-title="<%= @current_image&.title %>"
+     data-show-title="<%= @player_display.show_title %>"
+     data-transition-type="<%= @player_display.transition_type %>"></div>
