@@ -16,10 +16,23 @@ class NavigationTest < ApplicationSystemTestCase
     assert_link @campaign.name
   end
 
+  test "shows an explicit empty state in the sidebar when the campaign tree has no items" do
+    empty_campaign = create(:campaign, name: "Blank Atlas")
+
+    visit campaign_path(empty_campaign)
+
+    within "#campaign-tree" do
+      assert_text(/Campaign library is empty/i)
+      assert_text "Create a folder or album to start organizing this campaign."
+    end
+  end
+
   test "navigates from the campaign index to the campaign dashboard" do
     visit campaigns_path
 
-    click_link @campaign.name
+    within find(".campaign-card", text: @campaign.name) do
+      find(".campaign-card__title a", text: @campaign.name, exact_text: true).click
+    end
 
     assert_current_path campaign_path(@campaign)
     assert_text "Recently Added"
@@ -94,6 +107,21 @@ class NavigationTest < ApplicationSystemTestCase
       assert_text @folder.name
       assert_no_text @root_folder.name
     end
+  end
+
+  test "expands the sidebar tree to the current nested folder" do
+    nested_folder = create(:folder, campaign: @campaign, parent: @folder, name: "Signal Fires")
+    nested_album = create(:album, campaign: @campaign, folder: nested_folder, name: "Watch Posts")
+
+    visit folder_path(nested_folder)
+
+    assert_selector "#sidebar .tree-folder .tree-label", text: @folder.name
+    assert_selector "#sidebar .tree-folder .tree-label", text: nested_folder.name
+    assert_selector "#sidebar .tree-album .tree-label", text: nested_album.name
+
+    storage_key = "campaign-tree:#{@campaign.id}:expanded"
+    expanded_state = page.evaluate_script("JSON.parse(sessionStorage.getItem('#{storage_key}'))")
+    assert_equal({ @folder.id.to_s => true, nested_folder.id.to_s => true }, expanded_state)
   end
 
   test "persists expanded sidebar folders across campaign page visits" do
