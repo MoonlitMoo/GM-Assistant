@@ -32,7 +32,10 @@ function mountPlayerScreen() {
   root.render(
     <PlayerScreen
       campaignId={element.dataset.campaignId}
-      initialImageUrl={element.dataset.imageUrl || null}
+      initialImageUrl={element.dataset.initialImage || element.dataset.imageUrl || null}
+      initialImageTitle={element.dataset.imageTitle || ""}
+      initialShowTitle={element.dataset.showTitle === "true"}
+      initialTransitionType={element.dataset.transitionType || "crossfade"}
     />
   )
 }

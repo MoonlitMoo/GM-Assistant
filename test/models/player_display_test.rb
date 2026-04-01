@@ -7,6 +7,15 @@ class PlayerDisplayTest < ActiveSupport::TestCase
     assert player_display.valid?
   end
 
+  test "transition type enum values are valid" do
+    assert build(:player_display, transition_type: :crossfade).valid?
+    assert build(:player_display, transition_type: :instant).valid?
+  end
+
+  test "show title defaults to false" do
+    assert_equal false, build(:player_display).show_title
+  end
+
   test "is valid without a current image" do
     player_display = build(:player_display)
 
