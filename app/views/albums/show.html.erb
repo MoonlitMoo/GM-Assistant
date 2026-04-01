@@ -16,8 +16,8 @@
         </div>
 
         <div class="record-actions">
-          <%= link_to "Upload image", new_album_image_path(@album), class: "fantasy-button fantasy-button--primary" %>
-          <%= link_to "Edit album", edit_album_path(@album), class: "fantasy-button" %>
+          <%= link_to "Upload image", new_album_image_path(@album, form_navigation_params), class: "fantasy-button fantasy-button--primary" %>
+          <%= link_to "Edit album", edit_album_path(@album, form_navigation_params), class: "fantasy-button" %>
           <%= link_to "Delete album",
                       album_path(@album),
                       class: "fantasy-button fantasy-button--danger",
@@ -76,7 +76,7 @@
       <% else %>
         <div class="album-empty-state">
           <p>This album is still waiting for its first illustration.</p>
-          <%= link_to "Upload image", new_album_image_path(@album), class: "fantasy-button fantasy-button--primary" %>
+          <%= link_to "Upload image", new_album_image_path(@album, form_navigation_params), class: "fantasy-button fantasy-button--primary" %>
         </div>
       <% end %>
     </div>

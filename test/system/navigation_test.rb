@@ -56,6 +56,32 @@ class NavigationTest < ApplicationSystemTestCase
     assert_text @image.title
   end
 
+  test "canceling an invalid campaign edit returns to the campaign index" do
+    visit campaigns_path
+
+    within find(".campaign-card", text: @campaign.name) do
+      click_link "Edit campaign"
+    end
+
+    fill_in "Name", with: ""
+    click_button "Save Campaign"
+
+    assert_selector ".form-errors", text: "Name can't be blank"
+
+    click_link "Cancel"
+
+    assert_current_path campaigns_path
+    assert_link @campaign.name
+  end
+
+  test "canceling image edit returns to the image page" do
+    visit edit_image_path(@image)
+    click_link "Cancel"
+
+    assert_current_path route_helpers.image_path(@image)
+    assert_text @image.title
+  end
+
   test "navigates from the sidebar tree and refreshes breadcrumbs" do
     visit folder_path(@root_folder)
 

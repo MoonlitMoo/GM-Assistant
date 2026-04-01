@@ -109,6 +109,15 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, image.file.filename.to_s
   end
 
+  test "shows the edit image form with the image as the default cancel path" do
+    image = create(:image, title: "Beacon Cliffs")
+
+    get edit_image_path(image)
+
+    assert_response :success
+    assert_match(%r{href="#{image_path(image)}"[^>]*>Cancel<}, response.body)
+  end
+
   test "destroys an image and returns to its album" do
     image = create(:image)
 

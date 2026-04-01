@@ -17,8 +17,8 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "New Album"
     assert_includes response.body, "Market Square"
     assert_includes response.body, "Faces of the Ward"
-    assert_match(%r{href="#{new_folder_folder_path(folder)}"}, response.body)
-    assert_match(%r{href="#{new_folder_album_path(folder)}"}, response.body)
+    assert_includes response.body, new_folder_folder_path(folder)
+    assert_includes response.body, new_folder_album_path(folder)
     assert_match(
       /Moonwake Atlas<\/a>\s*&rsaquo;\s*<a[^>]*>Districts<\/a>\s*&rsaquo;\s*<span>Villagers<\/span>/,
       response.body

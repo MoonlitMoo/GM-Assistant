@@ -48,7 +48,7 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "New Campaign"
     assert_includes response.body, "North Reach"
     assert_includes response.body, "Southern Isles"
-    assert_match(%r{href="#{edit_campaign_path(first_campaign)}"}, response.body)
+    assert_includes response.body, edit_campaign_path(first_campaign)
     assert_match(%r{href="#{campaign_path(second_campaign)}"}, response.body)
     assert_includes response.body, 'data-turbo-confirm="Delete this campaign?"'
   end
@@ -71,6 +71,16 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Edit Campaign"
     assert_includes response.body, "Save Campaign"
     assert_match(%r{href="#{campaign_path(campaign)}"[^>]*>Cancel<}, response.body)
+  end
+
+  test "shows the edit campaign form with the supplied return path" do
+    campaign = create(:campaign, name: "North Reach")
+
+    get edit_campaign_path(campaign, return_to: campaigns_path)
+
+    assert_response :success
+    assert_match(%r{href="#{campaigns_path}"[^>]*>Cancel<}, response.body)
+    assert_match(%r{name="return_to"[^>]*value="#{campaigns_path}"}, response.body)
   end
 
   test "returns the campaign tree as nested json" do

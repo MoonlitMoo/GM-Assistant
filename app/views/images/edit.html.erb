@@ -1,5 +1,5 @@
 <%= content_body_frame do %>
   <%= render "form",
              form_model: @image,
-             cancel_path: @image.album %>
+             cancel_path: form_cancel_path(@image) %>
 <% end %>
