@@ -11,7 +11,7 @@
       </div>
 
       <div class="record-actions">
-        <%= link_to "New Campaign", new_campaign_path, class: "fantasy-button fantasy-button--primary" %>
+        <%= link_to "New Campaign", new_campaign_path(form_navigation_params), class: "fantasy-button fantasy-button--primary" %>
       </div>
     </div>
   </div>
@@ -34,7 +34,7 @@
             </div>
 
             <div class="campaign-card__actions">
-              <%= link_to "Edit campaign", edit_campaign_path(campaign), class: "fantasy-button" %>
+              <%= link_to "Edit campaign", edit_campaign_path(campaign, form_navigation_params), class: "fantasy-button" %>
               <%= link_to "Delete",
                           campaign_path(campaign),
                           class: "fantasy-button fantasy-button--danger",
