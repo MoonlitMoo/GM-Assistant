@@ -83,6 +83,11 @@ class PlayerDisplaysController < ApplicationController
         "gm-status",
         partial: "player_displays/gm_status",
         locals: { player_display: player_display }
+      ),
+      turbo_stream.replace(
+        "topbar-status",
+        partial: "player_displays/topbar_status",
+        locals: { player_display: player_display }
       )
     ]
   end
