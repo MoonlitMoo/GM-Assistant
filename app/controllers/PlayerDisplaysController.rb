@@ -14,7 +14,12 @@ class PlayerDisplaysController < ApplicationController
     @player_display = @campaign.player_display || @campaign.build_player_display
     @player_display.current_image_id = params[:current_image_id]
 
-    if @player_display.save
+    if @player_display.valid?
+      PlayerDisplay.transaction do
+        @player_display.save!
+        record_presented_event!(@player_display.current_image)
+      end
+
       payload = {
         image_url: image_url_for(@player_display.current_image),
         image_id: @player_display.current_image_id
@@ -40,11 +45,20 @@ class PlayerDisplaysController < ApplicationController
       format.turbo_stream { head :unprocessable_entity }
       format.html { head :unprocessable_entity }
     end
+  rescue ActiveRecord::RecordInvalid => error
+    respond_to do |format|
+      format.json { render json: { errors: error.record.errors.full_messages }, status: :unprocessable_entity }
+      format.turbo_stream { head :unprocessable_entity }
+      format.html { head :unprocessable_entity }
+    end
   end
 
   def clear
     player_display = @campaign.player_display
-    player_display&.update!(current_image: nil)
+    PlayerDisplay.transaction do
+      player_display&.update!(current_image: nil)
+      record_cleared_event!
+    end
 
     payload = { cleared: true }
 
@@ -70,6 +84,22 @@ class PlayerDisplaysController < ApplicationController
 
   def player_display_stream_name
     "player_display_#{@campaign.id}"
+  end
+
+  def record_presented_event!(image)
+    PresentationEvent.create!(
+      event_type: :presented,
+      campaign: @campaign,
+      image: image,
+      image_title: image.title
+    )
+  end
+
+  def record_cleared_event!
+    PresentationEvent.create!(
+      event_type: :cleared,
+      campaign: @campaign
+    )
   end
 
   def render_gm_panel_turbo_stream(player_display)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_31_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_01_000000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -90,6 +90,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_31_000000) do
     t.index ["current_image_id"], name: "index_player_displays_on_current_image_id"
   end
 
+  create_table "presentation_events", force: :cascade do |t|
+    t.integer "campaign_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "event_type", default: 0, null: false
+    t.integer "image_id"
+    t.string "image_title"
+    t.datetime "updated_at", null: false
+    t.index ["campaign_id"], name: "index_presentation_events_on_campaign_id"
+    t.index ["image_id"], name: "index_presentation_events_on_image_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "albums", "campaigns"
@@ -100,4 +111,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_31_000000) do
   add_foreign_key "images", "campaigns"
   add_foreign_key "player_displays", "campaigns"
   add_foreign_key "player_displays", "images", column: "current_image_id", on_delete: :nullify
+  add_foreign_key "presentation_events", "campaigns"
+  add_foreign_key "presentation_events", "images", on_delete: :nullify
 end
