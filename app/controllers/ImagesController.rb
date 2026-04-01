@@ -4,10 +4,11 @@ class ImagesController < ApplicationController
   layout "campaign"
   before_action :set_image, only: [ :show, :edit, :update, :destroy ]
   before_action :set_album, only: [ :new, :create ]
-  before_action :set_campaign, only: [ :show, :edit, :update, :new, :create ]
+  before_action :set_campaign, only: [ :show, :edit, :update, :new, :create, :destroy ]
   before_action :set_image_show_breadcrumbs, only: [ :show ]
   before_action :set_image_new_breadcrumbs, only: [ :new, :create ]
   before_action :set_image_edit_breadcrumbs, only: [ :edit, :update ]
+  after_action :touch_campaign_activity, only: [ :show, :edit, :new, :create, :update, :destroy ]
 
   def show
     @presenting_image_id = @campaign.player_display&.current_image_id.to_i

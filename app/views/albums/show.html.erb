@@ -1,6 +1,7 @@
 <%= content_body_frame do %>
   <section class="record-shell"
            data-controller="player-display"
+           data-player-display-campaign-id-value="<%= @campaign.id %>"
            data-player-display-present-url-value="<%= present_campaign_player_display_path(@campaign) %>"
            data-player-display-presenting-image-id-value="<%= @presenting_image_id %>">
     <div class="record-panel">

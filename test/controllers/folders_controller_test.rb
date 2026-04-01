@@ -41,6 +41,20 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/>\s*Root\s*</, breadcrumb_nav)
   end
 
+  test "showing a folder moves its campaign to the top of recent activity" do
+    campaign = create(:campaign, name: "Moonwake Atlas")
+    other_campaign = create(:campaign, name: "Shattered Coast")
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Villagers")
+    campaign.update_columns(updated_at: 3.days.ago)
+    other_campaign.update_columns(updated_at: 1.day.ago)
+
+    get folder_path(folder)
+    get campaigns_path
+
+    assert_response :success
+    assert_operator response.body.index(campaign.name), :<, response.body.index(other_campaign.name)
+  end
+
   test "shows the new folder form" do
     campaign = create(:campaign)
     parent = campaign.root_folder

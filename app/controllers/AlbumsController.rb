@@ -4,10 +4,11 @@ class AlbumsController < ApplicationController
   layout "campaign"
   before_action :set_album, only: [ :show, :edit, :update, :destroy ]
   before_action :set_folder, only: [ :new, :create ], if: -> { params[:folder_id].present? }
-  before_action :set_campaign, only: [ :show, :edit, :update, :new, :create ]
+  before_action :set_campaign, only: [ :show, :edit, :update, :new, :create, :destroy ]
   before_action :set_album_show_breadcrumbs, only: [ :show ]
   before_action :set_album_new_breadcrumbs, only: [ :new, :create ]
   before_action :set_album_edit_breadcrumbs, only: [ :edit, :update ]
+  after_action :touch_campaign_activity, only: [ :show, :edit, :new, :create, :update, :destroy ]
 
   def show
     @images = @album.images.with_attached_file

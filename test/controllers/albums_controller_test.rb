@@ -102,6 +102,27 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Fresh notes", album.description
   end
 
+  test "updating an album moves its campaign to the top of recent activity" do
+    campaign = create(:campaign, name: "Shattered Coast")
+    other_campaign = create(:campaign, name: "Moonwake Atlas")
+    album = create(:album, campaign: campaign, name: "Storm Sketches")
+    campaign.update_columns(updated_at: 3.days.ago)
+    other_campaign.update_columns(updated_at: 1.day.ago)
+
+    patch album_path(album), params: {
+      album: {
+        name: "Storm Sketches Revised"
+      }
+    }
+
+    assert_redirected_to album_path(album)
+
+    get campaigns_path
+
+    assert_response :success
+    assert_operator response.body.index(campaign.name), :<, response.body.index(other_campaign.name)
+  end
+
   test "re-renders the edit album form when the update is invalid" do
     album = create(:album)
 

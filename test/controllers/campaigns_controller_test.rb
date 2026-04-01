@@ -53,6 +53,31 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'data-turbo-confirm="Delete this campaign?"'
   end
 
+  test "orders campaigns by recent activity" do
+    older_campaign = create(:campaign, name: "North Reach")
+    newer_campaign = create(:campaign, name: "Southern Isles")
+    older_campaign.update_columns(updated_at: 3.days.ago)
+    newer_campaign.update_columns(updated_at: 1.day.ago)
+
+    get campaigns_path
+
+    assert_response :success
+    assert_operator response.body.index(newer_campaign.name), :<, response.body.index(older_campaign.name)
+  end
+
+  test "showing a campaign moves it to the top of recent activity" do
+    older_campaign = create(:campaign, name: "North Reach")
+    newer_campaign = create(:campaign, name: "Southern Isles")
+    older_campaign.update_columns(updated_at: 3.days.ago)
+    newer_campaign.update_columns(updated_at: 1.day.ago)
+
+    get campaign_path(older_campaign)
+    get campaigns_path
+
+    assert_response :success
+    assert_operator response.body.index(older_campaign.name), :<, response.body.index(newer_campaign.name)
+  end
+
   test "shows the new campaign form" do
     get new_campaign_path
 

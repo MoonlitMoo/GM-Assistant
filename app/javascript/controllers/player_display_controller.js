@@ -1,7 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
+import consumer from "../channels/consumer"
 
 export default class extends Controller {
   static values = {
+    campaignId: Number,
     clearUrl: String,
     presentUrl: String,
     presentingImageId: Number
@@ -9,6 +11,11 @@ export default class extends Controller {
 
   connect() {
     this.syncButtons()
+    this.subscribeToPlayerDisplay()
+  }
+
+  disconnect() {
+    this.unsubscribeFromPlayerDisplay()
   }
 
   async present(event) {
@@ -94,6 +101,34 @@ export default class extends Controller {
       button.disabled = !hasPresentedImage
       button.classList.toggle("fantasy-button--disabled", !hasPresentedImage)
     })
+  }
+
+  subscribeToPlayerDisplay() {
+    if (!this.hasCampaignIdValue) return
+
+    this.unsubscribeFromPlayerDisplay()
+
+    this.subscription = consumer.subscriptions.create(
+      { channel: "PlayerDisplayChannel", campaign_id: this.campaignIdValue },
+      {
+        received: (data) => {
+          if (data.cleared) {
+            this.presentingImageIdValue = 0
+          } else {
+            this.presentingImageIdValue = Number(data.image_id || 0)
+          }
+
+          this.syncButtons()
+        }
+      }
+    )
+  }
+
+  unsubscribeFromPlayerDisplay() {
+    if (!this.subscription) return
+
+    this.subscription.unsubscribe()
+    this.subscription = null
   }
 
   get csrfToken() {

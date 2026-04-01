@@ -1,5 +1,6 @@
 class PlayerDisplaysController < ApplicationController
   before_action :set_campaign
+  after_action :touch_campaign_activity, only: [ :present, :clear ]
 
   def present
     if params[:current_image_id].blank?
