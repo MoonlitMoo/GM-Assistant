@@ -42,6 +42,20 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     assert_equal image.id, player_display.current_image_id
   end
 
+  test "present turbo stream updates the topbar status" do
+    image = create(:image)
+    create(:player_display, campaign: image.campaign)
+
+    patch present_campaign_player_display_path(image.campaign),
+          params: { current_image_id: image.id },
+          headers: { "Accept" => Mime[:turbo_stream].to_s }
+
+    assert_response :success
+    assert_equal Mime[:turbo_stream].to_s, response.media_type
+    assert_includes response.body, 'target="topbar-status"'
+    assert_includes response.body, image.title
+  end
+
   test "present rejects images from another campaign" do
     campaign = create(:campaign)
     image = create(:image)
@@ -68,6 +82,18 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal({ "cleared" => true }, JSON.parse(response.body))
     assert_nil player_display.reload.current_image
+  end
+
+  test "clear turbo stream clears the topbar status" do
+    player_display = create(:player_display, :with_current_image)
+
+    patch clear_campaign_player_display_path(player_display.campaign),
+          headers: { "Accept" => Mime[:turbo_stream].to_s }
+
+    assert_response :success
+    assert_equal Mime[:turbo_stream].to_s, response.media_type
+    assert_includes response.body, 'target="topbar-status"'
+    assert_includes response.body, 'class="topbar-status-frame is-empty"'
   end
 
   test "clear when no player display exists does not crash" do

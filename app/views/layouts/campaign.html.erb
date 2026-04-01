@@ -15,7 +15,10 @@
     <div id="top-bar">
       <%= link_to "⚔ GM Assistant", campaigns_path %>
       <span><%= content_for?(:topbar_title) ? yield(:topbar_title) : @campaign.name %></span>
-      <span>⚙</span>
+      <span class="topbar-actions">
+        <%= render "player_displays/topbar_status", player_display: @campaign.player_display %>
+        <span class="topbar-icon">⚙</span>
+      </span>
     </div>
 
     <% if standalone_layout %>
