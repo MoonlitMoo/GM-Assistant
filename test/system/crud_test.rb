@@ -55,10 +55,6 @@ class CrudTest < ApplicationSystemTestCase
 
     visit folder_path(folder)
 
-    within "#sidebar" do
-      find(".tree-folder", text: folder.name).find(".tree-toggle").click
-    end
-
     within ".record-actions" do
       click_link "New Album"
     end
@@ -90,10 +86,7 @@ class CrudTest < ApplicationSystemTestCase
     image_title = "Breakwater at Dawn"
 
     visit album_path(album)
-
-    within ".record-actions" do
-      click_link "Upload image"
-    end
+    click_link "Upload image", match: :first
 
     fill_in "Title", with: image_title
     fill_in "Description", with: "Soft light over the water."
