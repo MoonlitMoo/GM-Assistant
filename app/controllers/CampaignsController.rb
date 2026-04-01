@@ -5,9 +5,10 @@ class CampaignsController < ApplicationController
   before_action :set_campaign, only: [ :show, :edit, :update, :destroy ]
   before_action :set_campaign_show_breadcrumbs, only: [ :show ]
   before_action :set_campaign_edit_breadcrumbs, only: [ :edit, :update ]
+  after_action :touch_campaign_activity, only: [ :show, :edit, :create, :update ]
 
   def index
-    @campaigns = Campaign.order(created_at: :desc)
+    @campaigns = Campaign.recently_active
   end
 
   def show
