@@ -32,6 +32,32 @@
                     class: "fantasy-button fantasy-button--danger",
                     data: { turbo_method: :patch } %>
       </div>
+
+      <div class="gm-status-card__controls">
+        <%= button_to(player_display.show_title ? "Title on" : "Title off",
+                      toggle_title_campaign_path(player_display.campaign),
+                      method: :patch,
+                      class: "fantasy-button fantasy-button--secondary gm-status-card__secondary-action",
+                      form: { data: { turbo_frame: "_top" } }) %>
+
+        <%= form_with url: update_transition_campaign_path(player_display.campaign),
+                      method: :patch,
+                      class: "gm-status-card__transition-form",
+                      data: { controller: "auto-submit", turbo_frame: "_top" } do |form| %>
+          <%= form.label :transition_type, "Transition", class: "gm-status-card__transition-label" %>
+          <%= form.select :transition_type,
+                          options_for_select(
+                            [
+                              [ "Crossfade", "crossfade" ],
+                              [ "Instant", "instant" ]
+                            ],
+                            player_display.transition_type
+                          ),
+                          {},
+                          class: "resource-form__input gm-status-card__transition-select",
+                          data: { action: "change->auto-submit#submit" } %>
+        <% end %>
+      </div>
     </div>
   <% else %>
     <div class="gm-status-placeholder">

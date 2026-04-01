@@ -364,6 +364,40 @@ body {
   font-size: 0.78rem;
 }
 
+.gm-status-card__controls {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.gm-status-card__controls form {
+  margin: 0;
+}
+
+.gm-status-card__secondary-action {
+  min-height: 2.25rem;
+  width: 100%;
+  font-size: 0.74rem;
+}
+
+.gm-status-card__transition-form {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.gm-status-card__transition-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+}
+
+.gm-status-card__transition-select {
+  min-height: 2.6rem;
+  padding-block: 0.65rem;
+  font-size: 0.95rem;
+}
+
 .gm-recent {
   margin: 0 0.75rem 0.75rem;
   display: grid;
@@ -560,6 +594,12 @@ turbo-frame {
   background: linear-gradient(180deg, rgba(139, 94, 60, 0.18), rgba(160, 57, 26, 0.24));
   border-color: rgba(160, 57, 26, 0.28);
   color: var(--accent);
+}
+
+.fantasy-button--secondary {
+  background: linear-gradient(180deg, rgba(255, 252, 244, 0.82), rgba(224, 208, 176, 0.72));
+  border-color: rgba(107, 63, 31, 0.22);
+  color: var(--ink-light);
 }
 
 .fantasy-button--active,
@@ -836,6 +876,29 @@ turbo-frame {
   letter-spacing: 0.04em;
 }
 
+.resource-form__field--checkbox {
+  gap: 0;
+}
+
+.resource-form__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(107, 63, 31, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 252, 244, 0.55);
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.resource-form__checkbox-input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
 .resource-form__input {
   width: 100%;
   min-height: 3rem;
@@ -1093,15 +1156,13 @@ turbo-frame {
 .player-layout-body {
   min-height: 100vh;
   overflow: hidden;
-  background:
-    radial-gradient(circle at top, rgba(160, 57, 26, 0.12), transparent 34%),
-    radial-gradient(circle at bottom, rgba(107, 63, 31, 0.1), transparent 38%),
-    #060708;
+  background: #000;
 }
 
 .player-screen-root {
   width: 100vw;
   height: 100vh;
+  background: #000;
 }
 
 .player-screen,
@@ -1110,11 +1171,18 @@ turbo-frame {
   height: 100%;
 }
 
+.player-screen__blank {
+  background: #000;
+}
+
 .player-screen {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
+  background: #000;
+  overflow: hidden;
 }
 
 .player-screen__image {
@@ -1123,6 +1191,37 @@ turbo-frame {
   max-height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.35));
+}
+
+.player-image {
+  opacity: 1;
+  transition: opacity 400ms ease-in-out;
+}
+
+.player-image.transitioning {
+  opacity: 0;
+}
+
+.player-title-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1.25rem 2rem 1.5rem;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.72));
+  color: var(--parchment);
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  letter-spacing: 0.05em;
+  text-align: center;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms ease-in-out;
+}
+
+.player-title-overlay.is-visible {
+  opacity: 1;
 }
 
 @media (max-width: 720px) {

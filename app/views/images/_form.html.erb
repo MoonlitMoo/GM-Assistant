@@ -37,6 +37,13 @@
         <%= form.file_field :file, class: "resource-form__input resource-form__file", accept: "image/*" %>
       </div>
 
+      <div class="resource-form__field resource-form__field--checkbox">
+        <label class="resource-form__checkbox">
+          <%= form.check_box :show_title, class: "resource-form__checkbox-input" %>
+          <span>Show title on player screen by default</span>
+        </label>
+      </div>
+
       <div class="resource-form__actions">
         <%= form.submit(@image.persisted? ? "Save Image" : "Create Image",
                         class: "fantasy-button fantasy-button--primary") %>

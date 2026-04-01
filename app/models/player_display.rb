@@ -2,7 +2,10 @@ class PlayerDisplay < ApplicationRecord
   belongs_to :campaign
   belongs_to :current_image, class_name: "Image", optional: true
 
+  enum :transition_type, { crossfade: 0, instant: 1 }
+
   validates :campaign_id, uniqueness: true
+  validates :transition_type, presence: true
 
   validate :current_image_belongs_to_same_campaign
 
