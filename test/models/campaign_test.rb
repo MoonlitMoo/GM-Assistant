@@ -42,4 +42,13 @@ class CampaignTest < ActiveSupport::TestCase
 
     assert_nil PlayerDisplay.find_by(id: player_display.id)
   end
+
+  test "destroying a campaign destroys its presentation events" do
+    campaign = create(:campaign)
+    presentation_event = create(:presentation_event, campaign: campaign)
+
+    campaign.destroy
+
+    assert_nil PresentationEvent.find_by(id: presentation_event.id)
+  end
 end

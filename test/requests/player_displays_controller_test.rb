@@ -11,17 +11,25 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
       "image_id" => image.id
     }
 
-    assert_no_difference("PlayerDisplay.count") do
-      assert_broadcast_on("player_display_#{image.campaign_id}", expected_payload) do
-        patch present_campaign_player_display_path(image.campaign),
-              params: { current_image_id: image.id },
-              as: :json
+    assert_difference("PresentationEvent.count", 1) do
+      assert_no_difference("PlayerDisplay.count") do
+        assert_broadcast_on("player_display_#{image.campaign_id}", expected_payload) do
+          patch present_campaign_player_display_path(image.campaign),
+                params: { current_image_id: image.id },
+                as: :json
+        end
       end
     end
 
     assert_response :success
     assert_equal expected_payload, JSON.parse(response.body)
     assert_equal image.id, player_display.reload.current_image_id
+
+    presentation_event = PresentationEvent.order(:created_at).last
+    assert_equal image.campaign, presentation_event.campaign
+    assert_equal image, presentation_event.image
+    assert_equal "presented", presentation_event.event_type
+    assert_equal image.title, presentation_event.image_title
   end
 
   test "present lazily creates the player display if one does not exist" do
@@ -29,10 +37,12 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
 
     assert_nil image.campaign.player_display
 
-    assert_difference("PlayerDisplay.count", 1) do
-      patch present_campaign_player_display_path(image.campaign),
-            params: { current_image_id: image.id },
-            as: :json
+    assert_difference("PresentationEvent.count", 1) do
+      assert_difference("PlayerDisplay.count", 1) do
+        patch present_campaign_player_display_path(image.campaign),
+              params: { current_image_id: image.id },
+              as: :json
+      end
     end
 
     assert_response :success
@@ -60,11 +70,13 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     campaign = create(:campaign)
     image = create(:image)
 
-    assert_no_difference("PlayerDisplay.count") do
-      assert_broadcasts("player_display_#{campaign.id}", 0) do
-        patch present_campaign_player_display_path(campaign),
-              params: { current_image_id: image.id },
-              as: :json
+    assert_no_difference("PresentationEvent.count") do
+      assert_no_difference("PlayerDisplay.count") do
+        assert_broadcasts("player_display_#{campaign.id}", 0) do
+          patch present_campaign_player_display_path(campaign),
+                params: { current_image_id: image.id },
+                as: :json
+        end
       end
     end
 
@@ -75,13 +87,21 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
   test "clear clears the current image, broadcasts the change, and returns json" do
     player_display = create(:player_display, :with_current_image)
 
-    assert_broadcast_on("player_display_#{player_display.campaign_id}", { "cleared" => true }) do
-      patch clear_campaign_player_display_path(player_display.campaign), as: :json
+    assert_difference("PresentationEvent.count", 1) do
+      assert_broadcast_on("player_display_#{player_display.campaign_id}", { "cleared" => true }) do
+        patch clear_campaign_player_display_path(player_display.campaign), as: :json
+      end
     end
 
     assert_response :success
     assert_equal({ "cleared" => true }, JSON.parse(response.body))
     assert_nil player_display.reload.current_image
+
+    presentation_event = PresentationEvent.order(:created_at).last
+    assert_equal player_display.campaign, presentation_event.campaign
+    assert_equal "cleared", presentation_event.event_type
+    assert_nil presentation_event.image
+    assert_nil presentation_event.image_title
   end
 
   test "clear turbo stream clears the topbar status" do
@@ -99,15 +119,21 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
   test "clear when no player display exists does not crash" do
     campaign = create(:campaign)
 
-    assert_no_difference("PlayerDisplay.count") do
-      assert_broadcast_on("player_display_#{campaign.id}", { "cleared" => true }) do
-        patch clear_campaign_player_display_path(campaign), as: :json
+    assert_difference("PresentationEvent.count", 1) do
+      assert_no_difference("PlayerDisplay.count") do
+        assert_broadcast_on("player_display_#{campaign.id}", { "cleared" => true }) do
+          patch clear_campaign_player_display_path(campaign), as: :json
+        end
       end
     end
 
     assert_response :success
     assert_equal({ "cleared" => true }, JSON.parse(response.body))
     assert_nil campaign.reload.player_display
+
+    presentation_event = PresentationEvent.order(:created_at).last
+    assert_equal campaign, presentation_event.campaign
+    assert_equal "cleared", presentation_event.event_type
   end
 
   test "player show returns 200 for a valid campaign" do

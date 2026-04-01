@@ -63,4 +63,14 @@ class ImageTest < ActiveSupport::TestCase
     assert_not image.valid?
     assert_includes image.errors[:album_id], "must belong to same campaign"
   end
+
+  test "destroying an image nullifies its presentation events" do
+    presentation_event = create(:presentation_event)
+    original_title = presentation_event.image_title
+
+    presentation_event.image.destroy
+
+    assert_nil presentation_event.reload.image
+    assert_equal original_title, presentation_event.image_title
+  end
 end
