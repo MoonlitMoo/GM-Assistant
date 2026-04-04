@@ -13,6 +13,11 @@ class CampaignsController < ApplicationController
 
   def show
     @root_folder = @campaign.root_folder
+    @child_folders = @root_folder ? @root_folder.child_folders.order(:name) : []
+    @root_albums = @root_folder ? @root_folder.albums.order(:name) : []
+    @recent_images = @campaign.images.includes(:album).order(created_at: :desc).limit(5)
+    @album_count = @campaign.albums.count
+    @image_count = @campaign.images.count
   end
 
   def new
