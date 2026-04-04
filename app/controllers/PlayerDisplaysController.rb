@@ -12,7 +12,7 @@ class PlayerDisplaysController < ApplicationController
       return
     end
 
-    @player_display = @campaign.player_display || @campaign.build_player_display
+    @player_display = @campaign.player_display || build_player_display_from_preferences
     previous_image = @player_display.current_image
 
     if previous_image&.id.to_s == params[:current_image_id].to_s
@@ -73,7 +73,7 @@ class PlayerDisplaysController < ApplicationController
   end
 
   def toggle_title
-    player_display = @campaign.player_display || @campaign.build_player_display
+    player_display = @campaign.player_display || build_player_display_from_preferences
     player_display.show_title = !player_display.show_title
     player_display.save!
 
@@ -98,7 +98,7 @@ class PlayerDisplaysController < ApplicationController
       return
     end
 
-    player_display = @campaign.player_display || @campaign.build_player_display
+    player_display = @campaign.player_display || build_player_display_from_preferences
     player_display.transition_type = params[:transition_type]
     player_display.save!
 
@@ -124,6 +124,13 @@ class PlayerDisplaysController < ApplicationController
   def image_url_for(image)
     return nil unless image&.file&.attached?
     url_for(image.file)
+  end
+
+  def build_player_display_from_preferences
+    @campaign.build_player_display(
+      transition_type: Current.user.default_transition,
+      show_title: Current.user.default_show_title
+    )
   end
 
   def player_display_stream_name

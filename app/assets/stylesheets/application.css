@@ -81,8 +81,30 @@ body {
 }
 
 #top-bar .topbar-icon {
-  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.1rem;
+}
+
+#top-bar .topbar-icon-link {
+  color: var(--parchment-dark);
+  opacity: 0.72;
+}
+
+#top-bar .topbar-icon-link:hover {
+  color: var(--parchment);
+  opacity: 0.92;
+}
+
+#top-bar .topbar-icon-link svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
 }
 
 #top-bar .topbar-status-frame.is-empty {
@@ -957,6 +979,24 @@ turbo-frame {
 .form-errors ul {
   padding-left: 1.2rem;
   color: var(--ink-light);
+}
+
+.settings-section {
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+  border: 1px solid rgba(107, 63, 31, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 252, 244, 0.52);
+}
+
+.settings-section .section-heading {
+  margin-bottom: 0;
+}
+
+.settings-placeholder-link {
+  pointer-events: auto;
+  cursor: not-allowed;
 }
 
 .campaign-hub {
