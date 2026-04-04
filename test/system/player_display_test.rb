@@ -90,6 +90,7 @@ class PlayerDisplayTest < ApplicationSystemTestCase
   end
 
   test "navigating to the player page returns a page with the minimal player layout", :js do
+    Capybara.reset_sessions!
     visit route_helpers.player_campaign_path(@campaign)
 
     assert_current_path route_helpers.player_campaign_path(@campaign)
@@ -102,6 +103,7 @@ class PlayerDisplayTest < ApplicationSystemTestCase
   test "if a player display exists with a current image that image is visible on the player screen on load", :js do
     create(:player_display, campaign: @campaign, current_image: @image)
 
+    Capybara.reset_sessions!
     visit route_helpers.player_campaign_path(@campaign)
 
     assert_selector ".player-screen__image"
@@ -109,6 +111,7 @@ class PlayerDisplayTest < ApplicationSystemTestCase
   end
 
   test "if no player display exists the player screen loads without error and shows a blank state", :js do
+    Capybara.reset_sessions!
     visit route_helpers.player_campaign_path(@campaign)
 
     assert_selector "#player-screen.player-screen-root"

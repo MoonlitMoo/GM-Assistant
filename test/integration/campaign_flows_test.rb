@@ -1,6 +1,11 @@
 require "test_helper"
 
-class CampaignFlowsTest < AuthenticatedIntegrationTest
+class CampaignFlowsTest < ActionDispatch::IntegrationTest
+  setup do
+    @user = create(:user)
+    sign_in(@user)
+  end
+
   test "creating a campaign creates its root folder" do
     assert_difference("Campaign.count", 1) do
       assert_difference("Folder.where(is_root: true).count", 1) do
@@ -28,7 +33,7 @@ class CampaignFlowsTest < AuthenticatedIntegrationTest
   end
 
   test "creating a child folder keeps it inside the same campaign" do
-    campaign = create(:campaign)
+    campaign = create(:campaign, user: @user)
     parent = campaign.root_folder
 
     assert_difference("Folder.count", 1) do
@@ -52,7 +57,7 @@ class CampaignFlowsTest < AuthenticatedIntegrationTest
   end
 
   test "creating an album nests it under the chosen folder" do
-    campaign = create(:campaign)
+    campaign = create(:campaign, user: @user)
     folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Locations")
 
     assert_difference("Album.count", 1) do
@@ -78,7 +83,7 @@ class CampaignFlowsTest < AuthenticatedIntegrationTest
   end
 
   test "uploading an image attaches the file to the album" do
-    album = create(:album)
+    album = create(:album, campaign: create(:campaign, user: @user))
 
     assert_difference("Image.count", 1) do
       post album_images_path(album), params: {
@@ -105,8 +110,8 @@ class CampaignFlowsTest < AuthenticatedIntegrationTest
   end
 
   test "cross-campaign album association attempts are rejected" do
-    campaign = create(:campaign)
-    other_campaign = create(:campaign)
+    campaign = create(:campaign, user: @user)
+    other_campaign = create(:campaign, user: @user)
     folder = create(:folder, campaign: campaign, parent: campaign.root_folder)
 
     # The nested folder is the source of truth, so the forged campaign id is rejected.
