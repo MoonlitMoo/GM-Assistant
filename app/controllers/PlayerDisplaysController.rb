@@ -167,7 +167,7 @@ class PlayerDisplaysController < ApplicationController
       turbo_stream.replace(
         "topbar-status",
         partial: "player_displays/topbar_status",
-        locals: { player_display: player_display }
+        locals: { campaign: @campaign, player_display: player_display }
       )
     ]
   end

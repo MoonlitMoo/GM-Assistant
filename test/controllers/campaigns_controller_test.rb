@@ -36,6 +36,10 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Recent Image 5"
     assert_no_match(/<div class="recent-list">.*Old Lantern/m, response.body)
     assert_no_match(%r{href="#{folder_path(root_folder)}"}, response.body)
+    assert_includes response.body, 'id="topbar-status"'
+    assert_includes response.body, 'class="topbar-status-frame is-empty"'
+    assert_includes response.body, player_campaign_path(campaign)
+    assert_includes response.body, "Not showing"
     assert_match(
       /<nav aria-label="Breadcrumbs">\s*<span>North Reach<\/span>\s*<\/nav>/,
       response.body

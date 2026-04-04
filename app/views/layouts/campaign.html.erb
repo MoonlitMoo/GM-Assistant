@@ -16,7 +16,7 @@
       <%= link_to "⚔ GM Assistant", campaigns_path %>
       <span><%= content_for?(:topbar_title) ? yield(:topbar_title) : @campaign.name %></span>
       <span class="topbar-actions">
-        <%= render "player_displays/topbar_status", player_display: @campaign.player_display %>
+        <%= render "player_displays/topbar_status", campaign: @campaign, player_display: @campaign.player_display %>
         <%= render "shared/settings_icon" %>
       </span>
     </div>
