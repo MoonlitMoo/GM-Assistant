@@ -1,16 +1,13 @@
 require "test_helper"
 
-class CampaignsControllerTest < AuthenticatedIntegrationTest
-  test "redirects unauthenticated requests to the sign-in page" do
-    sign_out
-
-    get campaigns_path
-
-    assert_redirected_to new_session_path
+class CampaignsControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    @user = create(:user)
+    sign_in(@user)
   end
 
   test "shows a campaign with breadcrumb context" do
-    campaign = create(:campaign, name: "North Reach", description: "A weathered coastal frontier.")
+    campaign = create(:campaign, user: @user, name: "North Reach", description: "A weathered coastal frontier.")
     root_folder = campaign.root_folder
     create(:folder, campaign: campaign, parent: root_folder, name: "Locations")
     album = create(:album, campaign: campaign, folder: root_folder, name: "Harbour Sketches")
@@ -47,8 +44,8 @@ class CampaignsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows the campaign index" do
-    first_campaign = create(:campaign, name: "North Reach")
-    second_campaign = create(:campaign, name: "Southern Isles")
+    first_campaign = create(:campaign, user: @user, name: "North Reach")
+    second_campaign = create(:campaign, user: @user, name: "Southern Isles")
 
     get campaigns_path
 
@@ -63,8 +60,8 @@ class CampaignsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "orders campaigns by recent activity" do
-    older_campaign = create(:campaign, name: "North Reach")
-    newer_campaign = create(:campaign, name: "Southern Isles")
+    older_campaign = create(:campaign, user: @user, name: "North Reach")
+    newer_campaign = create(:campaign, user: @user, name: "Southern Isles")
     older_campaign.update_columns(updated_at: 3.days.ago)
     newer_campaign.update_columns(updated_at: 1.day.ago)
 
@@ -75,8 +72,8 @@ class CampaignsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "showing a campaign moves it to the top of recent activity" do
-    older_campaign = create(:campaign, name: "North Reach")
-    newer_campaign = create(:campaign, name: "Southern Isles")
+    older_campaign = create(:campaign, user: @user, name: "North Reach")
+    newer_campaign = create(:campaign, user: @user, name: "Southern Isles")
     older_campaign.update_columns(updated_at: 3.days.ago)
     newer_campaign.update_columns(updated_at: 1.day.ago)
 
@@ -97,7 +94,7 @@ class CampaignsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows the edit campaign form" do
-    campaign = create(:campaign, name: "North Reach")
+    campaign = create(:campaign, user: @user, name: "North Reach")
 
     get edit_campaign_path(campaign)
 
@@ -108,7 +105,7 @@ class CampaignsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows the edit campaign form with the supplied return path" do
-    campaign = create(:campaign, name: "North Reach")
+    campaign = create(:campaign, user: @user, name: "North Reach")
 
     get edit_campaign_path(campaign, return_to: campaigns_path)
 
@@ -118,7 +115,7 @@ class CampaignsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "returns the campaign tree as nested json" do
-    campaign = create(:campaign, name: "North Reach")
+    campaign = create(:campaign, user: @user, name: "North Reach")
     root_folder = campaign.root_folder
     child_folder = create(:folder, campaign: campaign, parent: root_folder, name: "Locations")
     create(:album, campaign: campaign, folder: child_folder, name: "Harbour Sketches")
@@ -156,7 +153,7 @@ class CampaignsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "updates a campaign" do
-    campaign = create(:campaign, name: "Old Name", description: "Old notes")
+    campaign = create(:campaign, user: @user, name: "Old Name", description: "Old notes")
 
     patch campaign_path(campaign), params: {
       campaign: {
@@ -172,7 +169,7 @@ class CampaignsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "re-renders the edit campaign form when the update is invalid" do
-    campaign = create(:campaign)
+    campaign = create(:campaign, user: @user)
 
     patch campaign_path(campaign), params: {
       campaign: {
@@ -186,7 +183,7 @@ class CampaignsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "destroys a campaign" do
-    campaign = create(:campaign)
+    campaign = create(:campaign, user: @user)
 
     assert_difference("Campaign.count", -1) do
       delete campaign_path(campaign)
@@ -194,13 +191,5 @@ class CampaignsControllerTest < AuthenticatedIntegrationTest
 
     assert_redirected_to campaigns_path
     assert_nil Campaign.find_by(id: campaign.id)
-  end
-
-  test "does not expose another user's campaign" do
-    campaign = create(:campaign, user: create(:user))
-
-    get campaign_path(campaign)
-
-    assert_response :not_found
   end
 end

@@ -1,8 +1,13 @@
 require "test_helper"
 
-class ImagesControllerTest < AuthenticatedIntegrationTest
+class ImagesControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    @user = create(:user)
+    sign_in(@user)
+  end
+
   test "shows an image" do
-    campaign = create(:campaign, name: "Shoreline Atlas")
+    campaign = create(:campaign, user: @user, name: "Shoreline Atlas")
     campaign.root_folder.update!(name: "Deep Vault")
     parent_folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Cliffside Sketches")
     folder = create(:folder, campaign: campaign, parent: parent_folder, name: "Sea Caves")
@@ -30,7 +35,7 @@ class ImagesControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows an image inside the content frame for turbo frame requests" do
-    image = create(:image, title: "Beacon Cliffs")
+    image = create(:image, campaign: create(:campaign, user: @user), title: "Beacon Cliffs")
 
     get image_path(image), headers: { "Turbo-Frame" => "content-body" }
 
@@ -41,7 +46,7 @@ class ImagesControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows the new image form" do
-    album = create(:album, name: "Weathered Maps")
+    album = create(:album, campaign: create(:campaign, user: @user), name: "Weathered Maps")
 
     get new_album_image_path(album)
 
@@ -52,7 +57,7 @@ class ImagesControllerTest < AuthenticatedIntegrationTest
   end
 
   test "re-renders the new image form when creation is invalid" do
-    album = create(:album, name: "Clues")
+    album = create(:album, campaign: create(:campaign, user: @user), name: "Clues")
 
     assert_no_difference("Image.count") do
       post album_images_path(album), params: {
@@ -70,7 +75,7 @@ class ImagesControllerTest < AuthenticatedIntegrationTest
   end
 
   test "updates an image" do
-    image = create(:image, title: "Old Title", notes: "Old notes")
+    image = create(:image, campaign: create(:campaign, user: @user), title: "Old Title", notes: "Old notes")
 
     patch image_path(image), params: {
       image: {
@@ -86,7 +91,7 @@ class ImagesControllerTest < AuthenticatedIntegrationTest
   end
 
   test "re-renders the edit image form when the update is invalid" do
-    image = create(:image)
+    image = create(:image, campaign: create(:campaign, user: @user))
 
     patch image_path(image), params: {
       image: {
@@ -100,7 +105,7 @@ class ImagesControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows the current attachment filename when editing an image" do
-    image = create(:image, title: "Beacon Cliffs")
+    image = create(:image, campaign: create(:campaign, user: @user), title: "Beacon Cliffs")
 
     get edit_image_path(image)
 
@@ -110,7 +115,7 @@ class ImagesControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows the edit image form with the image as the default cancel path" do
-    image = create(:image, title: "Beacon Cliffs")
+    image = create(:image, campaign: create(:campaign, user: @user), title: "Beacon Cliffs")
 
     get edit_image_path(image)
 
@@ -119,7 +124,7 @@ class ImagesControllerTest < AuthenticatedIntegrationTest
   end
 
   test "destroys an image and returns to its album" do
-    image = create(:image)
+    image = create(:image, campaign: create(:campaign, user: @user))
 
     assert_difference("Image.count", -1) do
       delete image_path(image)

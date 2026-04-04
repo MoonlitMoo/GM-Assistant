@@ -1,8 +1,13 @@
 require "test_helper"
 
-class AlbumsControllerTest < AuthenticatedIntegrationTest
+class AlbumsControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    @user = create(:user)
+    sign_in(@user)
+  end
+
   test "shows an album with breadcrumb context, actions, and thumbnail grid" do
-    campaign = create(:campaign, name: "Shattered Coast")
+    campaign = create(:campaign, user: @user, name: "Shattered Coast")
     campaign.root_folder.update!(name: "Archive Root")
     parent_folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Harbour")
     folder = create(:folder, campaign: campaign, parent: parent_folder, name: "Tide Charts")
@@ -37,7 +42,7 @@ class AlbumsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows an album inside the content frame for turbo frame requests" do
-    album = create(:album, name: "Storm Sketches")
+    album = create(:album, campaign: create(:campaign, user: @user), name: "Storm Sketches")
 
     get album_path(album), headers: { "Turbo-Frame" => "content-body" }
 
@@ -49,7 +54,7 @@ class AlbumsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows the new album form" do
-    folder = create(:folder, name: "Landmarks")
+    folder = create(:folder, campaign: create(:campaign, user: @user), name: "Landmarks")
 
     get new_folder_album_path(folder)
 
@@ -59,7 +64,7 @@ class AlbumsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "re-renders the new album form when creation is invalid" do
-    folder = create(:folder)
+    folder = create(:folder, campaign: create(:campaign, user: @user))
 
     assert_no_difference("Album.count") do
       post folder_albums_path(folder), params: {
@@ -76,7 +81,7 @@ class AlbumsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows the edit album form" do
-    album = create(:album, name: "Gallery")
+    album = create(:album, campaign: create(:campaign, user: @user), name: "Gallery")
 
     get edit_album_path(album)
 
@@ -87,7 +92,7 @@ class AlbumsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "updates an album" do
-    album = create(:album, name: "Old Gallery", description: "Old notes")
+    album = create(:album, campaign: create(:campaign, user: @user), name: "Old Gallery", description: "Old notes")
 
     patch album_path(album), params: {
       album: {
@@ -103,8 +108,8 @@ class AlbumsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "updating an album moves its campaign to the top of recent activity" do
-    campaign = create(:campaign, name: "Shattered Coast")
-    other_campaign = create(:campaign, name: "Moonwake Atlas")
+    campaign = create(:campaign, user: @user, name: "Shattered Coast")
+    other_campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
     album = create(:album, campaign: campaign, name: "Storm Sketches")
     campaign.update_columns(updated_at: 3.days.ago)
     other_campaign.update_columns(updated_at: 1.day.ago)
@@ -124,7 +129,7 @@ class AlbumsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "re-renders the edit album form when the update is invalid" do
-    album = create(:album)
+    album = create(:album, campaign: create(:campaign, user: @user))
 
     patch album_path(album), params: {
       album: {
@@ -138,7 +143,7 @@ class AlbumsControllerTest < AuthenticatedIntegrationTest
   end
 
   test "destroys an album and returns to its folder" do
-    album = create(:album)
+    album = create(:album, campaign: create(:campaign, user: @user))
 
     assert_difference("Album.count", -1) do
       delete album_path(album)

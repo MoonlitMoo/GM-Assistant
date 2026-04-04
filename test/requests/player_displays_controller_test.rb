@@ -1,10 +1,15 @@
 require "test_helper"
 
-class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
+class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
   include ActionCable::TestHelper
 
+  setup do
+    @user = create(:user)
+    sign_in(@user)
+  end
+
   test "present with a valid image sets current image id and returns json" do
-    image = create(:image, show_title: false)
+    image = create(:image, campaign: create(:campaign, user: @user), show_title: false)
     player_display = create(:player_display, campaign: image.campaign, transition_type: :instant)
     expected_payload = {
       "image_url" => rails_blob_url(image.file, host: "www.example.com"),
@@ -31,7 +36,7 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "present sets player display show title from image show title" do
-    image = create(:image, show_title: false)
+    image = create(:image, campaign: create(:campaign, user: @user), show_title: false)
     player_display = create(:player_display, campaign: image.campaign, show_title: true)
 
     patch present_campaign_player_display_path(image.campaign),
@@ -43,7 +48,8 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "present changing the image creates a presentation event for the previously shown image" do
-    previous_image = create(:image)
+    campaign = create(:campaign, user: @user)
+    previous_image = create(:image, campaign: campaign)
     next_image = create(:image, campaign: previous_image.campaign)
     create(:player_display, campaign: previous_image.campaign, current_image: previous_image)
 
@@ -63,7 +69,7 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "present lazily creates the player display if one does not exist" do
-    image = create(:image)
+    image = create(:image, campaign: create(:campaign, user: @user))
 
     assert_nil image.campaign.player_display
 
@@ -83,7 +89,7 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "presenting the same image is ignored and does not create a presentation event" do
-    player_display = create(:player_display, :with_current_image)
+    player_display = create(:player_display, :with_current_image, campaign: create(:campaign, user: @user))
     image = player_display.current_image
     expected_payload = {
       "image_url" => rails_blob_url(image.file, host: "www.example.com"),
@@ -107,7 +113,7 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "present turbo stream updates the topbar status" do
-    image = create(:image)
+    image = create(:image, campaign: create(:campaign, user: @user))
     create(:player_display, campaign: image.campaign)
 
     patch present_campaign_player_display_path(image.campaign),
@@ -121,8 +127,8 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "present rejects images from another campaign" do
-    campaign = create(:campaign)
-    image = create(:image)
+    campaign = create(:campaign, user: @user)
+    image = create(:image, campaign: create(:campaign, user: @user))
 
     assert_no_difference("PresentationEvent.count") do
       assert_no_difference("PlayerDisplay.count") do
@@ -139,7 +145,7 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "clear clears the current image, broadcasts the change, and returns json" do
-    player_display = create(:player_display, :with_current_image)
+    player_display = create(:player_display, :with_current_image, campaign: create(:campaign, user: @user))
     previous_image = player_display.current_image
 
     assert_difference("PresentationEvent.count", 2) do
@@ -165,7 +171,7 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "clear creates a presentation event with event type cleared" do
-    player_display = create(:player_display, :with_current_image)
+    player_display = create(:player_display, :with_current_image, campaign: create(:campaign, user: @user))
 
     assert_difference("PresentationEvent.count", 2) do
       patch clear_campaign_player_display_path(player_display.campaign), as: :json
@@ -181,7 +187,7 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "toggle title flips show title and returns turbo stream" do
-    player_display = create(:player_display, :with_current_image, show_title: true)
+    player_display = create(:player_display, :with_current_image, campaign: create(:campaign, user: @user), show_title: true)
 
     assert_broadcast_on("player_display_#{player_display.campaign_id}", { "show_title" => false }) do
       patch toggle_title_campaign_player_display_path(player_display.campaign),
@@ -196,7 +202,7 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "update transition updates transition type and returns turbo stream" do
-    player_display = create(:player_display, :with_current_image, transition_type: :crossfade)
+    player_display = create(:player_display, :with_current_image, campaign: create(:campaign, user: @user), transition_type: :crossfade)
 
     patch update_transition_campaign_player_display_path(player_display.campaign),
           params: { transition_type: "instant" },
@@ -209,7 +215,7 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "clear turbo stream clears the topbar status" do
-    player_display = create(:player_display, :with_current_image)
+    player_display = create(:player_display, :with_current_image, campaign: create(:campaign, user: @user))
 
     patch clear_campaign_player_display_path(player_display.campaign),
           headers: { "Accept" => Mime[:turbo_stream].to_s }
@@ -221,7 +227,7 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   end
 
   test "clear when no player display exists does not crash" do
-    campaign = create(:campaign)
+    campaign = create(:campaign, user: @user)
 
     assert_difference("PresentationEvent.count", 1) do
       assert_no_difference("PlayerDisplay.count") do
@@ -239,11 +245,12 @@ class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
     assert_equal campaign, presentation_event.campaign
     assert_equal "cleared", presentation_event.event_type
   end
+end
 
+class PlayerControllerTest < ActionDispatch::IntegrationTest
   test "player show returns 200 for a valid campaign" do
-    campaign = create(:campaign)
-
-    sign_out
+    user = create(:user)
+    campaign = create(:campaign, user: user)
 
     get player_campaign_path(campaign)
 
