@@ -1,0 +1,90 @@
+<% provide :title, "Settings — GM Assistant" %>
+<% provide :topbar_title, "Settings" %>
+
+<section class="record-shell form-shell">
+  <%= render "shared/flash" %>
+
+  <div class="record-panel form-panel">
+    <div class="form-panel__header">
+      <p class="record-kicker">Preferences</p>
+      <h1 class="record-title">Settings</h1>
+    </div>
+
+    <%= form_with url: settings_path, method: :patch, scope: nil, class: "resource-form" do |form| %>
+      <%= form_return_to_field %>
+
+      <% if Current.user.errors.any? %>
+        <div class="form-errors">
+          <h2><%= pluralize(Current.user.errors.count, "error") %> prevented your settings from being saved:</h2>
+          <ul>
+            <% Current.user.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <section class="settings-section">
+        <div class="section-heading">
+          <h2>Display Defaults</h2>
+        </div>
+
+        <div class="resource-form__field">
+          <%= form.label :default_transition, "Default transition" %>
+          <%= form.select :default_transition,
+                          options_for_select(
+                            [
+                              [ "Crossfade", "crossfade" ],
+                              [ "Instant", "instant" ]
+                            ],
+                            Current.user.default_transition
+                          ),
+                          {},
+                          class: "resource-form__input" %>
+        </div>
+
+        <div class="resource-form__field resource-form__field--checkbox">
+          <label class="resource-form__checkbox">
+            <%= form.check_box :default_show_title,
+                               {
+                                 class: "resource-form__checkbox-input",
+                                 checked: Current.user.default_show_title
+                               },
+                               "1",
+                               "0" %>
+            <span>Show image title on player screen by default</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <div class="section-heading">
+          <h2>Account</h2>
+        </div>
+
+        <div class="resource-form__field">
+          <%= label_tag :account_email, "Email address" %>
+          <%= text_field_tag :account_email,
+                             Current.user.email_address,
+                             class: "resource-form__input",
+                             readonly: true,
+                             disabled: true %>
+        </div>
+
+        <div class="resource-form__actions">
+          <%= link_to "Change password",
+                      "#",
+                      class: "fantasy-button fantasy-button--secondary fantasy-button--disabled settings-placeholder-link",
+                      title: "Coming soon",
+                      aria: { disabled: true },
+                      onclick: "return false;" %>
+        </div>
+      </section>
+
+      <div class="resource-form__actions">
+        <%= form.submit "Save Settings", class: "fantasy-button fantasy-button--primary" %>
+        <%= link_to "Cancel", form_cancel_path(campaigns_path), class: "resource-form__cancel" %>
+      </div>
+    <% end %>
+  </div>
+</section>

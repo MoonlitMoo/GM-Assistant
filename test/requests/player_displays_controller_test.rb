@@ -69,6 +69,9 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "present lazily creates the player display if one does not exist" do
+    @user.default_transition = "instant"
+    @user.default_show_title = false
+    @user.save!
     image = create(:image, campaign: create(:campaign, user: @user))
 
     assert_nil image.campaign.player_display
@@ -86,6 +89,7 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     player_display = image.campaign.reload.player_display
     assert_not_nil player_display
     assert_equal image.id, player_display.current_image_id
+    assert_equal "instant", player_display.transition_type
   end
 
   test "presenting the same image is ignored and does not create a presentation event" do
@@ -259,5 +263,19 @@ class PlayerControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, %(data-campaign-id="#{campaign.id}")
     assert_includes response.body, 'data-show-title="false"'
     assert_includes response.body, 'data-transition-type="crossfade"'
+  end
+
+  test "player show uses the campaign owner's saved preferences when no display exists" do
+    user = create(:user)
+    user.default_transition = "instant"
+    user.default_show_title = false
+    user.save!
+    campaign = create(:campaign, user: user)
+
+    get player_campaign_path(campaign)
+
+    assert_response :success
+    assert_includes response.body, 'data-show-title="false"'
+    assert_includes response.body, 'data-transition-type="instant"'
   end
 end
