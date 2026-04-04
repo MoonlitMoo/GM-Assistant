@@ -13,6 +13,6 @@ class Campaign < ApplicationRecord
   after_create :create_root_folder!
 
   def create_root_folder!
-    folders.create!(name: "Root", is_root: true, campaign: @campaign)
+    folders.create!(name: "Root", is_root: true)
   end
 end
