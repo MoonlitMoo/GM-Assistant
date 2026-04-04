@@ -1,7 +1,7 @@
 <article class="library-card library-card--album">
-  <p class="library-card__kicker">Album</p>
+  <p class="library-card__kicker card-kicker">Album</p>
   <h3 class="library-card__title">
-    <%= link_to album.name, album_path(album) %>
+    <%= link_to album.name, album_path(album), class: "card-title-link" %>
   </h3>
 
   <% if album.description.present? %>
