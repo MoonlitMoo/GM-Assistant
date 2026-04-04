@@ -64,6 +64,21 @@ class FolderTest < ActiveSupport::TestCase
     assert_includes folder.errors[:is_root], "has already been taken"
   end
 
+  test "ancestry returns folders from the top-most ancestor through self without the root" do
+    campaign = create(:campaign)
+    district = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Districts")
+    villagers = create(:folder, campaign: campaign, parent: district, name: "Villagers")
+    market = create(:folder, campaign: campaign, parent: villagers, name: "Market Square")
+
+    assert_equal [ district, villagers, market ], market.ancestry
+  end
+
+  test "ancestry is empty for the root folder" do
+    campaign = create(:campaign)
+
+    assert_equal [], campaign.root_folder.ancestry
+  end
+
   test "destroying a folder destroys its child folders and albums" do
     folder = create(:folder)
     child_folder = create(:folder, campaign: folder.campaign, parent: folder)
