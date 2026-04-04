@@ -19,14 +19,6 @@ module Breadcrumbable
   end
 
   def folder_lineage(folder)
-    lineage = []
-    current = folder
-
-    while current.present?
-      lineage.unshift([ current.name, folder_path(current) ]) unless current.is_root?
-      current = current.parent
-    end
-
-    lineage
+    folder.ancestry.map { |ancestor| [ ancestor.name, folder_path(ancestor) ] }
   end
 end
