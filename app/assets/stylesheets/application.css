@@ -28,6 +28,26 @@ body {
   flex-direction: column;
 }
 
+/* Shared card utilities */
+.card-kicker {
+  color: var(--accent);
+  font-family: 'Cinzel', serif;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+}
+
+.card-title-link {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.card-title-link:hover {
+  color: var(--accent);
+  border-bottom-color: rgba(160, 57, 26, 0.3);
+}
+
 /* ── Top bar ── */
 #top-bar {
   height: var(--topbar-height);
@@ -334,11 +354,8 @@ body {
 }
 
 .gm-status-card__kicker {
-  color: var(--accent);
-  font-family: 'Cinzel', serif;
   font-size: 0.72rem;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .gm-status-card__title {
@@ -685,28 +702,12 @@ turbo-frame {
 }
 
 .library-card__kicker {
-  color: var(--accent);
-  font-family: 'Cinzel', serif;
   font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .library-card__title {
   font-size: 1.2rem;
   line-height: 1.2;
-}
-
-.library-card__title a {
-  color: var(--ink);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-}
-
-.library-card__title a:hover {
-  color: var(--accent);
-  border-bottom-color: rgba(160, 57, 26, 0.3);
 }
 
 .library-card__description,
@@ -816,17 +817,6 @@ turbo-frame {
 .image-card__title {
   font-size: 1.15rem;
   line-height: 1.2;
-}
-
-.image-card__title a {
-  color: var(--ink);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-}
-
-.image-card__title a:hover {
-  color: var(--accent);
-  border-bottom-color: rgba(160, 57, 26, 0.3);
 }
 
 .album-empty-state {
@@ -1001,28 +991,12 @@ turbo-frame {
 }
 
 .campaign-card__kicker {
-  color: var(--accent);
-  font-family: 'Cinzel', serif;
   font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .campaign-card__title {
   font-size: 1.35rem;
   line-height: 1.2;
-}
-
-.campaign-card__title a {
-  color: var(--ink);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-}
-
-.campaign-card__title a:hover {
-  color: var(--accent);
-  border-bottom-color: rgba(160, 57, 26, 0.3);
 }
 
 .campaign-card__actions {
@@ -1091,17 +1065,6 @@ turbo-frame {
 .recent-item__title {
   font-size: 1.18rem;
   line-height: 1.25;
-}
-
-.recent-item__title a {
-  color: var(--ink);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-}
-
-.recent-item__title a:hover {
-  color: var(--accent);
-  border-bottom-color: rgba(160, 57, 26, 0.3);
 }
 
 .recent-item__subtitle {
