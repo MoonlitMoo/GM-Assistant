@@ -7,6 +7,7 @@ end
 
 require_relative "../config/environment"
 require "rails/test_help"
+require_relative "test_helpers/session_test_helper"
 require "cgi"
 
 
@@ -25,6 +26,10 @@ module ActiveSupport
         with.library :rails
       end
     end
+
+    teardown do
+      Current.reset
+    end
   end
 end
 
@@ -33,5 +38,16 @@ class ActionDispatch::IntegrationTest
 
   def html_response_body
     CGI.unescapeHTML(response.body)
+  end
+end
+
+class AuthenticatedIntegrationTest < ActionDispatch::IntegrationTest
+  setup do
+    @current_user = create(:user)
+    sign_in_as(@current_user)
+  end
+
+  teardown do
+    sign_out
   end
 end

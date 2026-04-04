@@ -1,6 +1,6 @@
 require "test_helper"
 
-class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
+class PlayerDisplaysControllerTest < AuthenticatedIntegrationTest
   include ActionCable::TestHelper
 
   test "present with a valid image sets current image id and returns json" do
@@ -242,6 +242,8 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
 
   test "player show returns 200 for a valid campaign" do
     campaign = create(:campaign)
+
+    sign_out
 
     get player_campaign_path(campaign)
 

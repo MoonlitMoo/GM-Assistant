@@ -51,7 +51,7 @@ class FoldersController < ApplicationController
   private
 
   def set_folder
-    @folder = Folder.find(params[:id])
+    @folder = Folder.joins(:campaign).merge(Current.user.campaigns).find(params[:id])
   end
 
   def set_campaign
@@ -59,7 +59,7 @@ class FoldersController < ApplicationController
   end
 
   def set_parent_from_folder
-    @parent = Folder.find(params[:folder_id])
+    @parent = Folder.joins(:campaign).merge(Current.user.campaigns).find(params[:folder_id])
   end
 
   def folder_params

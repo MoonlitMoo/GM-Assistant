@@ -1,6 +1,8 @@
 class Campaign < ApplicationRecord
   scope :recently_active, -> { order(updated_at: :desc, created_at: :desc, id: :desc) }
 
+  belongs_to :user
+
   has_one :root_folder, -> { where(is_root: true) }, class_name: "Folder", dependent: :destroy
   has_one :player_display, dependent: :destroy
   has_many :presentation_events, dependent: :destroy
