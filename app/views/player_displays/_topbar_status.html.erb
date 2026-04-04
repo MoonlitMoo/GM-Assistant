@@ -1,13 +1,13 @@
 <% current_image = player_display&.current_image %>
+<% status_title = current_image&.title.presence || "Not showing" %>
 
 <%= turbo_frame_tag "topbar-status",
                     class: class_names("topbar-status-frame", { "is-empty": current_image.blank? }) do %>
-  <% if current_image.present? %>
-    <%= link_to image_path(current_image),
-                class: "topbar-status-link",
-                data: { turbo_frame: "content-body" } do %>
-      <span class="gm-status-dot is-active"></span>
-      <span class="topbar-status-title"><%= current_image.title %></span>
-    <% end %>
+  <%= link_to player_campaign_path(campaign),
+              class: class_names("topbar-status-link", { "is-inactive": current_image.blank? }),
+              data: { turbo_frame: "_top" },
+              aria: { label: "Open player display" } do %>
+    <span class="<%= class_names("gm-status-dot", { "is-active": current_image.present? }) %>"></span>
+    <span class="topbar-status-title"><%= status_title %></span>
   <% end %>
 <% end %>

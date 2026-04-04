@@ -119,6 +119,18 @@ class PlayerDisplayTest < ApplicationSystemTestCase
     assert_no_selector ".player-screen__image"
   end
 
+  test "top bar player display widget remains visible and opens the player screen when nothing is showing", :js do
+    visit route_helpers.campaign_path(@campaign)
+
+    within "#top-bar" do
+      assert_selector "#topbar-status", text: "Not showing"
+      click_link "Not showing"
+    end
+
+    assert_current_path route_helpers.player_campaign_path(@campaign)
+    assert_selector "#player-screen.player-screen-root"
+  end
+
   private
 
   def route_helpers
