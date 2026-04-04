@@ -35,6 +35,7 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
       /<nav aria-label="Breadcrumbs">\s*<span>North Reach<\/span>\s*<\/nav>/,
       response.body
     )
+    assert_equal 1, response.body.scan("data-breadcrumbs-payload").size
   end
 
   test "shows the campaign index" do

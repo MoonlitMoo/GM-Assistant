@@ -74,7 +74,6 @@
             <%= yield %>
           <% else %>
             <%= turbo_frame_tag "content-body", **content_body_frame_options do %>
-              <%= breadcrumbs_payload_tag %>
               <%= yield %>
             <% end %>
           <% end %>
