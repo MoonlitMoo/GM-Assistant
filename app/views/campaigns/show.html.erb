@@ -1,10 +1,4 @@
 <%= content_body_frame do %>
-  <% child_folders = @root_folder.present? ? @root_folder.child_folders.order(:name) : [] %>
-  <% root_albums = @root_folder.present? ? @root_folder.albums.order(:name) : [] %>
-  <% recent_images = @campaign.images.includes(:album).order(created_at: :desc).limit(5) %>
-  <% album_count = @campaign.albums.count %>
-  <% image_count = @campaign.images.count %>
-
   <section class="record-shell campaign-dashboard">
     <div class="record-panel">
       <div class="record-header">
@@ -33,12 +27,12 @@
       <div class="stats-grid">
         <article class="stat-card">
           <p class="stat-card__label">Total albums</p>
-          <p class="stat-card__value"><%= album_count %></p>
+          <p class="stat-card__value"><%= @album_count %></p>
         </article>
 
         <article class="stat-card">
           <p class="stat-card__label">Total images</p>
-          <p class="stat-card__value"><%= image_count %></p>
+          <p class="stat-card__value"><%= @image_count %></p>
         </article>
       </div>
     </div>
@@ -49,9 +43,9 @@
         <span>Latest 5 images</span>
       </div>
 
-      <% if recent_images.any? %>
+      <% if @recent_images.any? %>
         <div class="recent-list">
-          <% recent_images.each do |image| %>
+          <% @recent_images.each do |image| %>
             <article class="recent-item">
               <h3 class="recent-item__title"><%= link_to image.title, image_path(image), class: "card-title-link" %></h3>
               <p class="recent-item__subtitle"><%= image.album.name %></p>
@@ -68,12 +62,12 @@
     <div class="record-panel">
       <div class="section-heading">
         <h2>Folders</h2>
-        <span><%= pluralize(child_folders.size, "folder") %></span>
+        <span><%= pluralize(@child_folders.size, "folder") %></span>
       </div>
 
-      <% if child_folders.any? %>
+      <% if @child_folders.any? %>
         <div class="library-grid">
-          <%= render partial: "shared/folder_card", collection: child_folders, as: :folder %>
+          <%= render partial: "shared/folder_card", collection: @child_folders, as: :folder %>
         </div>
       <% else %>
         <div class="album-empty-state">
@@ -85,12 +79,12 @@
     <div class="record-panel">
       <div class="section-heading">
         <h2>Albums</h2>
-        <span><%= pluralize(root_albums.size, "album") %></span>
+        <span><%= pluralize(@root_albums.size, "album") %></span>
       </div>
 
-      <% if root_albums.any? %>
+      <% if @root_albums.any? %>
         <div class="library-grid">
-          <%= render partial: "shared/album_card", collection: root_albums, as: :album %>
+          <%= render partial: "shared/album_card", collection: @root_albums, as: :album %>
         </div>
       <% else %>
         <div class="album-empty-state">
