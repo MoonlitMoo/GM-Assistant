@@ -1,6 +1,11 @@
 require_relative "application_system_test_case"
 
 class CrudTest < ApplicationSystemTestCase
+  setup do
+    @user = create(:user)
+    sign_in_as(@user)
+  end
+
   test "creates a campaign through the form and shows it in the index" do
     campaign_name = "Cook Strait Chronicle"
 
@@ -25,7 +30,7 @@ class CrudTest < ApplicationSystemTestCase
   end
 
   test "creates a folder beneath the root folder and shows it in the folder list" do
-    campaign = create(:campaign, name: "South Coast Survey")
+    campaign = create(:campaign, user: @user, name: "South Coast Survey")
     root_folder = campaign.root_folder
     folder_name = "Wharf Sketches"
     description = "Reference sketches for the old docks."
@@ -52,7 +57,7 @@ class CrudTest < ApplicationSystemTestCase
   end
 
   test "creates an album beneath a folder and shows it in the folder list" do
-    campaign = create(:campaign, name: "Northern Lights")
+    campaign = create(:campaign, user: @user, name: "Northern Lights")
     folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Lantern Notes")
     album_name = "Harbour Evenings"
 
@@ -83,7 +88,7 @@ class CrudTest < ApplicationSystemTestCase
   end
 
   test "uploads an image to an album through the form and shows it in the album" do
-    campaign = create(:campaign, name: "Rainy Bay")
+    campaign = create(:campaign, user: @user, name: "Rainy Bay")
     folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Storm Files")
     album = create(:album, campaign: campaign, folder: folder, name: "Jetty Studies")
     image_title = "Breakwater at Dawn"
@@ -113,8 +118,8 @@ class CrudTest < ApplicationSystemTestCase
   end
 
   test "deletes a campaign and removes it from the index" do
-    create(:campaign, name: "Sheltered Inlet")
-    doomed_campaign = create(:campaign, name: "Fading Coast")
+    create(:campaign, user: @user, name: "Sheltered Inlet")
+    doomed_campaign = create(:campaign, user: @user, name: "Fading Coast")
 
     visit campaigns_path
 

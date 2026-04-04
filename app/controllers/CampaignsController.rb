@@ -2,13 +2,13 @@ class CampaignsController < ApplicationController
   include Breadcrumbable
 
   layout "campaign", only: [ :show, :edit, :update ]
-  before_action :set_campaign, only: [ :show, :edit, :update, :destroy ]
+  before_action :set_campaign, only: [ :show, :edit, :update, :destroy, :tree ]
   before_action :set_campaign_show_breadcrumbs, only: [ :show ]
   before_action :set_campaign_edit_breadcrumbs, only: [ :edit, :update ]
   after_action :touch_campaign_activity, only: [ :show, :edit, :create, :update ]
 
   def index
-    @campaigns = Campaign.recently_active
+    @campaigns = Current.user.campaigns.recently_active
   end
 
   def show
@@ -21,11 +21,11 @@ class CampaignsController < ApplicationController
   end
 
   def new
-    @campaign = Campaign.new
+    @campaign = Current.user.campaigns.build
   end
 
   def create
-    @campaign = Campaign.new(campaign_params)
+    @campaign = Current.user.campaigns.build(campaign_params)
     if @campaign.save
       redirect_to @campaign, notice: "Campaign created successfully"
     else
@@ -50,7 +50,6 @@ class CampaignsController < ApplicationController
   end
 
   def tree
-    @campaign = Campaign.find(params[:id])
     root = @campaign.root_folder
     render json: build_folder_tree(root)
   end
@@ -58,7 +57,7 @@ class CampaignsController < ApplicationController
   private
 
   def set_campaign
-    @campaign = Campaign.find(params[:id])
+    @campaign = Current.user.campaigns.find(params[:id])
   end
 
   def campaign_params

@@ -1,6 +1,6 @@
 require "test_helper"
 
-class AlbumsControllerTest < ActionDispatch::IntegrationTest
+class AlbumsControllerTest < AuthenticatedIntegrationTest
   test "shows an album with breadcrumb context, actions, and thumbnail grid" do
     campaign = create(:campaign, name: "Shattered Coast")
     campaign.root_folder.update!(name: "Archive Root")

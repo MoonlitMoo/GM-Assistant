@@ -1,6 +1,6 @@
 require "test_helper"
 
-class ImagesControllerTest < ActionDispatch::IntegrationTest
+class ImagesControllerTest < AuthenticatedIntegrationTest
   test "shows an image" do
     campaign = create(:campaign, name: "Shoreline Atlas")
     campaign.root_folder.update!(name: "Deep Vault")

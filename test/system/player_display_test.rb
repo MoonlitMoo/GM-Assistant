@@ -7,10 +7,12 @@ class PlayerDisplayTest < ApplicationSystemTestCase
   end
 
   setup do
-    @campaign = create(:campaign, name: "Silver Tides")
+    @user = create(:user)
+    @campaign = create(:campaign, user: @user, name: "Silver Tides")
     @folder = create(:folder, campaign: @campaign, parent: @campaign.root_folder, name: "Harbour Notes")
     @album = create(:album, campaign: @campaign, folder: @folder, name: "Lantern Studies")
     @image = create(:image, campaign: @campaign, album: @album, title: "Beacon Fire")
+    sign_in_as(@user)
   end
 
   test "present button appears on the image show page", :js do

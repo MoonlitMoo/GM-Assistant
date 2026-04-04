@@ -1,6 +1,6 @@
 require "test_helper"
 
-class CampaignFlowsTest < ActionDispatch::IntegrationTest
+class CampaignFlowsTest < AuthenticatedIntegrationTest
   test "creating a campaign creates its root folder" do
     assert_difference("Campaign.count", 1) do
       assert_difference("Folder.where(is_root: true).count", 1) do

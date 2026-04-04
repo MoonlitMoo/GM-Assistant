@@ -1,6 +1,6 @@
 require "test_helper"
 
-class FoldersControllerTest < ActionDispatch::IntegrationTest
+class FoldersControllerTest < AuthenticatedIntegrationTest
   test "shows a folder with breadcrumb context and omits the root folder" do
     campaign = create(:campaign, name: "Moonwake Atlas")
     campaign.root_folder.update!(name: "Archive Root")

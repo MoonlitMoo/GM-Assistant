@@ -2,11 +2,13 @@ require_relative "application_system_test_case"
 
 class NavigationTest < ApplicationSystemTestCase
   setup do
-    @campaign = create(:campaign, name: "Te Whanga")
+    @user = create(:user)
+    @campaign = create(:campaign, user: @user, name: "Te Whanga")
     @root_folder = @campaign.root_folder
     @folder = create(:folder, campaign: @campaign, parent: @root_folder, name: "Field Notes")
     @album = create(:album, campaign: @campaign, folder: @folder, name: "Harbour Sketches")
     @image = create(:image, campaign: @campaign, album: @album, title: "Beacon Cliffs")
+    sign_in_as(@user)
   end
 
   test "campaign index page loads and lists a campaign" do
@@ -17,7 +19,7 @@ class NavigationTest < ApplicationSystemTestCase
   end
 
   test "shows an explicit empty state in the sidebar when the campaign tree has no items" do
-    empty_campaign = create(:campaign, name: "Blank Atlas")
+    empty_campaign = create(:campaign, user: @user, name: "Blank Atlas")
 
     visit campaign_path(empty_campaign)
 
