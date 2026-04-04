@@ -5,7 +5,7 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     campaign = create(:campaign, name: "Moonwake Atlas")
     campaign.root_folder.update!(name: "Archive Root")
     parent = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Districts")
-    folder = create(:folder, campaign: campaign, parent: parent, name: "Villagers")
+    folder = create(:folder, campaign: campaign, parent: parent, name: "Villagers", description: "A ledger of ward residents.")
     create(:folder, campaign: campaign, parent: folder, name: "Market Square")
     create(:album, campaign: campaign, folder: folder, name: "Faces of the Ward", description: "Reference portraits")
 
@@ -17,6 +17,7 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "New Album"
     assert_includes response.body, "Market Square"
     assert_includes response.body, "Faces of the Ward"
+    assert_includes response.body, "A ledger of ward residents."
     assert_includes response.body, new_folder_folder_path(folder)
     assert_includes response.body, new_folder_album_path(folder)
     assert_match(
@@ -63,6 +64,7 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "New Folder"
+    assert_includes response.body, "Description"
     assert_match(%r{href="#{folder_path(parent)}"[^>]*>Cancel<}, response.body)
   end
 
@@ -99,13 +101,15 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
 
     patch folder_path(folder), params: {
       folder: {
-        name: "Villains"
+        name: "Villains",
+        description: "New settlement notes"
       }
     }
 
     assert_redirected_to folder_path(folder)
     folder.reload
     assert_equal "Villains", folder.name
+    assert_equal "New settlement notes", folder.description
   end
 
   test "re-renders the edit folder form when the update is invalid" do

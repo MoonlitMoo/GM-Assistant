@@ -6,6 +6,10 @@
           <p class="record-kicker"><%= @folder.is_root? ? "Campaign Library" : "Folder" %></p>
           <h1 class="record-title"><%= @folder.name %></h1>
 
+          <% if @folder.description.present? %>
+            <p class="record-description"><%= @folder.description %></p>
+          <% end %>
+
           <p class="record-description">
             <%= pluralize(@child_folders.size, "child folder") %> and
             <%= pluralize(@albums.size, "album") %> within this chapter of the archive.
