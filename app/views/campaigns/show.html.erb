@@ -73,18 +73,7 @@
 
       <% if child_folders.any? %>
         <div class="library-grid">
-          <% child_folders.each do |folder| %>
-            <article class="library-card library-card--folder">
-              <p class="library-card__kicker">Folder</p>
-              <h3 class="library-card__title">
-                <%= link_to folder.name, folder_path(folder) %>
-              </h3>
-              <p class="library-card__meta">
-                <%= pluralize(folder.child_folders.size, "child folder") %> ·
-                <%= pluralize(folder.albums.size, "album") %>
-              </p>
-            </article>
-          <% end %>
+          <%= render partial: "shared/folder_card", collection: child_folders, as: :folder %>
         </div>
       <% else %>
         <div class="album-empty-state">
@@ -101,20 +90,7 @@
 
       <% if root_albums.any? %>
         <div class="library-grid">
-          <% root_albums.each do |album| %>
-            <article class="library-card library-card--album">
-              <p class="library-card__kicker">Album</p>
-              <h3 class="library-card__title">
-                <%= link_to album.name, album_path(album) %>
-              </h3>
-
-              <% if album.description.present? %>
-                <p class="library-card__description"><%= album.description %></p>
-              <% end %>
-
-              <p class="library-card__meta"><%= pluralize(album.images.size, "image") %></p>
-            </article>
-          <% end %>
+          <%= render partial: "shared/album_card", collection: root_albums, as: :album %>
         </div>
       <% else %>
         <div class="album-empty-state">

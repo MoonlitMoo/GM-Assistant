@@ -1,0 +1,12 @@
+<article class="library-card library-card--album">
+  <p class="library-card__kicker">Album</p>
+  <h3 class="library-card__title">
+    <%= link_to album.name, album_path(album) %>
+  </h3>
+
+  <% if album.description.present? %>
+    <p class="library-card__description"><%= album.description %></p>
+  <% end %>
+
+  <p class="library-card__meta"><%= pluralize(album.images.size, "image") %></p>
+</article>
