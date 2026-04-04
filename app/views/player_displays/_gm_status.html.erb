@@ -14,7 +14,7 @@
       </div>
 
       <div class="gm-status-card__copy">
-        <p class="gm-status-card__kicker">Now showing</p>
+        <p class="gm-status-card__kicker card-kicker">Now showing</p>
         <p class="gm-status-card__title"><%= current_image.title %></p>
 
         <% if gm_panel_breadcrumb(current_image).present? %>
@@ -66,7 +66,7 @@
   <% end %>
 
   <section class="gm-recent">
-    <p class="gm-status-card__kicker">Recently shown</p>
+    <p class="gm-status-card__kicker card-kicker">Recently shown</p>
 
     <% if recent_events.any? %>
       <ul class="gm-recent-list">

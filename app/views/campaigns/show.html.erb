@@ -53,7 +53,7 @@
         <div class="recent-list">
           <% recent_images.each do |image| %>
             <article class="recent-item">
-              <h3 class="recent-item__title"><%= link_to image.title, image_path(image) %></h3>
+              <h3 class="recent-item__title"><%= link_to image.title, image_path(image), class: "card-title-link" %></h3>
               <p class="recent-item__subtitle"><%= image.album.name %></p>
             </article>
           <% end %>

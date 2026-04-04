@@ -27,9 +27,9 @@
         <% @campaigns.each do |campaign| %>
           <article class="campaign-card">
             <div class="campaign-card__copy">
-              <p class="campaign-card__kicker">Campaign</p>
+              <p class="campaign-card__kicker card-kicker">Campaign</p>
               <h3 class="campaign-card__title">
-                <%= link_to campaign.name, campaign_path(campaign) %>
+                <%= link_to campaign.name, campaign_path(campaign), class: "card-title-link" %>
               </h3>
             </div>
 
