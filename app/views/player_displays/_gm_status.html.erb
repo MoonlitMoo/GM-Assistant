@@ -35,12 +35,12 @@
 
       <div class="gm-status-card__controls">
         <%= button_to(player_display.show_title ? "Title on" : "Title off",
-                      toggle_title_campaign_path(player_display.campaign),
+                      toggle_title_campaign_player_display_path(player_display.campaign),
                       method: :patch,
                       class: "fantasy-button fantasy-button--secondary gm-status-card__secondary-action",
                       form: { data: { turbo_frame: "_top" } }) %>
 
-        <%= form_with url: update_transition_campaign_path(player_display.campaign),
+        <%= form_with url: update_transition_campaign_player_display_path(player_display.campaign),
                       method: :patch,
                       class: "gm-status-card__transition-form",
                       data: { controller: "auto-submit", turbo_frame: "_top" } do |form| %>

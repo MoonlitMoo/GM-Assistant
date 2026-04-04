@@ -15,13 +15,13 @@ Rails.application.routes.draw do
     member do
       get :player, to: "player#show"
       get :tree
-      patch :toggle_title, to: "player_displays#toggle_title"
-      patch :update_transition, to: "player_displays#update_transition"
     end
 
     resource :player_display, only: [], shallow: true do
       patch :present
       patch :clear
+      patch :toggle_title
+      patch :update_transition
     end
   end
 

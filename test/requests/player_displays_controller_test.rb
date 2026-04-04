@@ -184,7 +184,7 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     player_display = create(:player_display, :with_current_image, show_title: true)
 
     assert_broadcast_on("player_display_#{player_display.campaign_id}", { "show_title" => false }) do
-      patch toggle_title_campaign_path(player_display.campaign),
+      patch toggle_title_campaign_player_display_path(player_display.campaign),
             headers: { "Accept" => Mime[:turbo_stream].to_s }
     end
 
@@ -198,7 +198,7 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
   test "update transition updates transition type and returns turbo stream" do
     player_display = create(:player_display, :with_current_image, transition_type: :crossfade)
 
-    patch update_transition_campaign_path(player_display.campaign),
+    patch update_transition_campaign_player_display_path(player_display.campaign),
           params: { transition_type: "instant" },
           headers: { "Accept" => Mime[:turbo_stream].to_s }
 
