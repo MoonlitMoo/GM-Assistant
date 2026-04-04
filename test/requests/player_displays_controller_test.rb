@@ -127,6 +127,7 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal Mime[:turbo_stream].to_s, response.media_type
     assert_includes response.body, 'target="topbar-status"'
+    assert_includes response.body, player_campaign_path(image.campaign)
     assert_includes response.body, image.title
   end
 
@@ -227,7 +228,9 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal Mime[:turbo_stream].to_s, response.media_type
     assert_includes response.body, 'target="topbar-status"'
+    assert_includes response.body, player_campaign_path(player_display.campaign)
     assert_includes response.body, 'class="topbar-status-frame is-empty"'
+    assert_includes response.body, "Not showing"
   end
 
   test "clear when no player display exists does not crash" do

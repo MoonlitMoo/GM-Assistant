@@ -107,10 +107,6 @@ body {
   stroke-width: 1.6;
 }
 
-#top-bar .topbar-status-frame.is-empty {
-  display: none;
-}
-
 #top-bar .topbar-status-link {
   display: inline-flex;
   align-items: center;
@@ -123,6 +119,10 @@ body {
 #top-bar .topbar-status-link:hover {
   color: var(--parchment);
   opacity: 0.92;
+}
+
+#top-bar .topbar-status-link.is-inactive {
+  opacity: 0.62;
 }
 
 #top-bar .topbar-status-title {
