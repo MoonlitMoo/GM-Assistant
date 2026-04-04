@@ -64,22 +64,20 @@
         </div>
 
         <!-- Main content -->
-          <div id="main-content">
-          <div id="main-content"
-               data-controller="content-panel"
-               data-action="turbo:frame-load->content-panel#syncBreadcrumbs">
-            <div id="breadcrumbs" data-content-panel-target="breadcrumbs">
-              <%= render "shared/breadcrumbs", breadcrumbs: breadcrumbs %>
-            </div>
-            <% if turbo_frame_request? %>
-              <%= yield %>
-            <% else %>
-              <%= turbo_frame_tag "content-body", **content_body_frame_options do %>
-                <%= breadcrumbs_payload_tag %>
-                <%= yield %>
-              <% end %>
-            <% end %>
+        <div id="main-content"
+             data-controller="content-panel"
+             data-action="turbo:frame-load->content-panel#syncBreadcrumbs">
+          <div id="breadcrumbs" data-content-panel-target="breadcrumbs">
+            <%= render "shared/breadcrumbs", breadcrumbs: breadcrumbs %>
           </div>
+          <% if turbo_frame_request? %>
+            <%= yield %>
+          <% else %>
+            <%= turbo_frame_tag "content-body", **content_body_frame_options do %>
+              <%= breadcrumbs_payload_tag %>
+              <%= yield %>
+            <% end %>
+          <% end %>
         </div>
       </div>
     <% end %>
