@@ -14,7 +14,20 @@ class Folder < ApplicationRecord
   validates :is_root, uniqueness: { scope: :campaign_id }, if: :is_root?
   validate :root_folder_has_no_parent
 
+  def ancestry
+    lineage = []
+    current = self
+
+    while current.present?
+      lineage.unshift(current) unless current.is_root?
+      current = current.parent
+    end
+
+    lineage
+  end
+
   private
+
   def folder_parent_from_same_campaign
     return if parent.blank?
     return if campaign.blank?
