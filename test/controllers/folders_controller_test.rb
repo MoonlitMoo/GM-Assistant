@@ -1,8 +1,13 @@
 require "test_helper"
 
-class FoldersControllerTest < AuthenticatedIntegrationTest
+class FoldersControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    @user = create(:user)
+    sign_in(@user)
+  end
+
   test "shows a folder with breadcrumb context and omits the root folder" do
-    campaign = create(:campaign, name: "Moonwake Atlas")
+    campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
     campaign.root_folder.update!(name: "Archive Root")
     parent = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Districts")
     folder = create(:folder, campaign: campaign, parent: parent, name: "Villagers", description: "A ledger of ward residents.")
@@ -28,7 +33,7 @@ class FoldersControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows the root folder with only the campaign in breadcrumbs" do
-    campaign = create(:campaign, name: "Moonwake Atlas")
+    campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
 
     get folder_path(campaign.root_folder)
 
@@ -43,8 +48,8 @@ class FoldersControllerTest < AuthenticatedIntegrationTest
   end
 
   test "showing a folder moves its campaign to the top of recent activity" do
-    campaign = create(:campaign, name: "Moonwake Atlas")
-    other_campaign = create(:campaign, name: "Shattered Coast")
+    campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
+    other_campaign = create(:campaign, user: @user, name: "Shattered Coast")
     folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Villagers")
     campaign.update_columns(updated_at: 3.days.ago)
     other_campaign.update_columns(updated_at: 1.day.ago)
@@ -57,7 +62,7 @@ class FoldersControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows the new folder form" do
-    campaign = create(:campaign)
+    campaign = create(:campaign, user: @user)
     parent = campaign.root_folder
 
     get new_folder_folder_path(parent)
@@ -69,7 +74,7 @@ class FoldersControllerTest < AuthenticatedIntegrationTest
   end
 
   test "re-renders the new folder form when creation is invalid" do
-    campaign = create(:campaign)
+    campaign = create(:campaign, user: @user)
     parent = campaign.root_folder
 
     assert_no_difference("Folder.count") do
@@ -86,7 +91,7 @@ class FoldersControllerTest < AuthenticatedIntegrationTest
   end
 
   test "shows the edit folder form" do
-    folder = create(:folder, name: "Villagers")
+    folder = create(:folder, campaign: create(:campaign, user: @user), name: "Villagers")
 
     get edit_folder_path(folder)
 
@@ -97,7 +102,7 @@ class FoldersControllerTest < AuthenticatedIntegrationTest
   end
 
   test "updates a folder" do
-    folder = create(:folder, name: "Villagers")
+    folder = create(:folder, campaign: create(:campaign, user: @user), name: "Villagers")
 
     patch folder_path(folder), params: {
       folder: {
@@ -113,7 +118,7 @@ class FoldersControllerTest < AuthenticatedIntegrationTest
   end
 
   test "re-renders the edit folder form when the update is invalid" do
-    folder = create(:folder)
+    folder = create(:folder, campaign: create(:campaign, user: @user))
 
     patch folder_path(folder), params: {
       folder: {
@@ -127,7 +132,7 @@ class FoldersControllerTest < AuthenticatedIntegrationTest
   end
 
   test "destroys a folder and returns to its parent" do
-    campaign = create(:campaign)
+    campaign = create(:campaign, user: @user)
     parent = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Districts")
     folder = create(:folder, campaign: campaign, parent: parent, name: "Docks")
 
