@@ -1,8 +1,32 @@
-<h1>Forgot your password?</h1>
+<% provide :title, "Reset Password — GM Assistant" %>
+<% provide :topbar_title, "Sign in" %>
 
-<%= tag.div(flash[:alert], style: "color:red") if flash[:alert] %>
+<section class="record-shell form-shell auth-shell">
+  <%= render "shared/flash" %>
 
-<%= form_with url: passwords_path do |form| %>
-  <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username", placeholder: "Enter your email address", value: params[:email_address] %><br>
-  <%= form.submit "Email reset instructions" %>
-<% end %>
+  <div class="record-panel form-panel">
+    <div class="form-panel__header">
+      <p class="record-kicker">Account Recovery</p>
+      <h1 class="record-title">Forgot your password?</h1>
+      <p class="record-description auth-description">Enter your email address and we&apos;ll send you a password reset link.</p>
+    </div>
+
+    <%= form_with url: passwords_path, class: "resource-form" do |form| %>
+      <div class="resource-form__field">
+        <%= form.label :email_address, "Email address" %>
+        <%= form.email_field :email_address,
+                             required: true,
+                             autofocus: true,
+                             autocomplete: "username",
+                             placeholder: "Enter your email address",
+                             value: params[:email_address],
+                             class: "resource-form__input" %>
+      </div>
+
+      <div class="resource-form__actions">
+        <%= form.submit "Send reset instructions", class: "fantasy-button fantasy-button--primary" %>
+        <%= link_to "Back to sign in", new_session_path, class: "resource-form__subtle-link" %>
+      </div>
+    <% end %>
+  </div>
+</section>

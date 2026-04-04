@@ -1,4 +1,8 @@
-You can reset your password on
-<%= edit_password_url(@user.password_reset_token) %>
+Hello,
 
-This link will expire in <%= distance_of_time_in_words(0, @user.password_reset_token_expires_in) %>.
+Someone requested a password reset for your GM Assistant account.
+
+Reset your password:
+<%= @url %>
+
+This link expires in 15 minutes. If you did not request this, you can ignore this email.

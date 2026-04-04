@@ -1,6 +1,8 @@
 class PasswordsMailer < ApplicationMailer
   def reset(user)
     @user = user
-    mail subject: "Reset your password", to: user.email_address
+    @url = edit_password_url(@user.password_reset_token)
+
+    mail to: @user.email_address, subject: "Reset your GM Assistant password"
   end
 end
