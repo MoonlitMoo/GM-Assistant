@@ -961,6 +961,24 @@ turbo-frame {
   color: var(--accent);
 }
 
+.resource-form__subtle-link {
+  color: var(--ink-light);
+  font-size: 0.98rem;
+  text-decoration: none;
+}
+
+.resource-form__subtle-link:hover {
+  color: var(--accent);
+}
+
+.auth-shell {
+  max-width: 720px;
+}
+
+.auth-description {
+  max-width: 32rem;
+}
+
 .form-errors {
   display: grid;
   gap: 0.65rem;

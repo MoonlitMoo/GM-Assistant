@@ -1,9 +1,51 @@
-<h1>Update your password</h1>
+<% provide :title, "Choose New Password — GM Assistant" %>
+<% provide :topbar_title, "Sign in" %>
 
-<%= tag.div(flash[:alert], style: "color:red") if flash[:alert] %>
+<section class="record-shell form-shell auth-shell">
+  <%= render "shared/flash" %>
 
-<%= form_with url: password_path(params[:token]), method: :put do |form| %>
-  <%= form.password_field :password, required: true, autocomplete: "new-password", placeholder: "Enter new password", maxlength: 72 %><br>
-  <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password", placeholder: "Repeat new password", maxlength: 72 %><br>
-  <%= form.submit "Save" %>
-<% end %>
+  <div class="record-panel form-panel">
+    <div class="form-panel__header">
+      <p class="record-kicker">Account Recovery</p>
+      <h1 class="record-title">Update your password</h1>
+      <p class="record-description auth-description">Choose a new password for your GM Assistant account.</p>
+    </div>
+
+    <%= form_with url: password_path(params[:token]), method: :patch, class: "resource-form" do |form| %>
+      <% if @user&.errors&.any? %>
+        <div class="form-errors">
+          <h2><%= pluralize(@user.errors.count, "error") %> prevented your password from being saved:</h2>
+          <ul>
+            <% @user.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="resource-form__field">
+        <%= form.label :password, "New password" %>
+        <%= form.password_field :password,
+                                required: true,
+                                autocomplete: "new-password",
+                                placeholder: "Enter new password",
+                                maxlength: 72,
+                                class: "resource-form__input" %>
+      </div>
+
+      <div class="resource-form__field">
+        <%= form.label :password_confirmation, "Confirm new password" %>
+        <%= form.password_field :password_confirmation,
+                                required: true,
+                                autocomplete: "new-password",
+                                placeholder: "Repeat new password",
+                                maxlength: 72,
+                                class: "resource-form__input" %>
+      </div>
+
+      <div class="resource-form__actions">
+        <%= form.submit "Save password", class: "fantasy-button fantasy-button--primary" %>
+      </div>
+    <% end %>
+  </div>
+</section>
