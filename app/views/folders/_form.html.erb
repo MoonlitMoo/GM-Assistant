@@ -24,6 +24,11 @@
         <%= form.text_field :name, class: "resource-form__input", autofocus: true %>
       </div>
 
+      <div class="resource-form__field">
+        <%= form.label :description %>
+        <%= form.text_area :description, class: "resource-form__input resource-form__textarea", rows: 6 %>
+      </div>
+
       <div class="resource-form__actions">
         <%= form.submit(@folder.persisted? ? "Save Folder" : "Create Folder",
                         class: "fantasy-button fantasy-button--primary") %>

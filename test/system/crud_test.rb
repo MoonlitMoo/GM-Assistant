@@ -28,6 +28,7 @@ class CrudTest < ApplicationSystemTestCase
     campaign = create(:campaign, name: "South Coast Survey")
     root_folder = campaign.root_folder
     folder_name = "Wharf Sketches"
+    description = "Reference sketches for the old docks."
 
     visit folder_path(root_folder)
 
@@ -36,6 +37,7 @@ class CrudTest < ApplicationSystemTestCase
     end
 
     fill_in "Name", with: folder_name
+    fill_in "Description", with: description
 
     assert_difference("Folder.count", 1) do
       click_button "Create Folder"
@@ -46,6 +48,7 @@ class CrudTest < ApplicationSystemTestCase
     assert_current_path folder_path(root_folder)
     assert_link folder.name
     assert_selector "#sidebar .tree-label", text: folder.name
+    assert_equal description, folder.description
   end
 
   test "creates an album beneath a folder and shows it in the folder list" do
