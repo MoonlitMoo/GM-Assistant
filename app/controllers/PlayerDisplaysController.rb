@@ -118,7 +118,7 @@ class PlayerDisplaysController < ApplicationController
   private
 
   def set_campaign
-    @campaign = Campaign.find(params[:campaign_id] || params[:id])
+    @campaign = Current.user.campaigns.find(params[:campaign_id] || params[:id])
   end
 
   def image_url_for(image)

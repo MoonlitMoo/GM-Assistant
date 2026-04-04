@@ -1,4 +1,6 @@
 class PlayerController < ApplicationController
+  allow_unauthenticated_access
+
   layout "player"
   before_action :set_campaign
 

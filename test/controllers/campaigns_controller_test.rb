@@ -1,6 +1,14 @@
 require "test_helper"
 
-class CampaignsControllerTest < ActionDispatch::IntegrationTest
+class CampaignsControllerTest < AuthenticatedIntegrationTest
+  test "redirects unauthenticated requests to the sign-in page" do
+    sign_out
+
+    get campaigns_path
+
+    assert_redirected_to new_session_path
+  end
+
   test "shows a campaign with breadcrumb context" do
     campaign = create(:campaign, name: "North Reach", description: "A weathered coastal frontier.")
     root_folder = campaign.root_folder
@@ -186,5 +194,13 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to campaigns_path
     assert_nil Campaign.find_by(id: campaign.id)
+  end
+
+  test "does not expose another user's campaign" do
+    campaign = create(:campaign, user: create(:user))
+
+    get campaign_path(campaign)
+
+    assert_response :not_found
   end
 end

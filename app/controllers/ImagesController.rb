@@ -49,11 +49,11 @@ class ImagesController < ApplicationController
   private
 
   def set_image
-    @image = Image.find(params[:id])
+    @image = Image.joins(:campaign).merge(Current.user.campaigns).find(params[:id])
   end
 
   def set_album
-    @album = Album.find(params[:album_id])
+    @album = Album.joins(:campaign).merge(Current.user.campaigns).find(params[:album_id])
   end
 
   def image_params

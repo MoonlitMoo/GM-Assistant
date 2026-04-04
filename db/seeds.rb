@@ -7,3 +7,17 @@
 #   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
 #     MovieGenre.find_or_create_by!(name: genre_name)
 #   end
+
+gm = User.find_or_initialize_by(email_address: "gm@example.com")
+gm.password = "password"
+gm.password_confirmation = "password"
+gm.save!
+
+# If legacy local data predates campaign ownership, attach it to the seeded GM user.
+Campaign.where(user_id: nil).find_each do |campaign|
+  campaign.update!(user: gm)
+end
+
+# Any future seeded campaigns should be created through `gm.campaigns` so ownership
+# stays explicit, for example:
+# gm.campaigns.find_or_create_by!(name: "Starter Campaign")
