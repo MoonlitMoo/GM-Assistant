@@ -33,13 +33,13 @@ Rails.application.routes.draw do
   end
 
   # Don't need to create folders outside of a folder, since the root folder is automatically created.
-  resources :folders, only: [ :show, :edit, :update, :destroy ] do
+  resources :folders, only: [ :new, :show, :edit, :update, :destroy ] do
     # From folders we can create folders and albums
     resources :folders, only: [ :new, :create ], shallow: true
     resources :albums, only: [ :new, :create ], shallow: true
   end
 
-  resources :albums, only: [ :show, :edit, :update, :destroy ] do
+  resources :albums, only: [ :new, :show, :edit, :update, :destroy ] do
     resources :images, only: [ :new, :create ]
   end
   resources :images, only: [ :show, :edit, :update, :destroy ]

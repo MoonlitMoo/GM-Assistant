@@ -51,7 +51,9 @@ class CampaignsController < ApplicationController
 
   def tree
     root = @campaign.root_folder
-    render json: build_folder_tree(root)
+    render json: build_folder_tree(root).merge(
+      new_root_folder_url: new_folder_path(parent_id: root.id)
+    )
   end
 
   private
@@ -73,13 +75,32 @@ class CampaignsController < ApplicationController
   end
 
   def build_folder_tree(folder)
+    child_folders = folder.child_folders.to_a
+    albums = folder.albums.includes(:images).to_a
+
     {
       id: folder.id,
       campaignId: folder.campaign_id,
       name: folder.name,
       url: folder_path(folder),
-      folders: folder.child_folders.map { |f| build_folder_tree(f) },
-      albums: folder.albums.map { |a| { id: a.id, name: a.name, url: album_path(a) } }
+      edit_url: edit_folder_path(folder),
+      new_subfolder_url: new_folder_path(parent_id: folder.id),
+      new_album_url: new_album_path(folder_id: folder.id),
+      child_folder_count: child_folders.size,
+      album_count: albums.size,
+      image_count: albums.sum { |album| album.images.size },
+      folders: child_folders.map { |child_folder| build_folder_tree(child_folder) },
+      albums: albums.map { |album| build_album_tree(album) }
+    }
+  end
+
+  def build_album_tree(album)
+    {
+      id: album.id,
+      name: album.name,
+      url: album_path(album),
+      edit_url: edit_album_path(album),
+      image_count: album.images.size
     }
   end
 end

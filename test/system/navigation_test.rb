@@ -154,4 +154,91 @@ class NavigationTest < ApplicationSystemTestCase
       assert_selector ".tree-album .tree-label", text: @album.name
     end
   end
+
+  test "sidebar context menu opens on a folder node and can navigate to new subfolder form" do
+    visit folder_path(@root_folder)
+
+    find("#sidebar .tree-folder .tree-label", text: @folder.name).right_click
+
+    within ".tree-context-menu" do
+      assert_button "New Subfolder"
+      assert_button "New Album"
+      assert_button "Rename"
+      assert_button "Edit"
+      assert_button "Delete"
+      click_button "New Subfolder"
+    end
+
+    assert_current_path new_folder_path(parent_id: @folder.id)
+    assert_text "New Folder"
+  end
+
+  test "sidebar context menu can rename a folder inline and refresh the tree" do
+    nested_folder = create(:folder, campaign: @campaign, parent: @folder, name: "Signal Fires")
+
+    visit folder_path(@root_folder)
+
+    within "#sidebar" do
+      find(".tree-folder", text: @folder.name).find(".tree-toggle").click
+      find(".tree-folder .tree-label", text: nested_folder.name).right_click
+    end
+
+    within ".tree-context-menu" do
+      click_button "Rename"
+    end
+
+    within "#sidebar" do
+      input = find(".tree-rename-input", visible: true)
+      input.set("Watch Posts")
+      input.send_keys(:enter)
+      assert_selector ".tree-folder .tree-label", text: "Watch Posts"
+    end
+  end
+
+  test "sidebar context menu can delete a folder through the confirmation modal" do
+    nested_folder = create(:folder, campaign: @campaign, parent: @folder, name: "Signal Fires")
+    create(:folder, campaign: @campaign, parent: nested_folder, name: "Watchtower")
+    nested_album = create(:album, campaign: @campaign, folder: nested_folder, name: "Lantern Studies")
+    create(:image, campaign: @campaign, album: nested_album, title: "Signal Flame")
+
+    visit folder_path(@root_folder)
+
+    within "#sidebar" do
+      find(".tree-folder", text: @folder.name).find(".tree-toggle").click
+      find(".tree-folder .tree-label", text: nested_folder.name).right_click
+    end
+
+    within ".tree-context-menu" do
+      click_button "Delete"
+    end
+
+    within ".tree-delete-modal" do
+      assert_text "Delete Folder"
+      assert_text "1 subfolder"
+      assert_text "1 album"
+      assert_text "1 image"
+      assert_text "This cannot be undone."
+      click_button "Cancel"
+    end
+
+    assert_no_selector ".tree-delete-modal"
+
+    within "#sidebar" do
+      find(".tree-folder .tree-label", text: nested_folder.name).right_click
+    end
+
+    within ".tree-context-menu" do
+      click_button "Delete"
+    end
+
+    within ".tree-delete-modal" do
+      click_button "Delete"
+    end
+
+    assert_nil Folder.find_by(id: nested_folder.id)
+
+    within "#sidebar" do
+      assert_no_selector ".tree-folder .tree-label", text: nested_folder.name, wait: 10
+    end
+  end
 end

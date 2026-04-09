@@ -63,6 +63,16 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Landmarks"
   end
 
+  test "shows the new album form from the top-level helper with folder_id" do
+    folder = create(:folder, campaign: create(:campaign, user: @user), name: "Landmarks")
+
+    get new_album_path(folder_id: folder.id)
+
+    assert_response :success
+    assert_includes response.body, "New Album"
+    assert_includes response.body, "Landmarks"
+  end
+
   test "re-renders the new album form when creation is invalid" do
     folder = create(:folder, campaign: create(:campaign, user: @user))
 
@@ -107,6 +117,24 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Fresh notes", album.description
   end
 
+  test "updates an album via json" do
+    album = create(:album, campaign: create(:campaign, user: @user), name: "Old Gallery")
+
+    patch album_path(album), params: {
+      album: {
+        name: "New Gallery"
+      }
+    }, as: :json
+
+    assert_response :ok
+    assert_equal "application/json", response.media_type
+    album.reload
+
+    payload = JSON.parse(response.body)
+    assert_equal album.id, payload["id"]
+    assert_equal "New Gallery", payload["name"]
+  end
+
   test "updating an album moves its campaign to the top of recent activity" do
     campaign = create(:campaign, user: @user, name: "Shattered Coast")
     other_campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
@@ -141,6 +169,20 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_includes response.body, "Edit Album"
     assert_includes html_response_body, "Name can't be blank"
+  end
+
+  test "returns json errors when an album update is invalid" do
+    album = create(:album, campaign: create(:campaign, user: @user))
+
+    patch album_path(album), params: {
+      album: {
+        name: nil
+      }
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "application/json", response.media_type
+    assert_equal [ "Name can't be blank" ], JSON.parse(response.body)["errors"]
   end
 
   test "destroys an album and returns to its folder" do
