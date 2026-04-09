@@ -3,7 +3,7 @@ class FoldersController < ApplicationController
 
   layout "campaign"
   before_action :set_folder, only: [ :show, :edit, :update, :destroy ]
-  before_action :set_parent_from_folder, only: [ :new, :create ], if: -> { params[:folder_id].present? }
+  before_action :set_parent, only: [ :new, :create ]
   before_action :set_campaign, only: [ :show, :edit, :update, :new, :create, :destroy ]
   before_action :set_folder_show_breadcrumbs, only: [ :show ]
   before_action :set_folder_new_breadcrumbs, only: [ :new, :create ]
@@ -36,16 +36,26 @@ class FoldersController < ApplicationController
 
   def update
     if @folder.update(folder_params)
-      redirect_to @folder, notice: "Folder updated successfully", flash: { tree_refresh: true }
+      respond_to do |format|
+        format.html { redirect_to @folder, notice: "Folder updated successfully", flash: { tree_refresh: true } }
+        format.json { render json: @folder }
+      end
     else
-      render :edit, status: :unprocessable_entity
+      respond_to do |format|
+        format.html { render :edit, status: :unprocessable_entity }
+        format.json { render json: { errors: @folder.errors.full_messages }, status: :unprocessable_entity }
+      end
     end
   end
 
   def destroy
     parent = @folder.parent || @folder.campaign
     @folder.destroy
-    redirect_to parent, notice: "Folder destroyed successfully", flash: { tree_refresh: true }
+
+    respond_to do |format|
+      format.html { redirect_to parent, notice: "Folder destroyed successfully", flash: { tree_refresh: true } }
+      format.json { head :ok }
+    end
   end
 
   private
@@ -58,8 +68,9 @@ class FoldersController < ApplicationController
     @campaign = @folder&.campaign || @parent&.campaign
   end
 
-  def set_parent_from_folder
-    @parent = Folder.joins(:campaign).merge(Current.user.campaigns).find(params[:folder_id])
+  def set_parent
+    parent_id = params[:folder_id].presence || params[:parent_id].presence
+    @parent = Folder.joins(:campaign).merge(Current.user.campaigns).find(parent_id)
   end
 
   def folder_params

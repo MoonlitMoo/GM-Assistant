@@ -3,7 +3,7 @@ class AlbumsController < ApplicationController
 
   layout "campaign"
   before_action :set_album, only: [ :show, :edit, :update, :destroy ]
-  before_action :set_folder, only: [ :new, :create ], if: -> { params[:folder_id].present? }
+  before_action :set_folder, only: [ :new, :create ]
   before_action :set_campaign, only: [ :show, :edit, :update, :new, :create, :destroy ]
   before_action :set_album_show_breadcrumbs, only: [ :show ]
   before_action :set_album_new_breadcrumbs, only: [ :new, :create ]
@@ -34,16 +34,26 @@ class AlbumsController < ApplicationController
 
   def update
     if @album.update(album_params)
-      redirect_to @album, notice: "Album updated successfully", flash: { tree_refresh: true }
+      respond_to do |format|
+        format.html { redirect_to @album, notice: "Album updated successfully", flash: { tree_refresh: true } }
+        format.json { render json: @album }
+      end
     else
-      render :edit, status: :unprocessable_entity
+      respond_to do |format|
+        format.html { render :edit, status: :unprocessable_entity }
+        format.json { render json: { errors: @album.errors.full_messages }, status: :unprocessable_entity }
+      end
     end
   end
 
   def destroy
     parent = @album.folder
     @album.destroy
-    redirect_to parent, notice: "Album destroyed successfully", flash: { tree_refresh: true }
+
+    respond_to do |format|
+      format.html { redirect_to parent, notice: "Album destroyed successfully", flash: { tree_refresh: true } }
+      format.json { head :ok }
+    end
   end
 
   private

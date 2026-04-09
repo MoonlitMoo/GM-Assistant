@@ -73,6 +73,18 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_match(%r{href="#{folder_path(parent)}"[^>]*>Cancel<}, response.body)
   end
 
+  test "shows the new folder form from the top-level helper with parent_id" do
+    campaign = create(:campaign, user: @user)
+    parent = campaign.root_folder
+
+    get new_folder_path(parent_id: parent.id)
+
+    assert_response :success
+    assert_includes response.body, "New Folder"
+    assert_includes response.body, "Description"
+    assert_match(%r{href="#{folder_path(parent)}"[^>]*>Cancel<}, response.body)
+  end
+
   test "re-renders the new folder form when creation is invalid" do
     campaign = create(:campaign, user: @user)
     parent = campaign.root_folder
@@ -117,6 +129,24 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "New settlement notes", folder.description
   end
 
+  test "updates a folder via json" do
+    folder = create(:folder, campaign: create(:campaign, user: @user), name: "Villagers")
+
+    patch folder_path(folder), params: {
+      folder: {
+        name: "Villains"
+      }
+    }, as: :json
+
+    assert_response :ok
+    assert_equal "application/json", response.media_type
+    folder.reload
+
+    payload = JSON.parse(response.body)
+    assert_equal folder.id, payload["id"]
+    assert_equal "Villains", payload["name"]
+  end
+
   test "re-renders the edit folder form when the update is invalid" do
     folder = create(:folder, campaign: create(:campaign, user: @user))
 
@@ -129,6 +159,20 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_includes response.body, "Edit Folder"
     assert_includes html_response_body, "Name can't be blank"
+  end
+
+  test "returns json errors when a folder update is invalid" do
+    folder = create(:folder, campaign: create(:campaign, user: @user))
+
+    patch folder_path(folder), params: {
+      folder: {
+        name: nil
+      }
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "application/json", response.media_type
+    assert_equal [ "Name can't be blank" ], JSON.parse(response.body)["errors"]
   end
 
   test "destroys a folder and returns to its parent" do
