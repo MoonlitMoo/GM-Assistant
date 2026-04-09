@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import DeleteConfirmModal from "./DeleteConfirmModal"
 import TreeContextMenu from "./TreeContextMenu"
+import { csrfToken, inferredNodeType } from "../lib/tree_utils"
 
 function storageKeyFor(campaignId) {
   return `campaign-tree:${campaignId}:expanded`
@@ -97,10 +98,6 @@ function statusMessage(title, body, modifier = "") {
   )
 }
 
-function csrfToken() {
-  return document.querySelector('meta[name="csrf-token"]')?.content || ""
-}
-
 function renamePayloadFor(nodeType, name) {
   if (nodeType === "folder") return { folder: { name } }
   return { album: { name } }
@@ -112,32 +109,6 @@ function renameErrorMessage(responseBody, fallbackMessage) {
   }
 
   return fallbackMessage
-}
-
-function inferredNodeType(node) {
-  if (!node) return null
-  if (node.type) return node.type
-  if (Array.isArray(node.folders) && Array.isArray(node.albums)) return "folder"
-  return "album"
-}
-
-function removeNodeFromTree(folder, node) {
-  if (!folder || !node) return folder
-
-  const nodeType = inferredNodeType(node)
-  const nextFolders = folder.folders
-    .filter((childFolder) => !(nodeType === "folder" && childFolder.id === node.id))
-    .map((childFolder) => removeNodeFromTree(childFolder, node))
-
-  const nextAlbums = nodeType === "album"
-    ? folder.albums.filter((album) => album.id !== node.id)
-    : folder.albums
-
-  return {
-    ...folder,
-    folders: nextFolders,
-    albums: nextAlbums
-  }
 }
 
 export default function CampaignTree({ treeUrl }) {
@@ -506,53 +477,14 @@ export default function CampaignTree({ treeUrl }) {
     )
   }
 
-  if (!treeData || treeIsEmpty(treeData)) {
-    return (
-      <div className="tree-surface" onContextMenu={handleTreeBackgroundContextMenu}>
-        {statusMessage(
-          "Campaign library is empty",
-          "Create a folder or album to start organizing this campaign.",
-          "tree-status--empty"
-        )}
-        {contextMenu && (
-          <TreeContextMenu
-            x={contextMenu.x}
-            y={contextMenu.y}
-            node={contextMenu.node}
-            campaignId={treeData?.campaignId || null}
-            onClose={() => setContextMenu(null)}
-            onRename={handleContextMenuRename}
-            onDelete={handleContextMenuDelete}
-          />
-        )}
-        {deletingNode && (
-          <DeleteConfirmModal
-            node={deletingNode}
-            onClose={() => setDeletingNode(null)}
-            onDeleted={() => {
-              dispatchTreeRefresh()
-              setDeletingNode(null)
-            }}
-          />
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div className="tree-surface" onContextMenu={handleTreeBackgroundContextMenu}>
-      <nav className="tree-nav" aria-label="Campaign tree">
-        <ul className="tree-list tree-list--root">
-          {renderFolderEntries(treeData)}
-        </ul>
-      </nav>
-
+  const overlays = (
+    <>
       {contextMenu && (
         <TreeContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
           node={contextMenu.node}
-          campaignId={treeData.campaignId}
+          newRootFolderUrl={treeData?.new_root_folder_url ?? null}
           onClose={() => setContextMenu(null)}
           onRename={handleContextMenuRename}
           onDelete={handleContextMenuDelete}
@@ -564,12 +496,32 @@ export default function CampaignTree({ treeUrl }) {
           node={deletingNode}
           onClose={() => setDeletingNode(null)}
           onDeleted={() => {
-            setTreeData((currentTreeData) => removeNodeFromTree(currentTreeData, deletingNode))
             dispatchTreeRefresh()
             setDeletingNode(null)
           }}
         />
       )}
+    </>
+  )
+
+  const content = !treeData || treeIsEmpty(treeData)
+    ? statusMessage(
+        "Campaign library is empty",
+        "Create a folder or album to start organizing this campaign.",
+        "tree-status--empty"
+      )
+    : (
+        <nav className="tree-nav" aria-label="Campaign tree">
+          <ul className="tree-list tree-list--root">
+            {renderFolderEntries(treeData)}
+          </ul>
+        </nav>
+      )
+
+  return (
+    <div className="tree-surface" onContextMenu={handleTreeBackgroundContextMenu}>
+      {content}
+      {overlays}
     </div>
   )
 }

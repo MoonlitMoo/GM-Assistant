@@ -1,16 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-
-function inferredNodeType(node) {
-  if (!node) return null
-  if (node.type) return node.type
-  if (Array.isArray(node.folders) && Array.isArray(node.albums)) return "folder"
-  return "album"
-}
-
-function csrfToken() {
-  return document.querySelector('meta[name="csrf-token"]')?.content || ""
-}
+import usePortalDismiss from "../hooks/usePortalDismiss"
+import { csrfToken, inferredNodeType } from "../lib/tree_utils"
 
 function pluralize(count, noun) {
   return `${count} ${noun}${count === 1 ? "" : "s"}`
@@ -28,23 +19,12 @@ export default function DeleteConfirmModal({ node, onClose, onDeleted }) {
     imageCount: Number(node?.image_count || 0)
   }), [node])
 
-  useEffect(() => {
-    if (!node) return undefined
-
-    cardRef.current?.focus()
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape" && !isDeleting) {
-        onClose()
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown)
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown)
-    }
-  }, [isDeleting, node, onClose])
+  usePortalDismiss({
+    containerRef: cardRef,
+    enabled: !!node,
+    onClose,
+    isDismissDisabled: isDeleting
+  })
 
   if (!node || typeof document === "undefined" || !document.body) {
     return null
