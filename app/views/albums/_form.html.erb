@@ -5,7 +5,10 @@
       <h1 class="record-title"><%= @album.persisted? ? "Edit Album" : "New Album" %></h1>
     </div>
 
-    <%= form_with model: form_model, class: "resource-form" do |form| %>
+    <% form_options = { model: form_model, class: "resource-form" } %>
+    <% form_options[:url] = form_url if local_assigns[:form_url].present? %>
+
+    <%= form_with(**form_options) do |form| %>
       <%= form_return_to_field %>
 
       <% if @album.errors.any? %>
