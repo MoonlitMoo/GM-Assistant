@@ -17,8 +17,7 @@ Capybara.register_driver(:cuprite_brave) do |app|
 end
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
-  driven_by :cuprite_brave
-
+  driven_by :cuprite, using: :chrome, screen_size: [1400, 900]
   include FactoryBot::Syntax::Methods
 
   def after_teardown
