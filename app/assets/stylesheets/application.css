@@ -231,6 +231,11 @@ body {
   min-width: 0;
 }
 
+.tree-row__content {
+  min-width: 0;
+  display: grid;
+}
+
 .tree-label:hover {
   background-color: var(--parchment-border);
   color: var(--ink);
@@ -249,6 +254,39 @@ body {
 
 .tree-album .tree-label.is-current {
   color: var(--accent);
+}
+
+.tree-rename-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2rem;
+  padding: 0.28rem 0.5rem;
+  border: 1px solid rgba(160, 57, 26, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 252, 244, 0.96);
+  color: var(--ink);
+  font-family: 'Crimson Text', serif;
+  font-size: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.tree-rename-input:focus {
+  outline: 2px solid rgba(160, 57, 26, 0.18);
+  outline-offset: 1px;
+  border-color: rgba(160, 57, 26, 0.36);
+}
+
+.tree-rename-input--album {
+  color: var(--ink-light);
+  font-style: italic;
+}
+
+.tree-inline-error {
+  margin-top: 0.18rem;
+  padding-left: 0.45rem;
+  color: var(--accent);
+  font-size: 0.74rem;
+  line-height: 1.25;
 }
 
 .tree-status {
@@ -281,6 +319,163 @@ body {
   margin-top: 0.35rem;
   color: var(--ink-light);
   line-height: 1.4;
+}
+
+.tree-context-menu {
+  position: fixed;
+  z-index: 30;
+  min-width: 12rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(107, 63, 31, 0.22);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 244, 0.96), rgba(242, 232, 213, 0.94)),
+    radial-gradient(circle at top right, rgba(160, 57, 26, 0.08), transparent 42%);
+  box-shadow:
+    0 18px 34px rgba(44, 31, 14, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  color: var(--ink);
+  font-family: 'Cinzel', serif;
+}
+
+.tree-context-menu:focus {
+  outline: none;
+}
+
+.tree-context-menu__list {
+  list-style: none;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.tree-context-menu__button {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font-family: 'Cinzel', serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.tree-context-menu__button:hover,
+.tree-context-menu__button:focus-visible {
+  background: rgba(160, 57, 26, 0.1);
+  color: var(--accent);
+  outline: none;
+}
+
+.tree-context-menu__button:active {
+  transform: translateY(1px);
+}
+
+.tree-context-menu__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.tree-context-menu__button--danger {
+  color: var(--accent);
+}
+
+.tree-context-menu__button--danger:hover,
+.tree-context-menu__button--danger:focus-visible {
+  background: rgba(160, 57, 26, 0.12);
+  color: var(--accent);
+}
+
+.tree-delete-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(44, 31, 14, 0.52);
+  backdrop-filter: blur(2px);
+}
+
+.tree-delete-modal__card {
+  width: min(100%, 28rem);
+  padding: 1.4rem;
+  border: 1px solid rgba(107, 63, 31, 0.22);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 252, 244, 0.97), rgba(242, 232, 213, 0.94)),
+    radial-gradient(circle at top right, rgba(160, 57, 26, 0.1), transparent 42%);
+  box-shadow:
+    0 24px 48px rgba(44, 31, 14, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  color: var(--ink);
+}
+
+.tree-delete-modal__card:focus {
+  outline: none;
+}
+
+.tree-delete-modal__kicker {
+  color: var(--accent);
+  font-family: 'Cinzel', serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.tree-delete-modal__title {
+  margin-top: 0.35rem;
+  font-family: 'Cinzel', serif;
+  font-size: 1.7rem;
+  line-height: 1.15;
+}
+
+.tree-delete-modal__name {
+  margin-top: 0.45rem;
+  color: var(--ink-light);
+  font-size: 1.02rem;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.tree-delete-modal__body {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.tree-delete-modal__line {
+  color: var(--ink-light);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.tree-delete-modal__error {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(160, 57, 26, 0.24);
+  border-radius: 12px;
+  background: rgba(160, 57, 26, 0.08);
+  color: var(--accent);
+  line-height: 1.4;
+}
+
+.tree-delete-modal__actions {
+  margin-top: 1.15rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.tree-delete-modal__delete {
+  background: linear-gradient(180deg, #97391f, #6f1d12);
+  border-color: rgba(107, 63, 31, 0.6);
+  color: var(--parchment);
 }
 
 .gm-panel {

@@ -137,7 +137,13 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     campaign = create(:campaign, user: @user, name: "North Reach")
     root_folder = campaign.root_folder
     child_folder = create(:folder, campaign: campaign, parent: root_folder, name: "Locations")
-    create(:album, campaign: campaign, folder: child_folder, name: "Harbour Sketches")
+    nested_folder = create(:folder, campaign: campaign, parent: child_folder, name: "Harbour")
+    root_album = create(:album, campaign: campaign, folder: root_folder, name: "Campaign Notes")
+    child_album = create(:album, campaign: campaign, folder: child_folder, name: "Harbour Sketches")
+    nested_album = create(:album, campaign: campaign, folder: nested_folder, name: "Secret Routes")
+    create(:image, campaign: campaign, album: root_album, title: "Root Image")
+    create_list(:image, 2, campaign: campaign, album: child_album)
+    create(:image, campaign: campaign, album: nested_album, title: "Nested Image")
 
     get tree_campaign_path(campaign)
 
@@ -148,12 +154,42 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal campaign.id, payload["campaignId"]
     assert_equal root_folder.name, payload["name"]
     assert_equal folder_path(root_folder), payload["url"]
+    assert_equal edit_folder_path(root_folder), payload["edit_url"]
+    assert_equal new_folder_path(parent_id: root_folder.id), payload["new_subfolder_url"]
+    assert_equal new_album_path(folder_id: root_folder.id), payload["new_album_url"]
+    assert_equal 1, payload["child_folder_count"]
+    assert_equal 1, payload["album_count"]
+    assert_equal 1, payload["image_count"]
+    assert_equal new_folder_path(parent_id: root_folder.id), payload["new_root_folder_url"]
+
+    root_album_payload = payload.fetch("albums").find { |album| album["id"] == root_album.id }
+    assert_equal root_album.name, root_album_payload["name"]
+    assert_equal album_path(root_album), root_album_payload["url"]
+    assert_equal edit_album_path(root_album), root_album_payload["edit_url"]
+    assert_equal 1, root_album_payload["image_count"]
 
     child_payload = payload.fetch("folders").find { |folder| folder["id"] == child_folder.id }
     assert_equal child_folder.name, child_payload["name"]
     assert_equal folder_path(child_folder), child_payload["url"]
-    assert_equal "Harbour Sketches", child_payload.dig("albums", 0, "name")
-    assert_equal album_path(child_folder.albums.first), child_payload.dig("albums", 0, "url")
+    assert_equal edit_folder_path(child_folder), child_payload["edit_url"]
+    assert_equal new_folder_path(parent_id: child_folder.id), child_payload["new_subfolder_url"]
+    assert_equal new_album_path(folder_id: child_folder.id), child_payload["new_album_url"]
+    assert_equal 1, child_payload["child_folder_count"]
+    assert_equal 1, child_payload["album_count"]
+    assert_equal 2, child_payload["image_count"]
+
+    child_album_payload = child_payload.fetch("albums").find { |album| album["id"] == child_album.id }
+    assert_equal child_album.name, child_album_payload["name"]
+    assert_equal album_path(child_album), child_album_payload["url"]
+    assert_equal edit_album_path(child_album), child_album_payload["edit_url"]
+    assert_equal 2, child_album_payload["image_count"]
+
+    nested_payload = child_payload.fetch("folders").find { |folder| folder["id"] == nested_folder.id }
+    assert_equal nested_folder.name, nested_payload["name"]
+    assert_equal folder_path(nested_folder), nested_payload["url"]
+    assert_equal 0, nested_payload["child_folder_count"]
+    assert_equal 1, nested_payload["album_count"]
+    assert_equal 1, nested_payload["image_count"]
   end
 
   test "re-renders the new campaign form when creation is invalid" do

@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
+import DeleteConfirmModal from "./DeleteConfirmModal"
+import TreeContextMenu from "./TreeContextMenu"
 
 function storageKeyFor(campaignId) {
   return `campaign-tree:${campaignId}:expanded`
@@ -94,12 +96,63 @@ function statusMessage(title, body, modifier = "") {
   )
 }
 
+function csrfToken() {
+  return document.querySelector('meta[name="csrf-token"]')?.content || ""
+}
+
+function renamePayloadFor(nodeType, name) {
+  if (nodeType === "folder") return { folder: { name } }
+  return { album: { name } }
+}
+
+function renameErrorMessage(responseBody, fallbackMessage) {
+  if (Array.isArray(responseBody?.errors) && responseBody.errors.length > 0) {
+    return responseBody.errors.join(", ")
+  }
+
+  return fallbackMessage
+}
+
+function inferredNodeType(node) {
+  if (!node) return null
+  if (node.type) return node.type
+  if (Array.isArray(node.folders) && Array.isArray(node.albums)) return "folder"
+  return "album"
+}
+
+function removeNodeFromTree(folder, node) {
+  if (!folder || !node) return folder
+
+  const nodeType = inferredNodeType(node)
+  const nextFolders = folder.folders
+    .filter((childFolder) => !(nodeType === "folder" && childFolder.id === node.id))
+    .map((childFolder) => removeNodeFromTree(childFolder, node))
+
+  const nextAlbums = nodeType === "album"
+    ? folder.albums.filter((album) => album.id !== node.id)
+    : folder.albums
+
+  return {
+    ...folder,
+    folders: nextFolders,
+    albums: nextAlbums
+  }
+}
+
 export default function CampaignTree({ treeUrl }) {
+  const suppressRenameBlurRef = useRef(false)
   const [treeData, setTreeData] = useState(null)
   const [expanded, setExpanded] = useState({})
   const [currentContext, setCurrentContext] = useState(currentTreeContext)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [contextMenu, setContextMenu] = useState(null)
+  const [deletingNode, setDeletingNode] = useState(null)
+  const [renamingNodeId, setRenamingNodeId] = useState(null)
+  const [renamingNodeType, setRenamingNodeType] = useState(null)
+  const [renameValue, setRenameValue] = useState("")
+  const [renameError, setRenameError] = useState(null)
+  const [isRenamingSubmitting, setIsRenamingSubmitting] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -110,7 +163,11 @@ export default function CampaignTree({ treeUrl }) {
         activeController?.abort()
         activeController = new AbortController()
 
-        const response = await fetch(treeUrl, { signal: activeController.signal })
+        const response = await fetch(treeUrl, {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+          signal: activeController.signal
+        })
         if (!response.ok) throw new Error(`Tree request failed with ${response.status}`)
 
         const data = await response.json()
@@ -131,6 +188,7 @@ export default function CampaignTree({ treeUrl }) {
     }
 
     function refreshTree() {
+      setContextMenu(null)
       loadTree()
     }
 
@@ -195,7 +253,166 @@ export default function CampaignTree({ treeUrl }) {
   }
 
   function navigateTo(url) {
+    setContextMenu(null)
     window.Turbo.visit(url, { frame: "content-body" })
+  }
+
+  function dispatchTreeRefresh() {
+    document.dispatchEvent(new CustomEvent("tree:refresh"))
+  }
+
+  function beginRename(node, nodeType) {
+    suppressRenameBlurRef.current = false
+    setContextMenu(null)
+    setRenameError(null)
+    setRenamingNodeId(node.id)
+    setRenamingNodeType(nodeType)
+    setRenameValue(node.name)
+    setIsRenamingSubmitting(false)
+  }
+
+  function clearRenameState() {
+    setRenamingNodeId(null)
+    setRenamingNodeType(null)
+    setRenameValue("")
+    setIsRenamingSubmitting(false)
+  }
+
+  async function submitRename(node, nodeType) {
+    if (isRenamingSubmitting) return
+
+    setRenameError(null)
+    setContextMenu(null)
+    setIsRenamingSubmitting(true)
+
+    try {
+      const response = await fetch(node.url, {
+        method: "PATCH",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken(),
+          "X-Requested-With": "XMLHttpRequest"
+        },
+        credentials: "same-origin",
+        body: JSON.stringify(renamePayloadFor(nodeType, renameValue))
+      })
+
+      const responseBody = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        setRenameError({
+          nodeId: node.id,
+          nodeType,
+          message: renameErrorMessage(responseBody, "Couldn’t rename this item.")
+        })
+        clearRenameState()
+        return
+      }
+
+      dispatchTreeRefresh()
+      clearRenameState()
+    } catch {
+      setRenameError({
+        nodeId: node.id,
+        nodeType,
+        message: "Couldn’t rename this item."
+      })
+      clearRenameState()
+    }
+  }
+
+  function cancelRename() {
+    setRenameError(null)
+    clearRenameState()
+  }
+
+  function handleNodeContextMenu(event, node) {
+    event.preventDefault()
+    event.stopPropagation()
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      node
+    })
+  }
+
+  function handleTreeBackgroundContextMenu(event) {
+    if (event.target.closest(".tree-item")) return
+
+    event.preventDefault()
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      node: null
+    })
+  }
+
+  function handleContextMenuRename(node) {
+    beginRename(node, inferredNodeType(node))
+    setContextMenu(null)
+  }
+
+  function handleContextMenuDelete(node) {
+    setDeletingNode(node)
+    setContextMenu(null)
+  }
+
+  function renderTreeLabel(node, nodeType, isCurrent) {
+    const isRenaming = renamingNodeId === node.id && renamingNodeType === nodeType
+    const inlineError = renameError?.nodeId === node.id && renameError?.nodeType === nodeType ? renameError.message : null
+    const labelClasses = `tree-label ${isCurrent ? "is-current" : ""}`.trim()
+
+    return (
+      <div className="tree-row__content">
+        {isRenaming ? (
+          <input
+            type="text"
+            className={`tree-rename-input ${nodeType === "album" ? "tree-rename-input--album" : ""}`.trim()}
+            value={renameValue}
+            autoFocus
+            disabled={isRenamingSubmitting}
+            onChange={(event) => setRenameValue(event.currentTarget.value)}
+            onBlur={() => {
+              if (suppressRenameBlurRef.current) {
+                suppressRenameBlurRef.current = false
+                return
+              }
+
+              submitRename(node, nodeType)
+            }}
+            onFocus={(event) => event.currentTarget.select()}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault()
+                submitRename(node, nodeType)
+              } else if (event.key === "Escape") {
+                event.preventDefault()
+                suppressRenameBlurRef.current = true
+                cancelRename()
+              }
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            className={labelClasses}
+            aria-current={isCurrent ? "page" : undefined}
+            onClick={() => navigateTo(node.url)}
+            onKeyDown={(event) => {
+              if (event.key === "F2") {
+                event.preventDefault()
+                beginRename(node, nodeType)
+              }
+            }}
+          >
+            {nodeType === "album" ? <i>{node.name}</i> : node.name}
+          </button>
+        )}
+
+        {inlineError ? <p className="tree-inline-error">{inlineError}</p> : null}
+      </div>
+    )
   }
 
   function renderFolderEntries(folder) {
@@ -207,7 +424,11 @@ export default function CampaignTree({ treeUrl }) {
           const isCurrent = currentContext.path === childFolder.url
 
           return (
-            <li className="tree-folder tree-item" key={`folder-${childFolder.id}`}>
+            <li
+              className="tree-folder tree-item"
+              key={`folder-${childFolder.id}`}
+              onContextMenu={(event) => handleNodeContextMenu(event, childFolder)}
+            >
               <div className="tree-row">
                 {hasChildren ? (
                   <button
@@ -223,14 +444,7 @@ export default function CampaignTree({ treeUrl }) {
                   <span className="tree-spacer" aria-hidden="true" />
                 )}
 
-                <button
-                  type="button"
-                  className={`tree-label ${isCurrent ? "is-current" : ""}`.trim()}
-                  aria-current={isCurrent ? "page" : undefined}
-                  onClick={() => navigateTo(childFolder.url)}
-                >
-                  {childFolder.name}
-                </button>
+                {renderTreeLabel(childFolder, "folder", isCurrent)}
               </div>
 
               {hasChildren && isExpanded ? (
@@ -246,17 +460,14 @@ export default function CampaignTree({ treeUrl }) {
           const isCurrent = currentContext.path === album.url
 
           return (
-            <li className="tree-album tree-item" key={`album-${album.id}`}>
+            <li
+              className="tree-album tree-item"
+              key={`album-${album.id}`}
+              onContextMenu={(event) => handleNodeContextMenu(event, album)}
+            >
               <div className="tree-row">
                 <span className="tree-spacer" aria-hidden="true" />
-                <button
-                  type="button"
-                  className={`tree-label ${isCurrent ? "is-current" : ""}`.trim()}
-                  aria-current={isCurrent ? "page" : undefined}
-                  onClick={() => navigateTo(album.url)}
-                >
-                  <i>{album.name}</i>
-                </button>
+                {renderTreeLabel(album, "album", isCurrent)}
               </div>
             </li>
           )
@@ -270,22 +481,77 @@ export default function CampaignTree({ treeUrl }) {
   }
 
   if (loadError && treeData === null) {
-    return statusMessage("Couldn’t load the tree", "Refresh the page and try again.", "tree-status--error")
+    return (
+      <div className="tree-surface" onContextMenu={handleTreeBackgroundContextMenu}>
+        {statusMessage("Couldn’t load the tree", "Refresh the page and try again.", "tree-status--error")}
+      </div>
+    )
   }
 
   if (!treeData || treeIsEmpty(treeData)) {
-    return statusMessage(
-      "Campaign library is empty",
-      "Create a folder or album to start organizing this campaign.",
-      "tree-status--empty"
+    return (
+      <div className="tree-surface" onContextMenu={handleTreeBackgroundContextMenu}>
+        {statusMessage(
+          "Campaign library is empty",
+          "Create a folder or album to start organizing this campaign.",
+          "tree-status--empty"
+        )}
+        {contextMenu && (
+          <TreeContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            node={contextMenu.node}
+            campaignId={treeData?.campaignId || null}
+            onClose={() => setContextMenu(null)}
+            onRename={handleContextMenuRename}
+            onDelete={handleContextMenuDelete}
+          />
+        )}
+        {deletingNode && (
+          <DeleteConfirmModal
+            node={deletingNode}
+            onClose={() => setDeletingNode(null)}
+            onDeleted={() => {
+              dispatchTreeRefresh()
+              setDeletingNode(null)
+            }}
+          />
+        )}
+      </div>
     )
   }
 
   return (
-    <nav className="tree-nav" aria-label="Campaign tree">
-      <ul className="tree-list tree-list--root">
-        {renderFolderEntries(treeData)}
-      </ul>
-    </nav>
+    <div className="tree-surface" onContextMenu={handleTreeBackgroundContextMenu}>
+      <nav className="tree-nav" aria-label="Campaign tree">
+        <ul className="tree-list tree-list--root">
+          {renderFolderEntries(treeData)}
+        </ul>
+      </nav>
+
+      {contextMenu && (
+        <TreeContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          node={contextMenu.node}
+          campaignId={treeData.campaignId}
+          onClose={() => setContextMenu(null)}
+          onRename={handleContextMenuRename}
+          onDelete={handleContextMenuDelete}
+        />
+      )}
+
+      {deletingNode && (
+        <DeleteConfirmModal
+          node={deletingNode}
+          onClose={() => setDeletingNode(null)}
+          onDeleted={() => {
+            setTreeData((currentTreeData) => removeNodeFromTree(currentTreeData, deletingNode))
+            dispatchTreeRefresh()
+            setDeletingNode(null)
+          }}
+        />
+      )}
+    </div>
   )
 }
