@@ -88,7 +88,7 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Edit Album"
     assert_includes response.body, "Gallery"
-    assert_match(%r{href="#{album_path(album)}"[^>]*>Cancel<}, response.body)
+    assert_match(%r{href="#{album_path(album.id)}"[^>]*>Cancel<}, response.body)
   end
 
   test "updates an album" do
@@ -101,8 +101,8 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_redirected_to album_path(album)
     album.reload
+    assert_redirected_to album_path(album)
     assert_equal "New Gallery", album.name
     assert_equal "Fresh notes", album.description
   end
@@ -120,6 +120,7 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
+    album.reload
     assert_redirected_to album_path(album)
 
     get campaigns_path

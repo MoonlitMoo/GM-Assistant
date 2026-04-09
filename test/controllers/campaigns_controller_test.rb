@@ -105,7 +105,7 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Edit Campaign"
     assert_includes response.body, "Save Campaign"
-    assert_match(%r{href="#{campaign_path(campaign)}"[^>]*>Cancel<}, response.body)
+    assert_match(%r{href="#{campaign_path(campaign.id)}"[^>]*>Cancel<}, response.body)
   end
 
   test "shows the edit campaign form with the supplied return path" do
@@ -166,8 +166,8 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_redirected_to campaign_path(campaign)
     campaign.reload
+    assert_redirected_to campaign_path(campaign)
     assert_equal "New Name", campaign.name
     assert_equal "Fresh notes", campaign.description
   end

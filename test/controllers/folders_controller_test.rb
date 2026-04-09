@@ -98,7 +98,7 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Edit Folder"
     assert_includes response.body, "Villagers"
-    assert_match(%r{href="#{folder_path(folder)}"[^>]*>Cancel<}, response.body)
+    assert_match(%r{href="#{folder_path(folder.id)}"[^>]*>Cancel<}, response.body)
   end
 
   test "updates a folder" do
@@ -111,8 +111,8 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_redirected_to folder_path(folder)
     folder.reload
+    assert_redirected_to folder_path(folder)
     assert_equal "Villains", folder.name
     assert_equal "New settlement notes", folder.description
   end
