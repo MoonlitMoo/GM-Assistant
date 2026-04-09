@@ -17,7 +17,16 @@ Capybara.register_driver(:cuprite_brave) do |app|
 end
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
-  driven_by :cuprite, using: :chrome, screen_size: [ 1400, 900 ]
+  driven_by :cuprite, using: :chrome, screen_size: [ 1400, 900 ], options: {
+    browser_path: ENV.fetch("BROWSER_PATH", "/snap/bin/brave"),
+    process_timeout: 30,
+    headless: true,
+    browser_options: {
+      "no-sandbox" => nil,
+      "disable-gpu" => nil,
+      "disable-dev-shm-usage" => nil
+    }
+  }
   include FactoryBot::Syntax::Methods
 
   def after_teardown
