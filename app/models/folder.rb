@@ -25,6 +25,10 @@ class Folder < ApplicationRecord
 
     lineage
   end
+  
+  def to_param
+    "#{id}-#{name.squish.parameterize}"
+  end
 
   private
 

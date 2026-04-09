@@ -5,4 +5,8 @@ class Album < ApplicationRecord
   has_many :images, -> { order(position: :asc) }, dependent: :destroy
 
   validates :name, presence: true
+
+  def to_param
+    "#{id}-#{name.squish.parameterize}"
+  end
 end
