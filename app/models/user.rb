@@ -1,7 +1,16 @@
 class User < ApplicationRecord
   DEFAULT_TRANSITION = "crossfade"
   DEFAULT_SHOW_TITLE = false
+  DEFAULT_CROSSFADE_DURATION = 400
+  DEFAULT_DASHBOARD_RECENT_COUNT = 5
+  DEFAULT_GM_HISTORY_COUNT = 3
+  DEFAULT_IMAGE_FIT = "contain"
+  CROSSFADE_DURATIONS = [ 200, 400, 600, 800, 1000 ].freeze
+  DASHBOARD_RECENT_COUNTS = [ 3, 5, 8, 10 ].freeze
+  GM_HISTORY_COUNTS = [ 2, 3, 5, 8 ].freeze
+  IMAGE_FITS = %w[contain cover].freeze
   BOOLEAN_TYPE = ActiveModel::Type::Boolean.new
+  INTEGER_TYPE = ActiveModel::Type::Integer.new
 
   serialize :preferences, coder: JSON
 
@@ -12,6 +21,10 @@ class User < ApplicationRecord
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 
   validates :default_transition, inclusion: { in: PlayerDisplay.transition_types.keys }
+  validates :crossfade_duration, inclusion: { in: CROSSFADE_DURATIONS }
+  validates :dashboard_recent_count, inclusion: { in: DASHBOARD_RECENT_COUNTS }
+  validates :gm_history_count, inclusion: { in: GM_HISTORY_COUNTS }
+  validates :image_fit, inclusion: { in: IMAGE_FITS }
 
   def preferences
     super || {}
@@ -31,5 +44,37 @@ class User < ApplicationRecord
 
   def default_show_title=(value)
     self.preferences = preferences.merge("default_show_title" => BOOLEAN_TYPE.cast(value))
+  end
+
+  def crossfade_duration
+    INTEGER_TYPE.cast(preferences.fetch("crossfade_duration", DEFAULT_CROSSFADE_DURATION))
+  end
+
+  def crossfade_duration=(value)
+    self.preferences = preferences.merge("crossfade_duration" => INTEGER_TYPE.cast(value))
+  end
+
+  def dashboard_recent_count
+    INTEGER_TYPE.cast(preferences.fetch("dashboard_recent_count", DEFAULT_DASHBOARD_RECENT_COUNT))
+  end
+
+  def dashboard_recent_count=(value)
+    self.preferences = preferences.merge("dashboard_recent_count" => INTEGER_TYPE.cast(value))
+  end
+
+  def gm_history_count
+    INTEGER_TYPE.cast(preferences.fetch("gm_history_count", DEFAULT_GM_HISTORY_COUNT))
+  end
+
+  def gm_history_count=(value)
+    self.preferences = preferences.merge("gm_history_count" => INTEGER_TYPE.cast(value))
+  end
+
+  def image_fit
+    preferences.fetch("image_fit", DEFAULT_IMAGE_FIT)
+  end
+
+  def image_fit=(value)
+    self.preferences = preferences.merge("image_fit" => value)
   end
 end

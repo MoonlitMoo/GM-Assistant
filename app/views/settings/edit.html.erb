@@ -59,6 +59,87 @@
 
       <section class="settings-section">
         <div class="section-heading">
+          <h2>Library &amp; Display</h2>
+        </div>
+
+        <div class="resource-form__field">
+          <label>Player Screen</label>
+        </div>
+
+        <% if Current.user.default_transition == "crossfade" %>
+          <div class="resource-form__field">
+            <%= form.label :crossfade_duration, "Crossfade duration" %>
+            <%= form.select :crossfade_duration,
+                            options_for_select(
+                              [
+                                [ "200ms", 200 ],
+                                [ "400ms", 400 ],
+                                [ "600ms", 600 ],
+                                [ "800ms", 800 ],
+                                [ "1000ms", 1000 ]
+                              ],
+                              Current.user.crossfade_duration
+                            ),
+                            {},
+                            class: "resource-form__input" %>
+          </div>
+        <% end %>
+
+        <div class="resource-form__field">
+          <%= form.label :image_fit, "Image fit" %>
+          <div class="resource-form__field resource-form__field--checkbox">
+            <label class="resource-form__checkbox">
+              <%= form.radio_button :image_fit, "contain", checked: Current.user.image_fit == "contain", class: "resource-form__checkbox-input" %>
+              <span>Fit (contain)</span>
+            </label>
+          </div>
+          <div class="resource-form__field resource-form__field--checkbox">
+            <label class="resource-form__checkbox">
+              <%= form.radio_button :image_fit, "cover", checked: Current.user.image_fit == "cover", class: "resource-form__checkbox-input" %>
+              <span>Fill (cover)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="resource-form__field">
+          <label>Library</label>
+        </div>
+
+        <div class="resource-form__field">
+          <%= form.label :dashboard_recent_count, "Dashboard recent images" %>
+          <%= form.select :dashboard_recent_count,
+                          options_for_select(
+                            [
+                              [ "3", 3 ],
+                              [ "5", 5 ],
+                              [ "8", 8 ],
+                              [ "10", 10 ]
+                            ],
+                            Current.user.dashboard_recent_count
+                          ),
+                          {},
+                          class: "resource-form__input" %>
+        </div>
+
+        <div class="resource-form__field">
+          <%= form.label :gm_history_count, "GM history panel" %>
+          <%= form.select :gm_history_count,
+                          options_for_select(
+                            [
+                              [ "2", 2 ],
+                              [ "3", 3 ],
+                              [ "5", 5 ],
+                              [ "8", 8 ]
+                            ],
+                            Current.user.gm_history_count
+                          ),
+                          {},
+                          class: "resource-form__input" %>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <div class="section-heading">
           <h2>Account</h2>
         </div>
 

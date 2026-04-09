@@ -2,8 +2,6 @@ import React, { useEffect, useRef, useState } from "react"
 
 import consumer from "../channels/consumer"
 
-const CROSSFADE_DURATION = 400
-
 function buildImage(url, title) {
   if (!url) return null
 
@@ -17,6 +15,15 @@ function normalizeTransitionType(value) {
   return value === "instant" ? "instant" : "crossfade"
 }
 
+function normalizeCrossfadeDuration(value) {
+  const duration = Number(value)
+  return [200, 400, 600, 800, 1000].includes(duration) ? duration : 400
+}
+
+function normalizeImageFit(value) {
+  return value === "cover" ? "cover" : "contain"
+}
+
 function hasOwnKey(payload, key) {
   return Object.prototype.hasOwnProperty.call(payload, key)
 }
@@ -26,11 +33,15 @@ export default function PlayerScreen({
   initialImageUrl,
   initialImageTitle,
   initialShowTitle,
-  initialTransitionType
+  initialTransitionType,
+  initialCrossfadeDuration,
+  initialImageFit
 }) {
   const [image, setImage] = useState(buildImage(initialImageUrl, initialImageTitle))
   const [showTitle, setShowTitle] = useState(initialShowTitle)
   const [transitionType, setTransitionType] = useState(normalizeTransitionType(initialTransitionType))
+  const [crossfadeDuration, setCrossfadeDuration] = useState(normalizeCrossfadeDuration(initialCrossfadeDuration))
+  const [imageFit, setImageFit] = useState(normalizeImageFit(initialImageFit))
   const [isTransitioning, setIsTransitioning] = useState(false)
 
   const imageRef = useRef(image)
@@ -50,8 +61,10 @@ export default function PlayerScreen({
     setImage(buildImage(initialImageUrl, initialImageTitle))
     setShowTitle(initialShowTitle)
     setTransitionType(normalizeTransitionType(initialTransitionType))
+    setCrossfadeDuration(normalizeCrossfadeDuration(initialCrossfadeDuration))
+    setImageFit(normalizeImageFit(initialImageFit))
     setIsTransitioning(false)
-  }, [initialImageTitle, initialImageUrl, initialShowTitle, initialTransitionType])
+  }, [initialCrossfadeDuration, initialImageFit, initialImageTitle, initialImageUrl, initialShowTitle, initialTransitionType])
 
   useEffect(() => () => {
     clearPendingTransition()
@@ -103,18 +116,20 @@ export default function PlayerScreen({
       window.requestAnimationFrame(() => {
         setIsTransitioning(false)
       })
-    }, CROSSFADE_DURATION)
+    }, crossfadeDuration)
   }
 
   function handlePresent(data) {
     const nextImage = buildImage(data.image_url, data.image_title)
     const nextShowTitle = Boolean(data.show_title)
     const nextTransitionType = normalizeTransitionType(data.transition_type)
+    const nextImageFit = normalizeImageFit(data.image_fit)
 
     const applyUpdate = () => {
       setImage(nextImage)
       setShowTitle(nextShowTitle)
       setTransitionType(nextTransitionType)
+      setImageFit(nextImageFit)
     }
 
     if (nextTransitionType === "crossfade") {
@@ -156,6 +171,7 @@ export default function PlayerScreen({
           src={image.url}
           alt="Presented artwork"
           className={`player-screen__image player-image${isTransitioning ? " transitioning" : ""}`}
+          style={{ objectFit: imageFit, transitionDuration: `${crossfadeDuration}ms` }}
         />
       ) : (
         <div className="player-screen__blank" />

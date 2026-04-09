@@ -16,7 +16,8 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
       "image_id" => image.id,
       "image_title" => image.title,
       "show_title" => false,
-      "transition_type" => "instant"
+      "transition_type" => "instant",
+      "image_fit" => "contain"
     }
 
     assert_no_difference("PresentationEvent.count") do
@@ -71,6 +72,7 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
   test "present lazily creates the player display if one does not exist" do
     @user.default_transition = "instant"
     @user.default_show_title = false
+    @user.image_fit = "cover"
     @user.save!
     image = create(:image, campaign: create(:campaign, user: @user))
 
@@ -90,6 +92,7 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil player_display
     assert_equal image.id, player_display.current_image_id
     assert_equal "instant", player_display.transition_type
+    assert_equal "cover", player_display.image_fit
   end
 
   test "presenting the same image is ignored and does not create a presentation event" do
@@ -100,7 +103,8 @@ class PlayerDisplaysControllerTest < ActionDispatch::IntegrationTest
       "image_id" => image.id,
       "image_title" => image.title,
       "show_title" => false,
-      "transition_type" => "crossfade"
+      "transition_type" => "crossfade",
+      "image_fit" => "contain"
     }
 
     assert_no_difference("PresentationEvent.count") do
@@ -266,12 +270,16 @@ class PlayerControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, %(data-campaign-id="#{campaign.id}")
     assert_includes response.body, 'data-show-title="false"'
     assert_includes response.body, 'data-transition-type="crossfade"'
+    assert_includes response.body, 'data-crossfade-duration="400"'
+    assert_includes response.body, 'data-image-fit="contain"'
   end
 
   test "player show uses the campaign owner's saved preferences when no display exists" do
     user = create(:user)
     user.default_transition = "instant"
     user.default_show_title = false
+    user.crossfade_duration = 1000
+    user.image_fit = "cover"
     user.save!
     campaign = create(:campaign, user: user)
 
@@ -280,5 +288,7 @@ class PlayerControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, 'data-show-title="false"'
     assert_includes response.body, 'data-transition-type="instant"'
+    assert_includes response.body, 'data-crossfade-duration="1000"'
+    assert_includes response.body, 'data-image-fit="cover"'
   end
 end

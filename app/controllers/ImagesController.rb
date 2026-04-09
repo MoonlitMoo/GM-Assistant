@@ -16,6 +16,7 @@ class ImagesController < ApplicationController
 
   def new
     @image = @album.images.build(campaign: @album.campaign)
+    @image.show_title = Current.user.default_show_title
   end
 
   def create

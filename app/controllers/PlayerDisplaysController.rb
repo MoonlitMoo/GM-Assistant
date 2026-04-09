@@ -129,7 +129,8 @@ class PlayerDisplaysController < ApplicationController
   def build_player_display_from_preferences
     @campaign.build_player_display(
       transition_type: Current.user.default_transition,
-      show_title: Current.user.default_show_title
+      show_title: Current.user.default_show_title,
+      image_fit: Current.user.image_fit
     )
   end
 
@@ -156,7 +157,8 @@ class PlayerDisplaysController < ApplicationController
   def recent_presentation_events(player_display)
     PresentationEvent.recent_for_panel(
       @campaign,
-      excluding_image: player_display&.current_image
+      excluding_image: player_display&.current_image,
+      limit: Current.user.gm_history_count
     )
   end
 
@@ -203,7 +205,8 @@ class PlayerDisplaysController < ApplicationController
       image_id: player_display.current_image_id,
       image_title: player_display.current_image&.title,
       show_title: player_display.show_title,
-      transition_type: player_display.transition_type
+      transition_type: player_display.transition_type,
+      image_fit: player_display.image_fit
     }
   end
 

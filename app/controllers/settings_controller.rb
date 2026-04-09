@@ -14,7 +14,14 @@ class SettingsController < ApplicationController
   private
 
   def user_preferences_params
-    params.permit(:default_transition, :default_show_title)
+    params.permit(
+      :default_transition,
+      :default_show_title,
+      :crossfade_duration,
+      :dashboard_recent_count,
+      :gm_history_count,
+      :image_fit
+    )
   end
 
   def settings_navigation_params
@@ -27,6 +34,7 @@ class SettingsController < ApplicationController
                  .where(campaigns: { user_id: Current.user.id })
                  .update_all(
                    transition_type: PlayerDisplay.transition_types.fetch(Current.user.default_transition),
+                   image_fit: Current.user.image_fit,
                    updated_at: Time.current
                  )
   end

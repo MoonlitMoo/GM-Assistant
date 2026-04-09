@@ -36,6 +36,8 @@ function mountPlayerScreen() {
       initialImageTitle={element.dataset.imageTitle || ""}
       initialShowTitle={element.dataset.showTitle === "true"}
       initialTransitionType={element.dataset.transitionType || "crossfade"}
+      initialCrossfadeDuration={element.dataset.crossfadeDuration || "400"}
+      initialImageFit={element.dataset.imageFit || "contain"}
     />
   )
 }

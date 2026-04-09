@@ -7,7 +7,7 @@ class PresentationEvent < ApplicationRecord
   validates :campaign, presence: true
   validates :event_type, presence: true
 
-  def self.recent_for_panel(campaign, excluding_image: nil)
+  def self.recent_for_panel(campaign, excluding_image: nil, limit: 3)
     scope = campaign.presentation_events
                     .presented
                     .where.not(image_id: nil)
@@ -22,6 +22,6 @@ class PresentationEvent < ApplicationRecord
     from("(#{ranked_scope.to_sql}) presentation_events")
       .where("presentation_rank = 1")
       .order(created_at: :desc, id: :desc)
-      .limit(3)
+      .limit(limit)
   end
 end

@@ -15,26 +15,36 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
   test "update with valid params redirects back to edit" do
     patch settings_path, params: {
       default_transition: "instant",
-      default_show_title: "0"
+      default_show_title: "0",
+      crossfade_duration: "1000",
+      dashboard_recent_count: "10",
+      gm_history_count: "5",
+      image_fit: "cover"
     }
 
     assert_redirected_to edit_settings_path
     @user.reload
     assert_equal "instant", @user.default_transition
     assert_equal false, @user.default_show_title
+    assert_equal 1000, @user.crossfade_duration
+    assert_equal 10, @user.dashboard_recent_count
+    assert_equal 5, @user.gm_history_count
+    assert_equal "cover", @user.image_fit
   end
 
-  test "update syncs existing player display transition to the saved default" do
+  test "update syncs existing player display preferences to the saved defaults" do
     campaign = create(:campaign, user: @user)
-    player_display = create(:player_display, campaign: campaign, transition_type: :crossfade)
+    player_display = create(:player_display, campaign: campaign, transition_type: :crossfade, image_fit: "contain")
 
     patch settings_path, params: {
       default_transition: "instant",
-      default_show_title: "0"
+      default_show_title: "0",
+      image_fit: "cover"
     }
 
     assert_redirected_to edit_settings_path
     assert_equal "instant", player_display.reload.transition_type
+    assert_equal "cover", player_display.reload.image_fit
   end
 
   test "edit uses the supplied return_to for the cancel link" do
@@ -62,6 +72,46 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     patch settings_path, params: {
       default_transition: "wipe",
       default_show_title: "1"
+    }
+
+    assert_response :unprocessable_entity
+  end
+
+  test "update with invalid crossfade duration returns unprocessable entity" do
+    patch settings_path, params: {
+      default_transition: "crossfade",
+      default_show_title: "1",
+      crossfade_duration: "750"
+    }
+
+    assert_response :unprocessable_entity
+  end
+
+  test "update with invalid dashboard recent count returns unprocessable entity" do
+    patch settings_path, params: {
+      default_transition: "crossfade",
+      default_show_title: "1",
+      dashboard_recent_count: "4"
+    }
+
+    assert_response :unprocessable_entity
+  end
+
+  test "update with invalid gm history count returns unprocessable entity" do
+    patch settings_path, params: {
+      default_transition: "crossfade",
+      default_show_title: "1",
+      gm_history_count: "4"
+    }
+
+    assert_response :unprocessable_entity
+  end
+
+  test "update with invalid image fit returns unprocessable entity" do
+    patch settings_path, params: {
+      default_transition: "crossfade",
+      default_show_title: "1",
+      image_fit: "stretch"
     }
 
     assert_response :unprocessable_entity
