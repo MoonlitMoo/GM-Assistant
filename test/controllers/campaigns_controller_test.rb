@@ -36,6 +36,8 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Recent Image 5"
     assert_no_match(/<div class="recent-list">.*Old Lantern/m, response.body)
     assert_no_match(%r{href="#{folder_path(root_folder)}"}, response.body)
+    assert_includes response.body, new_folder_folder_path(root_folder, return_to: campaign_path(campaign))
+    assert_includes response.body, new_folder_album_path(root_folder, return_to: campaign_path(campaign))
     assert_includes response.body, 'id="topbar-status"'
     assert_includes response.body, 'class="topbar-status-frame is-empty"'
     assert_includes response.body, player_campaign_path(campaign)
@@ -45,6 +47,19 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
       response.body
     )
     assert_equal 1, response.body.scan("data-breadcrumbs-payload").size
+  end
+
+  test "shows dashboard create actions even when top-level sections are empty" do
+    campaign = create(:campaign, user: @user, name: "North Reach")
+    root_folder = campaign.root_folder
+
+    get campaign_path(campaign)
+
+    assert_response :success
+    assert_includes response.body, "No folders at the top level yet."
+    assert_includes response.body, "No albums at the top level yet."
+    assert_includes response.body, new_folder_folder_path(root_folder, return_to: campaign_path(campaign))
+    assert_includes response.body, new_folder_album_path(root_folder, return_to: campaign_path(campaign))
   end
 
   test "shows the campaign index" do

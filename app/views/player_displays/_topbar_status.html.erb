@@ -1,9 +1,10 @@
 <% current_image = player_display&.current_image %>
 <% status_title = current_image&.title.presence || "Not showing" %>
+<% campaign_link_target = campaign.name.present? ? campaign : campaign.id %>
 
 <%= turbo_frame_tag "topbar-status",
                     class: class_names("topbar-status-frame", { "is-empty": current_image.blank? }) do %>
-  <%= link_to player_campaign_path(campaign),
+  <%= link_to player_campaign_path(campaign_link_target),
               class: class_names("topbar-status-link", { "is-inactive": current_image.blank? }),
               data: { turbo_frame: "_top" },
               aria: { label: "Open player display" } do %>

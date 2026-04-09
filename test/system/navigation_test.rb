@@ -23,6 +23,11 @@ class NavigationTest < ApplicationSystemTestCase
 
     visit campaign_path(empty_campaign)
 
+    assert_link "+ New Folder", href: new_folder_folder_path(empty_campaign.root_folder, return_to: campaign_path(empty_campaign))
+    assert_link "+ New Album", href: new_folder_album_path(empty_campaign.root_folder, return_to: campaign_path(empty_campaign))
+    assert_text "No folders at the top level yet."
+    assert_text "No albums at the top level yet."
+
     within "#campaign-tree" do
       assert_text(/Campaign library is empty/i)
       assert_text "Create a folder or album to start organizing this campaign."

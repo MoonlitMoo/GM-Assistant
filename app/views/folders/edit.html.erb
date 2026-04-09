@@ -1,5 +1,6 @@
 <%= content_body_frame do %>
   <%= render "form",
              form_model: @folder,
-             cancel_path: form_cancel_path(@folder) %>
+             form_url: folder_path(@folder.id),
+             cancel_path: form_cancel_path(folder_path(@folder.id)) %>
 <% end %>
