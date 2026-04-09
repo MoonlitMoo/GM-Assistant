@@ -56,6 +56,27 @@ class CrudTest < ApplicationSystemTestCase
     assert_equal description, folder.description
   end
 
+  test "creates a top-level folder from the campaign dashboard and returns to the dashboard" do
+    campaign = create(:campaign, user: @user, name: "South Coast Survey")
+    root_folder = campaign.root_folder
+    folder_name = "Wharf Sketches"
+
+    visit campaign_path(campaign)
+    click_link "+ New Folder"
+
+    fill_in "Name", with: folder_name
+
+    assert_difference("Folder.count", 1) do
+      click_button "Create Folder"
+    end
+
+    folder = Folder.find_by!(name: folder_name, parent: root_folder)
+
+    assert_current_path campaign_path(campaign)
+    assert_link folder.name
+    assert_selector "#sidebar .tree-label", text: folder.name
+  end
+
   test "creates an album beneath a folder and shows it in the folder list" do
     campaign = create(:campaign, user: @user, name: "Northern Lights")
     folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Lantern Notes")

@@ -102,6 +102,22 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_includes html_response_body, "Name can't be blank"
   end
 
+  test "creates a folder and redirects to return_to when supplied" do
+    campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
+    parent = campaign.root_folder
+
+    assert_difference("Folder.count", 1) do
+      post folder_folders_path(parent), params: {
+        folder: {
+          name: "Villagers"
+        },
+        return_to: campaign_path(campaign)
+      }
+    end
+
+    assert_redirected_to campaign_path(campaign)
+  end
+
   test "shows the edit folder form" do
     folder = create(:folder, campaign: create(:campaign, user: @user), name: "Villagers")
 
@@ -145,6 +161,7 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     payload = JSON.parse(response.body)
     assert_equal folder.id, payload["id"]
     assert_equal "Villains", payload["name"]
+    assert_equal folder_path(folder), payload["url"]
   end
 
   test "re-renders the edit folder form when the update is invalid" do
