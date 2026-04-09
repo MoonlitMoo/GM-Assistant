@@ -70,5 +70,4 @@ class CampaignsController < ApplicationController
   def set_campaign_edit_breadcrumbs
     @breadcrumbs = build_breadcrumbs(@campaign) + [ [ "Edit Campaign", edit_campaign_path(@campaign) ] ]
   end
-
 end
