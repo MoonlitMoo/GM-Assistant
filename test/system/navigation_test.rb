@@ -195,6 +195,35 @@ class NavigationTest < ApplicationSystemTestCase
     end
   end
 
+  test "sidebar rename updates the currently displayed folder page" do
+    nested_folder = create(:folder, campaign: @campaign, parent: @folder, name: "Signal Fires")
+
+    visit folder_path(nested_folder)
+
+    within "#sidebar" do
+      find(".tree-folder .tree-label", text: nested_folder.name).right_click
+    end
+
+    within ".tree-context-menu" do
+      click_button "Rename"
+    end
+
+    within "#sidebar" do
+      input = find(".tree-rename-input", visible: true)
+      input.set("Watch Posts")
+      input.send_keys(:enter)
+    end
+
+    nested_folder.reload
+
+    assert_current_path folder_path(nested_folder)
+    assert_selector ".record-title", text: "Watch Posts"
+
+    within "#breadcrumbs" do
+      assert_text "Watch Posts"
+    end
+  end
+
   test "sidebar context menu can delete a folder through the confirmation modal" do
     nested_folder = create(:folder, campaign: @campaign, parent: @folder, name: "Signal Fires")
     create(:folder, campaign: @campaign, parent: nested_folder, name: "Watchtower")

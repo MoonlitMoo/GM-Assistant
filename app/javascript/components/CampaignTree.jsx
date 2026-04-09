@@ -37,6 +37,7 @@ function readBreadcrumbUrls() {
 function currentTreeContext() {
   return {
     path: window.location.pathname,
+    fullPath: `${window.location.pathname}${window.location.search}`,
     breadcrumbUrls: readBreadcrumbUrls()
   }
 }
@@ -261,6 +262,22 @@ export default function CampaignTree({ treeUrl }) {
     document.dispatchEvent(new CustomEvent("tree:refresh"))
   }
 
+  function pageDependsOnNode(node) {
+    if (!node?.url) return false
+
+    return currentContext.path === node.url || currentContext.breadcrumbUrls.includes(node.url)
+  }
+
+  function refreshCurrentViewForRenamedNode(node, responseBody) {
+    if (!pageDependsOnNode(node)) return
+
+    const refreshUrl = currentContext.path === node.url
+      ? (responseBody?.url || node.url)
+      : (currentContext.fullPath || currentContext.path)
+
+    window.Turbo.visit(refreshUrl, { frame: "content-body" })
+  }
+
   function beginRename(node, nodeType) {
     suppressRenameBlurRef.current = false
     setContextMenu(null)
@@ -311,6 +328,7 @@ export default function CampaignTree({ treeUrl }) {
       }
 
       dispatchTreeRefresh()
+      refreshCurrentViewForRenamedNode(node, responseBody)
       clearRenameState()
     } catch {
       setRenameError({
