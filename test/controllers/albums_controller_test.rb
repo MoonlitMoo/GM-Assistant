@@ -133,6 +133,7 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     payload = JSON.parse(response.body)
     assert_equal album.id, payload["id"]
     assert_equal "New Gallery", payload["name"]
+    assert_equal album_path(album), payload["url"]
   end
 
   test "updating an album moves its campaign to the top of recent activity" do

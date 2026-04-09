@@ -36,7 +36,7 @@ class AlbumsController < ApplicationController
     if @album.update(album_params)
       respond_to do |format|
         format.html { redirect_to @album, notice: "Album updated successfully", flash: { tree_refresh: true } }
-        format.json { render json: @album }
+        format.json { render json: album_json_payload(@album) }
       end
     else
       respond_to do |format|
@@ -68,6 +68,15 @@ class AlbumsController < ApplicationController
 
   def set_campaign
     @campaign = @album&.campaign || @folder&.campaign
+  end
+
+  def album_json_payload(album)
+    {
+      id: album.id,
+      name: album.name,
+      description: album.description,
+      url: album_path(album)
+    }
   end
 
   def album_params

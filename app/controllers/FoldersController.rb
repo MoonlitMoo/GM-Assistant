@@ -25,7 +25,7 @@ class FoldersController < ApplicationController
     @folder.campaign = @parent.campaign
 
     if @folder.save
-      redirect_to @parent, notice: "Folder created successfully", flash: { tree_refresh: true }
+      redirect_to create_redirect_target, notice: "Folder created successfully", flash: { tree_refresh: true }
     else
       render :new, status: :unprocessable_entity
     end
@@ -38,7 +38,7 @@ class FoldersController < ApplicationController
     if @folder.update(folder_params)
       respond_to do |format|
         format.html { redirect_to @folder, notice: "Folder updated successfully", flash: { tree_refresh: true } }
-        format.json { render json: @folder }
+        format.json { render json: folder_json_payload(@folder) }
       end
     else
       respond_to do |format|
@@ -71,6 +71,29 @@ class FoldersController < ApplicationController
   def set_parent
     parent_id = params[:folder_id].presence || params[:parent_id].presence
     @parent = Folder.joins(:campaign).merge(Current.user.campaigns).find(parent_id)
+  end
+
+  def create_redirect_target
+    safe_return_to_path(params[:return_to]) || @parent
+  end
+
+  def folder_json_payload(folder)
+    {
+      id: folder.id,
+      name: folder.name,
+      description: folder.description,
+      url: folder_path(folder)
+    }
+  end
+
+  def safe_return_to_path(path)
+    value = path.to_s
+    return if value.blank?
+    return if value.start_with?("//")
+    return unless value.start_with?("/")
+    return if value.match?(/[\r\n]/)
+
+    value
   end
 
   def folder_params
