@@ -10,7 +10,7 @@ class FolderTree
     return {} unless root
 
     build_node(root).merge(
-      new_root_folder_url: new_folder_path(parent_id: root.id)
+      new_root_folder_url: new_folder_folder_path(root)
     )
   end
 
@@ -47,7 +47,7 @@ class FolderTree
       name: folder.name,
       url: folder_path(folder),
       edit_url: edit_folder_path(folder),
-      new_subfolder_url: new_folder_path(parent_id: folder.id),
+      new_subfolder_url: new_folder_folder_path(folder),
       new_album_url: new_album_path(folder_id: folder.id),
       child_folder_count: child_folders.size,
       album_count: albums.size,

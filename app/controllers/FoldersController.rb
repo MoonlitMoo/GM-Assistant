@@ -69,8 +69,7 @@ class FoldersController < ApplicationController
   end
 
   def set_parent
-    parent_id = params[:folder_id].presence || params[:parent_id].presence
-    @parent = Folder.joins(:campaign).merge(Current.user.campaigns).find(parent_id)
+    @parent = Folder.joins(:campaign).merge(Current.user.campaigns).find(params[:folder_id])
   end
 
   def create_redirect_target
