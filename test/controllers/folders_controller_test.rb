@@ -73,11 +73,11 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_match(%r{href="#{folder_path(parent)}"[^>]*>Cancel<}, response.body)
   end
 
-  test "shows the new folder form from the top-level helper with parent_id" do
+  test "shows the new folder form from the nested helper" do
     campaign = create(:campaign, user: @user)
     parent = campaign.root_folder
 
-    get new_folder_path(parent_id: parent.id)
+    get new_folder_folder_path(parent)
 
     assert_response :success
     assert_includes response.body, "New Folder"

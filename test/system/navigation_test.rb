@@ -169,7 +169,7 @@ class NavigationTest < ApplicationSystemTestCase
       click_button "New Subfolder"
     end
 
-    assert_current_path new_folder_path(parent_id: @folder.id)
+    assert_current_path new_folder_folder_path(@folder)
     assert_text "New Folder"
   end
 
