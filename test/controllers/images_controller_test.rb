@@ -47,6 +47,8 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
 
   test "shows the new image form" do
     album = create(:album, campaign: create(:campaign, user: @user), name: "Weathered Maps")
+    @user.default_show_title = true
+    @user.save!
 
     get new_album_image_path(album)
 
@@ -54,6 +56,7 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "New Image"
     assert_includes response.body, "Description"
     assert_includes response.body, "Weathered Maps"
+    assert_match(/name="image\[show_title\]".*checked="checked"/, response.body)
   end
 
   test "re-renders the new image form when creation is invalid" do
