@@ -1,351 +1,38 @@
-import React, { useEffect, useRef, useState } from "react"
+import React from "react"
 import DeleteConfirmModal from "./DeleteConfirmModal"
 import TreeContextMenu from "./TreeContextMenu"
-import { csrfToken, inferredNodeType } from "../lib/tree_utils"
-
-function storageKeyFor(campaignId) {
-  return `campaign-tree:${campaignId}:expanded`
-}
-
-function loadExpandedState(campaignId) {
-  try {
-    return JSON.parse(sessionStorage.getItem(storageKeyFor(campaignId)) || "{}")
-  } catch {
-    return {}
-  }
-}
-
-function saveExpandedState(campaignId, expanded) {
-  sessionStorage.setItem(storageKeyFor(campaignId), JSON.stringify(expanded))
-}
-
-function readBreadcrumbUrls() {
-  const payloadElement =
-    document.querySelector("turbo-frame#content-body [data-breadcrumbs-payload]") ||
-    document.querySelector("[data-breadcrumbs-payload]")
-
-  if (!payloadElement) return []
-
-  try {
-    return JSON.parse(payloadElement.dataset.breadcrumbsPayload || "[]")
-      .map(([, url]) => url)
-      .filter(Boolean)
-  } catch {
-    return []
-  }
-}
-
-function currentTreeContext() {
-  return {
-    path: window.location.pathname,
-    fullPath: `${window.location.pathname}${window.location.search}`,
-    breadcrumbUrls: readBreadcrumbUrls()
-  }
-}
-
-function treeIsEmpty(folder) {
-  return folder.folders.length === 0 && folder.albums.length === 0
-}
-
-function findExpandedPath(folder, targetUrl) {
-  if (!targetUrl) return null
-  if (folder.url === targetUrl) return []
-
-  for (const childFolder of folder.folders) {
-    if (childFolder.url === targetUrl) return [childFolder.id]
-
-    const descendantPath = findExpandedPath(childFolder, targetUrl)
-    if (descendantPath !== null) {
-      return [childFolder.id, ...descendantPath]
-    }
-  }
-
-  for (const album of folder.albums) {
-    if (album.url === targetUrl) return []
-  }
-
-  return null
-}
-
-function requiredExpandedState(folder, context) {
-  const candidateUrls = [context.path, ...[...context.breadcrumbUrls].reverse()]
-
-  for (const url of candidateUrls) {
-    const expandedPath = findExpandedPath(folder, url)
-    if (expandedPath !== null) {
-      return Object.fromEntries(expandedPath.map((folderId) => [folderId, true]))
-    }
-  }
-
-  return {}
-}
-
-function expandedStatesMatch(left, right) {
-  const leftEntries = Object.entries(left)
-  const rightEntries = Object.entries(right)
-
-  if (leftEntries.length !== rightEntries.length) return false
-
-  return leftEntries.every(([key, value]) => right[key] === value)
-}
-
-function statusMessage(title, body, modifier = "") {
-  return (
-    <div className={`tree-status ${modifier}`.trim()}>
-      <p className="tree-status__title">{title}</p>
-      {body ? <p className="tree-status__body">{body}</p> : null}
-    </div>
-  )
-}
-
-function renamePayloadFor(nodeType, name) {
-  if (nodeType === "folder") return { folder: { name } }
-  return { album: { name } }
-}
-
-function renameErrorMessage(responseBody, fallbackMessage) {
-  if (Array.isArray(responseBody?.errors) && responseBody.errors.length > 0) {
-    return responseBody.errors.join(", ")
-  }
-
-  return fallbackMessage
-}
+import { statusMessage, treeIsEmpty } from "./treeUtils"
+import useTreeState from "./useTreeState"
 
 export default function CampaignTree({ treeUrl }) {
-  const suppressRenameBlurRef = useRef(false)
-  const [treeData, setTreeData] = useState(null)
-  const [expanded, setExpanded] = useState({})
-  const [currentContext, setCurrentContext] = useState(currentTreeContext)
-  const [hasLoaded, setHasLoaded] = useState(false)
-  const [loadError, setLoadError] = useState(false)
-  const [contextMenu, setContextMenu] = useState(null)
-  const [deletingNode, setDeletingNode] = useState(null)
-  const [renamingNodeId, setRenamingNodeId] = useState(null)
-  const [renamingNodeType, setRenamingNodeType] = useState(null)
-  const [renameValue, setRenameValue] = useState("")
-  const [renameError, setRenameError] = useState(null)
-  const [isRenamingSubmitting, setIsRenamingSubmitting] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    let activeController = null
-
-    async function loadTree() {
-      try {
-        activeController?.abort()
-        activeController = new AbortController()
-
-        const response = await fetch(treeUrl, {
-          headers: { Accept: "application/json" },
-          cache: "no-store",
-          signal: activeController.signal
-        })
-        if (!response.ok) throw new Error(`Tree request failed with ${response.status}`)
-
-        const data = await response.json()
-        if (cancelled) return
-
-        setTreeData(data)
-        setExpanded(loadExpandedState(data.campaignId))
-        setLoadError(false)
-        setHasLoaded(true)
-      } catch {
-        if (activeController?.signal.aborted || cancelled) return
-
-        if (cancelled) return
-
-        setLoadError(true)
-        setHasLoaded(true)
-      }
-    }
-
-    function refreshTree() {
-      setContextMenu(null)
-      loadTree()
-    }
-
-    loadTree()
-    document.addEventListener("tree:refresh", refreshTree)
-
-    return () => {
-      cancelled = true
-      activeController?.abort()
-      document.removeEventListener("tree:refresh", refreshTree)
-    }
-  }, [treeUrl])
-
-  useEffect(() => {
-    function syncCurrentContext(event) {
-      if (event?.target?.id && event.target.id !== "content-body") return
-      setCurrentContext(currentTreeContext())
-    }
-
-    document.addEventListener("turbo:frame-load", syncCurrentContext)
-    document.addEventListener("turbo:load", syncCurrentContext)
-    window.addEventListener("popstate", syncCurrentContext)
-
-    return () => {
-      document.removeEventListener("turbo:frame-load", syncCurrentContext)
-      document.removeEventListener("turbo:load", syncCurrentContext)
-      window.removeEventListener("popstate", syncCurrentContext)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!treeData) return
-
-    const requiredExpanded = requiredExpandedState(treeData, currentContext)
-    if (Object.keys(requiredExpanded).length === 0) return
-
-    setExpanded((currentExpanded) => {
-      const nextExpanded = {
-        ...currentExpanded,
-        ...requiredExpanded
-      }
-
-      if (expandedStatesMatch(currentExpanded, nextExpanded)) return currentExpanded
-
-      saveExpandedState(treeData.campaignId, nextExpanded)
-      return nextExpanded
-    })
-  }, [treeData, currentContext])
-
-  function toggleFolder(folderId) {
-    if (!treeData) return
-
-    setExpanded((currentExpanded) => {
-      const nextExpanded = {
-        ...currentExpanded,
-        [folderId]: !currentExpanded[folderId]
-      }
-
-      saveExpandedState(treeData.campaignId, nextExpanded)
-      return nextExpanded
-    })
-  }
-
-  function navigateTo(url) {
-    setContextMenu(null)
-    window.Turbo.visit(url, { frame: "content-body" })
-  }
-
-  function dispatchTreeRefresh() {
-    document.dispatchEvent(new CustomEvent("tree:refresh"))
-  }
-
-  function pageDependsOnNode(node) {
-    if (!node?.url) return false
-
-    return currentContext.path === node.url || currentContext.breadcrumbUrls.includes(node.url)
-  }
-
-  function refreshCurrentViewForRenamedNode(node, responseBody) {
-    if (!pageDependsOnNode(node)) return
-
-    const refreshUrl = currentContext.path === node.url
-      ? (responseBody?.url || node.url)
-      : (currentContext.fullPath || currentContext.path)
-
-    window.Turbo.visit(refreshUrl, { frame: "content-body" })
-  }
-
-  function beginRename(node, nodeType) {
-    suppressRenameBlurRef.current = false
-    setContextMenu(null)
-    setRenameError(null)
-    setRenamingNodeId(node.id)
-    setRenamingNodeType(nodeType)
-    setRenameValue(node.name)
-    setIsRenamingSubmitting(false)
-  }
-
-  function clearRenameState() {
-    setRenamingNodeId(null)
-    setRenamingNodeType(null)
-    setRenameValue("")
-    setIsRenamingSubmitting(false)
-  }
-
-  async function submitRename(node, nodeType) {
-    if (isRenamingSubmitting) return
-
-    setRenameError(null)
-    setContextMenu(null)
-    setIsRenamingSubmitting(true)
-
-    try {
-      const response = await fetch(node.url, {
-        method: "PATCH",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken(),
-          "X-Requested-With": "XMLHttpRequest"
-        },
-        credentials: "same-origin",
-        body: JSON.stringify(renamePayloadFor(nodeType, renameValue))
-      })
-
-      const responseBody = await response.json().catch(() => null)
-
-      if (!response.ok) {
-        setRenameError({
-          nodeId: node.id,
-          nodeType,
-          message: renameErrorMessage(responseBody, "Couldn’t rename this item.")
-        })
-        clearRenameState()
-        return
-      }
-
-      dispatchTreeRefresh()
-      refreshCurrentViewForRenamedNode(node, responseBody)
-      clearRenameState()
-    } catch {
-      setRenameError({
-        nodeId: node.id,
-        nodeType,
-        message: "Couldn’t rename this item."
-      })
-      clearRenameState()
-    }
-  }
-
-  function cancelRename() {
-    setRenameError(null)
-    clearRenameState()
-  }
-
-  function handleNodeContextMenu(event, node) {
-    event.preventDefault()
-    event.stopPropagation()
-    setContextMenu({
-      x: event.clientX,
-      y: event.clientY,
-      node
-    })
-  }
-
-  function handleTreeBackgroundContextMenu(event) {
-    if (event.target.closest(".tree-item")) return
-
-    event.preventDefault()
-    setContextMenu({
-      x: event.clientX,
-      y: event.clientY,
-      node: null
-    })
-  }
-
-  function handleContextMenuRename(node) {
-    beginRename(node, inferredNodeType(node))
-    setContextMenu(null)
-  }
-
-  function handleContextMenuDelete(node) {
-    setDeletingNode(node)
-    setContextMenu(null)
-  }
+  const {
+    suppressRenameBlurRef,
+    treeData,
+    expanded,
+    currentContext,
+    hasLoaded,
+    loadError,
+    contextMenu,
+    deletingNode,
+    renamingNodeId,
+    renamingNodeType,
+    renameValue,
+    renameError,
+    isRenamingSubmitting,
+    setContextMenu,
+    setDeletingNode,
+    setRenameValue,
+    toggleFolder,
+    navigateTo,
+    dispatchTreeRefresh,
+    beginRename,
+    submitRename,
+    cancelRename,
+    handleNodeContextMenu,
+    handleTreeBackgroundContextMenu,
+    handleContextMenuRename,
+    handleContextMenuDelete
+  } = useTreeState(treeUrl)
 
   function renderTreeLabel(node, nodeType, isCurrent) {
     const isRenaming = renamingNodeId === node.id && renamingNodeType === nodeType
