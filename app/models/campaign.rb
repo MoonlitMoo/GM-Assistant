@@ -14,6 +14,10 @@ class Campaign < ApplicationRecord
 
   after_create :create_root_folder!
 
+  def to_param
+    "#{id}-#{name.squish.parameterize}"
+  end
+
   def create_root_folder!
     folders.create!(name: "Root", is_root: true)
   end
