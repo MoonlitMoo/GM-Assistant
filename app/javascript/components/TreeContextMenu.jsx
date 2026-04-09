@@ -1,38 +1,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
+import usePortalDismiss from "../hooks/usePortalDismiss"
+import { inferredNodeType } from "../lib/tree_utils"
 
 const MENU_VIEWPORT_PADDING = 12
-const rootFolderUrlCache = new Map()
-
-function inferredNodeType(node) {
-  if (!node) return null
-  if (node.type) return node.type
-  if (Array.isArray(node.folders) && Array.isArray(node.albums)) return "folder"
-  return "album"
-}
-
-async function loadNewRootFolderUrl(campaignId, signal) {
-  if (!campaignId) return null
-
-  const cachedUrl = rootFolderUrlCache.get(campaignId)
-  if (cachedUrl) return cachedUrl
-
-  const response = await fetch(`/campaigns/${encodeURIComponent(campaignId)}/tree`, {
-    headers: { Accept: "application/json" },
-    signal
-  })
-
-  if (!response.ok) throw new Error(`Tree request failed with ${response.status}`)
-
-  const data = await response.json()
-  const newRootFolderUrl = data.new_root_folder_url || null
-
-  if (newRootFolderUrl) {
-    rootFolderUrlCache.set(campaignId, newRootFolderUrl)
-  }
-
-  return newRootFolderUrl
-}
 
 function visitInContentFrame(url) {
   if (!url) return
@@ -45,39 +16,15 @@ function visitInContentFrame(url) {
   window.location.assign(url)
 }
 
-export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelete, campaignId }) {
+export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelete, newRootFolderUrl }) {
   const menuRef = useRef(null)
   const [position, setPosition] = useState({ x, y })
-  const [newRootFolderUrl, setNewRootFolderUrl] = useState(() => rootFolderUrlCache.get(campaignId) || null)
 
   useEffect(() => {
     setPosition({ x, y })
   }, [x, y])
 
-  useEffect(() => {
-    if (node) return
-
-    const cachedUrl = rootFolderUrlCache.get(campaignId) || null
-    setNewRootFolderUrl(cachedUrl)
-
-    if (cachedUrl || !campaignId) return
-
-    const controller = new AbortController()
-
-    loadNewRootFolderUrl(campaignId, controller.signal)
-      .then((url) => {
-        setNewRootFolderUrl(url)
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setNewRootFolderUrl(null)
-        }
-      })
-
-    return () => {
-      controller.abort()
-    }
-  }, [campaignId, node])
+  usePortalDismiss({ containerRef: menuRef, onClose })
 
   useEffect(() => {
     function handlePointerDown(event) {
@@ -86,24 +33,12 @@ export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelet
       onClose()
     }
 
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        onClose()
-      }
-    }
-
     document.addEventListener("pointerdown", handlePointerDown)
-    document.addEventListener("keydown", handleKeyDown)
 
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown)
-      document.removeEventListener("keydown", handleKeyDown)
     }
   }, [onClose])
-
-  useEffect(() => {
-    menuRef.current?.focus()
-  }, [])
 
   useLayoutEffect(() => {
     if (!menuRef.current) return
