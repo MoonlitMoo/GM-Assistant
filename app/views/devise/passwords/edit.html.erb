@@ -1,0 +1,49 @@
+<% provide :title, "Choose New Password — GM Assistant" %>
+<% provide :topbar_title, "Sign in" %>
+
+<section class="record-shell form-shell auth-shell">
+  <%= render "shared/flash" %>
+
+  <div class="record-panel form-panel">
+    <div class="form-panel__header">
+      <p class="record-kicker">Account Recovery</p>
+      <h1 class="record-title">Update your password</h1>
+      <p class="record-description auth-description">Choose a new password for your GM Assistant account.</p>
+    </div>
+
+    <%= form_for(resource, as: resource_name, url: user_password_path, html: { method: :put, class: "resource-form" }) do |f| %>
+      <%= render "devise/shared/error_messages", resource: resource %>
+      <%= f.hidden_field :reset_password_token %>
+
+      <div class="resource-form__field">
+        <%= f.label :password, "New password" %>
+        <% if @minimum_password_length %>
+          <p class="auth-field-note"><%= @minimum_password_length %> characters minimum.</p>
+        <% end %>
+        <%= f.password_field :password,
+                             required: true,
+                             autofocus: true,
+                             autocomplete: "new-password",
+                             placeholder: "Enter your new password",
+                             maxlength: 72,
+                             class: "resource-form__input" %>
+      </div>
+
+      <div class="resource-form__field">
+        <%= f.label :password_confirmation, "Confirm new password" %>
+        <%= f.password_field :password_confirmation,
+                             required: true,
+                             autocomplete: "new-password",
+                             placeholder: "Repeat your new password",
+                             maxlength: 72,
+                             class: "resource-form__input" %>
+      </div>
+
+      <div class="resource-form__actions">
+        <%= f.submit "Save password", class: "fantasy-button fantasy-button--primary" %>
+      </div>
+    <% end %>
+
+    <%= render "devise/shared/links" %>
+  </div>
+</section>
