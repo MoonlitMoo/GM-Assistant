@@ -13,11 +13,11 @@
     <%= form_with url: settings_path, method: :patch, scope: nil, class: "resource-form" do |form| %>
       <%= form_return_to_field %>
 
-      <% if Current.user.errors.any? %>
+      <% if current_user.errors.any? %>
         <div class="form-errors">
-          <h2><%= pluralize(Current.user.errors.count, "error") %> prevented your settings from being saved:</h2>
+          <h2><%= pluralize(current_user.errors.count, "error") %> prevented your settings from being saved:</h2>
           <ul>
-            <% Current.user.errors.full_messages.each do |message| %>
+            <% current_user.errors.full_messages.each do |message| %>
               <li><%= message %></li>
             <% end %>
           </ul>
@@ -37,7 +37,7 @@
                               [ "Crossfade", "crossfade" ],
                               [ "Instant", "instant" ]
                             ],
-                            Current.user.default_transition
+                            current_user.default_transition
                           ),
                           {},
                           class: "resource-form__input" %>
@@ -48,7 +48,7 @@
             <%= form.check_box :default_show_title,
                                {
                                  class: "resource-form__checkbox-input",
-                                 checked: Current.user.default_show_title
+                                 checked: current_user.default_show_title
                                },
                                "1",
                                "0" %>
@@ -66,7 +66,7 @@
           <label>Player Screen</label>
         </div>
 
-        <% if Current.user.default_transition == "crossfade" %>
+        <% if current_user.default_transition == "crossfade" %>
           <div class="resource-form__field">
             <%= form.label :crossfade_duration, "Crossfade duration" %>
             <%= form.select :crossfade_duration,
@@ -78,7 +78,7 @@
                                 [ "800ms", 800 ],
                                 [ "1000ms", 1000 ]
                               ],
-                              Current.user.crossfade_duration
+                              current_user.crossfade_duration
                             ),
                             {},
                             class: "resource-form__input" %>
@@ -89,13 +89,13 @@
           <%= form.label :image_fit, "Image fit" %>
           <div class="resource-form__field resource-form__field--checkbox">
             <label class="resource-form__checkbox">
-              <%= form.radio_button :image_fit, "contain", checked: Current.user.image_fit == "contain", class: "resource-form__checkbox-input" %>
+              <%= form.radio_button :image_fit, "contain", checked: current_user.image_fit == "contain", class: "resource-form__checkbox-input" %>
               <span>Fit (contain)</span>
             </label>
           </div>
           <div class="resource-form__field resource-form__field--checkbox">
             <label class="resource-form__checkbox">
-              <%= form.radio_button :image_fit, "cover", checked: Current.user.image_fit == "cover", class: "resource-form__checkbox-input" %>
+              <%= form.radio_button :image_fit, "cover", checked: current_user.image_fit == "cover", class: "resource-form__checkbox-input" %>
               <span>Fill (cover)</span>
             </label>
           </div>
@@ -115,7 +115,7 @@
                               [ "8", 8 ],
                               [ "10", 10 ]
                             ],
-                            Current.user.dashboard_recent_count
+                            current_user.dashboard_recent_count
                           ),
                           {},
                           class: "resource-form__input" %>
@@ -131,7 +131,7 @@
                               [ "5", 5 ],
                               [ "8", 8 ]
                             ],
-                            Current.user.gm_history_count
+                            current_user.gm_history_count
                           ),
                           {},
                           class: "resource-form__input" %>
@@ -146,7 +146,7 @@
         <div class="resource-form__field">
           <%= label_tag :account_email, "Email address" %>
           <%= text_field_tag :account_email,
-                             Current.user.email_address,
+                             current_user.email_address,
                              class: "resource-form__input",
                              readonly: true,
                              disabled: true %>
@@ -154,7 +154,7 @@
 
         <div class="resource-form__actions">
           <%= link_to "Change password",
-                      new_password_path,
+                      new_user_password_path,
                       class: "fantasy-button fantasy-button--secondary" %>
         </div>
       </section>
