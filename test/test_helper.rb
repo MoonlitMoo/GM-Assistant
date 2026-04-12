@@ -25,10 +25,6 @@ module ActiveSupport
         with.library :rails
       end
     end
-
-    teardown do
-      Current.reset
-    end
   end
 end
 
