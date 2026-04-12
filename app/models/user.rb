@@ -43,6 +43,14 @@ class User < ApplicationRecord
     self[:password_digest] = value
   end
 
+  # Devise internally uses a helper named `password_digest(password)`, which
+  # collides with the legacy column reader. Support both call patterns.
+  def password_digest(raw_password = nil)
+    return self[:password_digest] if raw_password.nil?
+
+    Devise::Encryptor.digest(self.class, raw_password)
+  end
+
   def encrypted_password_before_last_save
     attribute_before_last_save("password_digest")
   end
