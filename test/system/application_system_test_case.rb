@@ -28,7 +28,6 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
     }
   }
   include FactoryBot::Syntax::Methods
-  include Devise::Test::IntegrationHelpers
 
   def after_teardown
     wait_for_browser_to_go_idle
