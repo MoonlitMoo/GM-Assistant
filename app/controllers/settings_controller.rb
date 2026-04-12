@@ -3,7 +3,7 @@ class SettingsController < ApplicationController
   end
 
   def update
-    if Current.user.update(user_preferences_params)
+    if current_user.update(user_preferences_params)
       sync_existing_player_displays!
       redirect_to edit_settings_path(settings_navigation_params), notice: "Settings saved."
     else
@@ -31,10 +31,10 @@ class SettingsController < ApplicationController
 
   def sync_existing_player_displays!
     PlayerDisplay.joins(:campaign)
-                 .where(campaigns: { user_id: Current.user.id })
+                 .where(campaigns: { user_id: current_user.id })
                  .update_all(
-                   transition_type: PlayerDisplay.transition_types.fetch(Current.user.default_transition),
-                   image_fit: Current.user.image_fit,
+                   transition_type: PlayerDisplay.transition_types.fetch(current_user.default_transition),
+                   image_fit: current_user.image_fit,
                    updated_at: Time.current
                  )
   end

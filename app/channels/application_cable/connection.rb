@@ -3,12 +3,7 @@ module ApplicationCable
     identified_by :current_user
 
     def connect
-      self.current_user = session_user
+      self.current_user = env["warden"]&.user
     end
-
-    private
-      def session_user
-        Session.find_by(id: cookies.signed[:session_id])&.user
-      end
   end
 end
