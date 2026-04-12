@@ -8,24 +8,24 @@ class CampaignsController < ApplicationController
   after_action :touch_campaign_activity, only: [ :show, :edit, :create, :update ]
 
   def index
-    @campaigns = Current.user.campaigns.recently_active
+    @campaigns = current_user.campaigns.recently_active
   end
 
   def show
     @root_folder = @campaign.root_folder
     @child_folders = @root_folder ? @root_folder.child_folders.order(:name) : []
     @root_albums = @root_folder ? @root_folder.albums.order(:name) : []
-    @recent_images = @campaign.images.includes(:album).order(created_at: :desc).limit(Current.user.dashboard_recent_count)
+    @recent_images = @campaign.images.includes(:album).order(created_at: :desc).limit(current_user.dashboard_recent_count)
     @album_count = @campaign.albums.count
     @image_count = @campaign.images.count
   end
 
   def new
-    @campaign = Current.user.campaigns.build
+    @campaign = current_user.campaigns.build
   end
 
   def create
-    @campaign = Current.user.campaigns.build(campaign_params)
+    @campaign = current_user.campaigns.build(campaign_params)
     if @campaign.save
       redirect_to @campaign, notice: "Campaign created successfully"
     else
@@ -56,7 +56,7 @@ class CampaignsController < ApplicationController
   private
 
   def set_campaign
-    @campaign = Current.user.campaigns.find(params[:id])
+    @campaign = current_user.campaigns.find(params[:id])
   end
 
   def campaign_params

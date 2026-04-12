@@ -118,7 +118,7 @@ class PlayerDisplaysController < ApplicationController
   private
 
   def set_campaign
-    @campaign = Current.user.campaigns.find(params[:campaign_id] || params[:id])
+    @campaign = current_user.campaigns.find(params[:campaign_id] || params[:id])
   end
 
   def image_url_for(image)
@@ -128,9 +128,9 @@ class PlayerDisplaysController < ApplicationController
 
   def build_player_display_from_preferences
     @campaign.build_player_display(
-      transition_type: Current.user.default_transition,
-      show_title: Current.user.default_show_title,
-      image_fit: Current.user.image_fit
+      transition_type: current_user.default_transition,
+      show_title: current_user.default_show_title,
+      image_fit: current_user.image_fit
     )
   end
 
@@ -158,7 +158,7 @@ class PlayerDisplaysController < ApplicationController
     PresentationEvent.recent_for_panel(
       @campaign,
       excluding_image: player_display&.current_image,
-      limit: Current.user.gm_history_count
+      limit: current_user.gm_history_count
     )
   end
 
