@@ -29,7 +29,7 @@
       <% recent_events = PresentationEvent.recent_for_panel(
            @campaign,
            excluding_image: @campaign.player_display&.current_image,
-           limit: Current.user.gm_history_count
+           limit: current_user.gm_history_count
          ) %>
       <div id="main-wrapper">
 

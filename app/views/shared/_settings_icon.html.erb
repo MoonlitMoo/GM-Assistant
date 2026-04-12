@@ -1,6 +1,8 @@
-<%= link_to edit_settings_path(form_navigation_params), class: "topbar-icon topbar-icon-link", title: "Settings", aria: { label: "Settings" } do %>
-  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    <path d="M10.5 2.8h3l.6 2.2a7.7 7.7 0 0 1 1.8.8l2-1.1 2.1 2.1-1.1 2a7.7 7.7 0 0 1 .8 1.8l2.2.6v3l-2.2.6a7.7 7.7 0 0 1-.8 1.8l1.1 2-2.1 2.1-2-1.1a7.7 7.7 0 0 1-1.8.8l-.6 2.2h-3l-.6-2.2a7.7 7.7 0 0 1-1.8-.8l-2 1.1-2.1-2.1 1.1-2a7.7 7.7 0 0 1-.8-1.8l-2.2-.6v-3l2.2-.6a7.7 7.7 0 0 1 .8-1.8l-1.1-2 2.1-2.1 2 1.1a7.7 7.7 0 0 1 1.8-.8z" />
-    <circle cx="12" cy="12" r="3.2" />
-  </svg>
+<% if user_signed_in? %>
+  <%= link_to edit_settings_path(form_navigation_params), class: "topbar-icon topbar-icon-link", title: "Settings", aria: { label: "Settings" } do %>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M10.5 2.8h3l.6 2.2a7.7 7.7 0 0 1 1.8.8l2-1.1 2.1 2.1-1.1 2a7.7 7.7 0 0 1 .8 1.8l2.2.6v3l-2.2.6a7.7 7.7 0 0 1-.8 1.8l1.1 2-2.1 2.1-2-1.1a7.7 7.7 0 0 1-1.8.8l-.6 2.2h-3l-.6-2.2a7.7 7.7 0 0 1-1.8-.8l-2 1.1-2.1-2.1 1.1-2a7.7 7.7 0 0 1-.8-1.8l-2.2-.6v-3l2.2-.6a7.7 7.7 0 0 1 .8-1.8l-1.1-2 2.1-2.1 2 1.1a7.7 7.7 0 0 1 1.8-.8z" />
+      <circle cx="12" cy="12" r="3.2" />
+    </svg>
+  <% end %>
 <% end %>
