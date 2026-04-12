@@ -118,10 +118,10 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "edit redirects to login when signed out" do
-    delete session_path
+    sign_out(@user)
 
     get edit_settings_path
 
-    assert_redirected_to new_session_path
+    assert_redirected_to new_user_session_path
   end
 end
