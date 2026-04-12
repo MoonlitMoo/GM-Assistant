@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_04_133000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_12_090000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -108,22 +108,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_04_133000) do
     t.index ["image_id"], name: "index_presentation_events_on_image_id"
   end
 
-  create_table "sessions", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.string "ip_address"
-    t.datetime "updated_at", null: false
-    t.string "user_agent"
-    t.integer "user_id", null: false
-    t.index ["user_id"], name: "index_sessions_on_user_id"
-  end
-
   create_table "users", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email_address", null: false
     t.string "password_digest", null: false
     t.text "preferences"
+    t.datetime "remember_created_at"
+    t.datetime "reset_password_sent_at"
+    t.string "reset_password_token"
     t.datetime "updated_at", null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
+    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -139,5 +134,4 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_04_133000) do
   add_foreign_key "player_displays", "images", column: "current_image_id", on_delete: :nullify
   add_foreign_key "presentation_events", "campaigns"
   add_foreign_key "presentation_events", "images", on_delete: :nullify
-  add_foreign_key "sessions", "users"
 end
