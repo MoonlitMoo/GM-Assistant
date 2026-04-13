@@ -6,6 +6,23 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     sign_in(@user)
   end
 
+  test "create signs the new user in and redirects to campaigns" do
+    sign_out(@user)
+
+    assert_difference("User.count", 1) do
+      post user_registration_path, params: {
+        user: {
+          email_address: "new-user@example.com",
+          password: "password",
+          password_confirmation: "password"
+        }
+      }
+    end
+
+    assert_redirected_to root_path
+    assert session["warden.user.user.key"]
+  end
+
   test "edit redirects to settings and preserves return_to" do
     campaign = create(:campaign, user: @user)
 
