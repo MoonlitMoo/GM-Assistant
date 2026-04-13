@@ -15,6 +15,16 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert session["warden.user.user.key"]
   end
 
+  test "create with stored location redirects back to the protected page" do
+    get edit_settings_path
+    assert_redirected_to new_user_session_path
+
+    post user_session_path, params: { user: { email_address: @user.email_address, password: "password" } }
+
+    assert_redirected_to edit_settings_path
+    assert session["warden.user.user.key"]
+  end
+
   test "create with invalid credentials" do
     post user_session_path, params: { user: { email_address: @user.email_address, password: "wrong" } }
 
