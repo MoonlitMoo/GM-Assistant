@@ -36,15 +36,17 @@
 
         <!-- Sidebar -->
         <div id="sidebar">
-          <div id="campaign-tree" data-tree-url="<%= tree_campaign_path(@campaign) %>"></div>
-          <details id="gm-panel" class="gm-panel">
-            <summary>
-              <%= render "player_displays/gm_panel_header", player_display: @campaign.player_display %>
-            </summary>
-            <%= render "player_displays/gm_status",
-                       player_display: @campaign.player_display,
-                       recent_events: recent_events %>
-          </details>
+          <div class="campaign-sidebar__content">
+            <div id="campaign-tree" data-tree-url="<%= tree_campaign_path(@campaign) %>"></div>
+            <details id="gm-panel" class="gm-panel">
+              <summary>
+                <%= render "player_displays/gm_panel_header", player_display: @campaign.player_display %>
+              </summary>
+              <%= render "player_displays/gm_status",
+                         player_display: @campaign.player_display,
+                         recent_events: recent_events %>
+            </details>
+          </div>
           <script>
             (() => {
               function syncGmPanelState() {
