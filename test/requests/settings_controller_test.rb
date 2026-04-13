@@ -12,6 +12,15 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "edit includes the embedded account update form" do
+    get edit_settings_path
+
+    assert_response :success
+    assert_match(%r{action="#{user_registration_path}"}, response.body)
+    assert_match(/name="user\[email_address\]"/, response.body)
+    assert_match(/name="user\[current_password\]"/, response.body)
+  end
+
   test "update with valid params redirects back to edit" do
     patch settings_path, params: {
       default_transition: "instant",
