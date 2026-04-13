@@ -8,7 +8,7 @@ end
 require_relative "../config/environment"
 require "rails/test_help"
 require "cgi"
-
+require "devise/test/integration_helpers"
 
 module ActiveSupport
   class TestCase
@@ -25,21 +25,11 @@ module ActiveSupport
         with.library :rails
       end
     end
-
-    teardown do
-      Current.reset
-    end
   end
 end
 
 class ActionDispatch::IntegrationTest
-  def sign_in(user)
-    post session_path, params: {
-      email_address: user.email_address,
-      password: "password"
-    }
-    follow_redirect! if response.redirect?
-  end
+  include Devise::Test::IntegrationHelpers
 
   private
 

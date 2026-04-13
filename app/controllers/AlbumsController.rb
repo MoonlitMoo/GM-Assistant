@@ -59,11 +59,11 @@ class AlbumsController < ApplicationController
   private
 
   def set_album
-    @album = Album.joins(:campaign).merge(Current.user.campaigns).find(params[:id])
+    @album = Album.joins(:campaign).merge(current_user.campaigns).find(params[:id])
   end
 
   def set_folder
-    @folder = Folder.joins(:campaign).merge(Current.user.campaigns).find(params[:folder_id])
+    @folder = Folder.joins(:campaign).merge(current_user.campaigns).find(params[:folder_id])
   end
 
   def set_campaign

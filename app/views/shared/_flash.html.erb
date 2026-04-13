@@ -1,2 +1,12 @@
-<%= tag.div(flash[:alert], style: "color:red") if flash[:alert] %>
-<%= tag.div(flash[:notice], style: "color:green") if flash[:notice] %>
+<% messages = flash.to_hash.filter_map { |type, message| [ type, Array(message).join(" ") ] if message.present? } %>
+<% if messages.any? %>
+  <div class="flash-stack">
+    <% messages.each do |type, message| %>
+      <% tone = type.to_s == "notice" ? "notice" : "alert" %>
+      <div class="flash-message flash-message--<%= tone %>" data-turbo-temporary>
+        <p class="flash-message__label"><%= tone == "notice" ? "Notice" : "Alert" %></p>
+        <p class="flash-message__body"><%= message %></p>
+      </div>
+    <% end %>
+  </div>
+<% end %>

@@ -16,7 +16,7 @@ class ImagesController < ApplicationController
 
   def new
     @image = @album.images.build(campaign: @album.campaign)
-    @image.show_title = Current.user.default_show_title
+    @image.show_title = current_user.default_show_title
   end
 
   def create
@@ -50,11 +50,11 @@ class ImagesController < ApplicationController
   private
 
   def set_image
-    @image = Image.joins(:campaign).merge(Current.user.campaigns).find(params[:id])
+    @image = Image.joins(:campaign).merge(current_user.campaigns).find(params[:id])
   end
 
   def set_album
-    @album = Album.joins(:campaign).merge(Current.user.campaigns).find(params[:album_id])
+    @album = Album.joins(:campaign).merge(current_user.campaigns).find(params[:album_id])
   end
 
   def image_params

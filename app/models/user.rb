@@ -1,4 +1,11 @@
 class User < ApplicationRecord
+  # Let Devise keep using the existing auth columns.
+  alias_attribute :email, :email_address
+
+  # Include default devise modules. Others available are:
+  # :confirmable, :lockable, :timeoutable, :trackable and :omniauthable
+  devise :database_authenticatable, :registerable,
+         :recoverable, :rememberable, :validatable
   DEFAULT_TRANSITION = "crossfade"
   DEFAULT_SHOW_TITLE = false
   DEFAULT_CROSSFADE_DURATION = 400
@@ -14,9 +21,7 @@ class User < ApplicationRecord
 
   serialize :preferences, coder: JSON
 
-  has_secure_password
   has_many :campaigns, dependent: :destroy
-  has_many :sessions, dependent: :destroy
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 
@@ -28,6 +33,38 @@ class User < ApplicationRecord
 
   def preferences
     super || {}
+  end
+
+  def encrypted_password
+    self[:password_digest]
+  end
+
+  def encrypted_password=(value)
+    self[:password_digest] = value
+  end
+
+  # Devise internally uses a helper named `password_digest(password)`, which
+  # collides with the legacy column reader. Support both call patterns.
+  def password_digest(raw_password = nil)
+    return self[:password_digest] if raw_password.nil?
+
+    Devise::Encryptor.digest(self.class, raw_password)
+  end
+
+  def encrypted_password_before_last_save
+    attribute_before_last_save("password_digest")
+  end
+
+  def encrypted_password_in_database
+    attribute_in_database("password_digest")
+  end
+
+  def saved_change_to_encrypted_password?
+    saved_change_to_password_digest?
+  end
+
+  def will_save_change_to_encrypted_password?
+    will_save_change_to_password_digest?
   end
 
   def default_transition

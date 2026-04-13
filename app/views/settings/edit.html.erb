@@ -1,23 +1,25 @@
 <% provide :title, "Settings — GM Assistant" %>
 <% provide :topbar_title, "Settings" %>
+<% preferences_user = @preferences_user || current_user %>
+<% account_user = @account_user || current_user %>
 
 <section class="record-shell form-shell">
   <%= render "shared/flash" %>
 
   <div class="record-panel form-panel">
     <div class="form-panel__header">
-      <p class="record-kicker">Preferences</p>
+      <p class="record-kicker">Preferences &amp; Account</p>
       <h1 class="record-title">Settings</h1>
     </div>
 
     <%= form_with url: settings_path, method: :patch, scope: nil, class: "resource-form" do |form| %>
       <%= form_return_to_field %>
 
-      <% if Current.user.errors.any? %>
+      <% if preferences_user.errors.any? %>
         <div class="form-errors">
-          <h2><%= pluralize(Current.user.errors.count, "error") %> prevented your settings from being saved:</h2>
+          <h2><%= pluralize(preferences_user.errors.count, "error") %> prevented your settings from being saved:</h2>
           <ul>
-            <% Current.user.errors.full_messages.each do |message| %>
+            <% preferences_user.errors.full_messages.each do |message| %>
               <li><%= message %></li>
             <% end %>
           </ul>
@@ -37,7 +39,7 @@
                               [ "Crossfade", "crossfade" ],
                               [ "Instant", "instant" ]
                             ],
-                            Current.user.default_transition
+                            preferences_user.default_transition
                           ),
                           {},
                           class: "resource-form__input" %>
@@ -48,7 +50,7 @@
             <%= form.check_box :default_show_title,
                                {
                                  class: "resource-form__checkbox-input",
-                                 checked: Current.user.default_show_title
+                                 checked: preferences_user.default_show_title
                                },
                                "1",
                                "0" %>
@@ -66,7 +68,7 @@
           <label>Player Screen</label>
         </div>
 
-        <% if Current.user.default_transition == "crossfade" %>
+        <% if preferences_user.default_transition == "crossfade" %>
           <div class="resource-form__field">
             <%= form.label :crossfade_duration, "Crossfade duration" %>
             <%= form.select :crossfade_duration,
@@ -78,7 +80,7 @@
                                 [ "800ms", 800 ],
                                 [ "1000ms", 1000 ]
                               ],
-                              Current.user.crossfade_duration
+                              preferences_user.crossfade_duration
                             ),
                             {},
                             class: "resource-form__input" %>
@@ -89,13 +91,13 @@
           <%= form.label :image_fit, "Image fit" %>
           <div class="resource-form__field resource-form__field--checkbox">
             <label class="resource-form__checkbox">
-              <%= form.radio_button :image_fit, "contain", checked: Current.user.image_fit == "contain", class: "resource-form__checkbox-input" %>
+              <%= form.radio_button :image_fit, "contain", checked: preferences_user.image_fit == "contain", class: "resource-form__checkbox-input" %>
               <span>Fit (contain)</span>
             </label>
           </div>
           <div class="resource-form__field resource-form__field--checkbox">
             <label class="resource-form__checkbox">
-              <%= form.radio_button :image_fit, "cover", checked: Current.user.image_fit == "cover", class: "resource-form__checkbox-input" %>
+              <%= form.radio_button :image_fit, "cover", checked: preferences_user.image_fit == "cover", class: "resource-form__checkbox-input" %>
               <span>Fill (cover)</span>
             </label>
           </div>
@@ -115,7 +117,7 @@
                               [ "8", 8 ],
                               [ "10", 10 ]
                             ],
-                            Current.user.dashboard_recent_count
+                            preferences_user.dashboard_recent_count
                           ),
                           {},
                           class: "resource-form__input" %>
@@ -131,31 +133,10 @@
                               [ "5", 5 ],
                               [ "8", 8 ]
                             ],
-                            Current.user.gm_history_count
+                            preferences_user.gm_history_count
                           ),
                           {},
                           class: "resource-form__input" %>
-        </div>
-      </section>
-
-      <section class="settings-section">
-        <div class="section-heading">
-          <h2>Account</h2>
-        </div>
-
-        <div class="resource-form__field">
-          <%= label_tag :account_email, "Email address" %>
-          <%= text_field_tag :account_email,
-                             Current.user.email_address,
-                             class: "resource-form__input",
-                             readonly: true,
-                             disabled: true %>
-        </div>
-
-        <div class="resource-form__actions">
-          <%= link_to "Change password",
-                      new_password_path,
-                      class: "fantasy-button fantasy-button--secondary" %>
         </div>
       </section>
 
@@ -164,5 +145,88 @@
         <%= link_to "Cancel", form_cancel_path(campaigns_path), class: "resource-form__cancel" %>
       </div>
     <% end %>
+
+    <section class="settings-section">
+      <div class="section-heading">
+        <h2>Account</h2>
+      </div>
+
+      <%= form_for(account_user, as: :user, url: user_registration_path, html: { method: :put, class: "resource-form" }) do |form| %>
+        <%= form_return_to_field %>
+        <%= render "devise/shared/error_messages", resource: account_user %>
+
+        <div class="resource-form__field">
+          <%= form.label :email_address, "Email address" %>
+          <%= form.email_field :email_address,
+                               required: true,
+                               autocomplete: "email",
+                               placeholder: "name@example.com",
+                               class: "resource-form__input" %>
+        </div>
+
+        <% if account_user.respond_to?(:pending_reconfirmation?) && account_user.pending_reconfirmation? %>
+          <div class="form-errors">
+            <h2>Confirmation pending</h2>
+            <ul>
+              <li>Currently waiting confirmation for: <%= account_user.unconfirmed_email %></li>
+            </ul>
+          </div>
+        <% end %>
+
+        <div class="resource-form__field">
+          <%= form.label :password, "New password" %>
+          <p class="auth-field-note">Leave blank if you do not want to change it.</p>
+          <% if @minimum_password_length.present? %>
+            <p class="auth-field-note"><%= @minimum_password_length %> characters minimum.</p>
+          <% end %>
+          <%= form.password_field :password,
+                                  autocomplete: "new-password",
+                                  placeholder: "Choose a new password",
+                                  maxlength: 72,
+                                  class: "resource-form__input" %>
+        </div>
+
+        <div class="resource-form__field">
+          <%= form.label :password_confirmation, "Confirm new password" %>
+          <%= form.password_field :password_confirmation,
+                                  autocomplete: "new-password",
+                                  placeholder: "Repeat your new password",
+                                  maxlength: 72,
+                                  class: "resource-form__input" %>
+        </div>
+
+        <div class="resource-form__field">
+          <%= form.label :current_password, "Current password" %>
+          <p class="auth-field-note">We need your current password to confirm these changes.</p>
+          <%= form.password_field :current_password,
+                                  required: true,
+                                  autocomplete: "current-password",
+                                  placeholder: "Enter your current password",
+                                  maxlength: 72,
+                                  class: "resource-form__input" %>
+        </div>
+
+        <div class="resource-form__actions">
+          <%= form.submit "Update Account", class: "fantasy-button fantasy-button--primary" %>
+          <%= link_to "Cancel", form_cancel_path(campaigns_path), class: "resource-form__cancel" %>
+        </div>
+      <% end %>
+    </section>
+
+    <section class="settings-section">
+      <div class="section-heading">
+        <h2>Close Account</h2>
+      </div>
+
+      <p class="auth-field-note">Unhappy? You can permanently remove your account and sign out everywhere.</p>
+
+      <div class="resource-form__actions">
+        <%= button_to "Cancel My Account",
+                      user_registration_path,
+                      class: "fantasy-button fantasy-button--danger",
+                      data: { confirm: "Are you sure?", turbo_confirm: "Are you sure?" },
+                      method: :delete %>
+      </div>
+    </section>
   </div>
 </section>

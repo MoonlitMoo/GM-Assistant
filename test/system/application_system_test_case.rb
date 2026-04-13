@@ -41,9 +41,9 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   end
 
   def sign_in_as(user, password: "password")
-    visit new_session_path
-    fill_in "Enter your email address", with: user.email_address
-    fill_in "Enter your password", with: password
+    visit route_helpers.new_user_session_path
+    fill_in "Email address", with: user.email_address
+    fill_in "Password", with: password
     click_button "Sign in"
   end
 

@@ -12,6 +12,15 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "edit includes the embedded account update form" do
+    get edit_settings_path
+
+    assert_response :success
+    assert_match(%r{action="#{user_registration_path}"}, response.body)
+    assert_match(/name="user\[email_address\]"/, response.body)
+    assert_match(/name="user\[current_password\]"/, response.body)
+  end
+
   test "update with valid params redirects back to edit" do
     patch settings_path, params: {
       default_transition: "instant",
@@ -118,10 +127,10 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "edit redirects to login when signed out" do
-    delete session_path
+    sign_out(@user)
 
     get edit_settings_path
 
-    assert_redirected_to new_session_path
+    assert_redirected_to new_user_session_path
   end
 end

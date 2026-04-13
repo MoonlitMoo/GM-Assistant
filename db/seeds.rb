@@ -9,8 +9,10 @@
 #   end
 
 gm = User.find_or_initialize_by(email_address: "gm@example.com")
-gm.password = "password"
-gm.password_confirmation = "password"
+gm.assign_attributes(
+  password: "password",
+  password_confirmation: "password"
+)
 gm.save!
 
 # If legacy local data predates campaign ownership, attach it to the seeded GM user.
