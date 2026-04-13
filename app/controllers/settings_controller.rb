@@ -1,9 +1,13 @@
 class SettingsController < ApplicationController
+  before_action :prepare_settings_page
+
   def edit
   end
 
   def update
-    if current_user.update(user_preferences_params)
+    @preferences_user.assign_attributes(user_preferences_params)
+
+    if @preferences_user.save
       sync_existing_player_displays!
       redirect_to edit_settings_path(settings_navigation_params), notice: "Settings saved."
     else
@@ -22,6 +26,12 @@ class SettingsController < ApplicationController
       :gm_history_count,
       :image_fit
     )
+  end
+
+  def prepare_settings_page
+    @preferences_user = current_user
+    @account_user = User.find(current_user.id)
+    @minimum_password_length = User.password_length.min if User.respond_to?(:password_length)
   end
 
   def settings_navigation_params
