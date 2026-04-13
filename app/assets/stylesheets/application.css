@@ -85,6 +85,10 @@ body {
   gap: 0.75rem;
 }
 
+#top-bar .topbar-auth-form {
+  margin: 0;
+}
+
 #top-bar .topbar-icon {
   display: inline-flex;
   align-items: center;
@@ -112,7 +116,9 @@ body {
   stroke-width: 1.6;
 }
 
-#top-bar .topbar-status-link {
+#top-bar .topbar-status-link,
+#top-bar .topbar-auth-link,
+#top-bar .topbar-auth-button {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -121,13 +127,34 @@ body {
   opacity: 0.72;
 }
 
-#top-bar .topbar-status-link:hover {
+#top-bar .topbar-auth-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+#top-bar .topbar-status-link:hover,
+#top-bar .topbar-auth-link:hover,
+#top-bar .topbar-auth-button:hover {
   color: var(--parchment);
   opacity: 0.92;
 }
 
 #top-bar .topbar-status-link.is-inactive {
   opacity: 0.62;
+}
+
+#top-bar .topbar-auth-link svg,
+#top-bar .topbar-auth-button svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
 }
 
 #top-bar .topbar-status-title {
