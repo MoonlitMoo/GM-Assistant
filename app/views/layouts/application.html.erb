@@ -26,7 +26,7 @@
       <%= link_to "⚔ GM Assistant", user_signed_in? ? campaigns_path : new_user_session_path %>
       <span><%= content_for?(:topbar_title) ? yield(:topbar_title) : "Campaigns" %></span>
       <span class="topbar-actions">
-        <%= render "shared/settings_icon" %>
+        <%= render "shared/topbar_auth" %>
       </span>
     </div>
 
