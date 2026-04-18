@@ -22,6 +22,7 @@ class User < ApplicationRecord
   serialize :preferences, coder: JSON
 
   has_many :campaigns, dependent: :destroy
+  has_one :invite_code, foreign_key: :used_by_user_id, dependent: :nullify
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 
