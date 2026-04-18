@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_12_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_18_001000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -85,6 +85,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_12_090000) do
     t.index ["campaign_id"], name: "index_images_on_campaign_id"
   end
 
+  create_table "invite_codes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "used_at"
+    t.integer "used_by_user_id"
+    t.index ["token"], name: "index_invite_codes_on_token", unique: true
+    t.index ["used_by_user_id"], name: "index_invite_codes_on_used_by_user_id"
+  end
+
   create_table "player_displays", force: :cascade do |t|
     t.integer "campaign_id", null: false
     t.datetime "created_at", null: false
@@ -130,6 +140,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_12_090000) do
   add_foreign_key "folders", "folders", column: "parent_id"
   add_foreign_key "images", "albums"
   add_foreign_key "images", "campaigns"
+  add_foreign_key "invite_codes", "users", column: "used_by_user_id", on_delete: :nullify
   add_foreign_key "player_displays", "campaigns"
   add_foreign_key "player_displays", "images", column: "current_image_id", on_delete: :nullify
   add_foreign_key "presentation_events", "campaigns"
