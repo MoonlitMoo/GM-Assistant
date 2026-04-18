@@ -1,3 +1,11 @@
+## [2.0.1](https://github.com/MoonlitMoo/GM-Assistant/compare/v2.0.0...v2.0.1) (2026-04-18)
+
+
+### Bug Fixes
+
+* Add correct assets to docker ([80f5424](https://github.com/MoonlitMoo/GM-Assistant/commit/80f5424cf4050d7f27cd4c7ed88597ff6eaf9215))
+* Remove encrypted credentials from build ([b0cb423](https://github.com/MoonlitMoo/GM-Assistant/commit/b0cb423e9a44b337560939ddd441ae29f7e561a3))
+
 # [2.0.0](https://github.com/MoonlitMoo/GM-Assistant/compare/v1.2.0...v2.0.0) (2026-04-18)
 
 
