@@ -1,8 +1,21 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-# If running the rails server then create or migrate existing database
-if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
-  ./bin/rails db:prepare
+primary_db="${PRIMARY_DB_PATH:-storage/${RAILS_ENV:-production}.sqlite3}"
+just_created_flag="tmp/.primary-db-created"
+
+mkdir -p "$(dirname "$primary_db")" "$(dirname "$just_created_flag")"
+rm -f "$just_created_flag"
+
+if [ ! -f "$primary_db" ]; then
+  touch "$just_created_flag"
 fi
 
-exec "${@}"
+bin/rails db:prepare
+
+if [ -f "$just_created_flag" ]; then
+  bin/rails db:seed
+  rm -f "$just_created_flag"
+fi
+
+exec "$@"
