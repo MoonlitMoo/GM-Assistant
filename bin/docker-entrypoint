@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+primary_db="${PRIMARY_DB_PATH:-storage/${RAILS_ENV:-production}.sqlite3}"
+just_created_flag="tmp/.primary-db-created"
+
+mkdir -p "$(dirname "$primary_db")" "$(dirname "$just_created_flag")"
+rm -f "$just_created_flag"
+
+if [ ! -f "$primary_db" ]; then
+  touch "$just_created_flag"
+fi
+
+bin/rails db:prepare
+
+if [ -f "$just_created_flag" ]; then
+  bin/rails db:seed
+  rm -f "$just_created_flag"
+fi
+
+exec "$@"

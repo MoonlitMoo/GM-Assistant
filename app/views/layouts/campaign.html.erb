@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= @campaign.name %> — GM Assistant</title>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <%= stylesheet_link_tag "application" %>
+    <%= vite_client_tag %>
+    <%= vite_javascript_tag 'application' %>
+  </head>
+  <% standalone_layout = content_for?(:standalone_campaign_layout) %>
+  <body>
+
+    <!-- Top bar -->
+    <div id="top-bar">
+      <%= link_to "⚔ GM Assistant", campaigns_path %>
+      <span><%= content_for?(:topbar_title) ? yield(:topbar_title) : @campaign.name %></span>
+      <span class="topbar-actions">
+        <%= render "player_displays/topbar_status", campaign: @campaign, player_display: @campaign.player_display %>
+        <%= render "shared/topbar_auth" %>
+      </span>
+    </div>
+
+    <% if standalone_layout %>
+      <main class="standalone-main standalone-main--campaign">
+        <%= yield %>
+      </main>
+    <% else %>
+      <% recent_events = PresentationEvent.recent_for_panel(
+           @campaign,
+           excluding_image: @campaign.player_display&.current_image,
+           limit: current_user.gm_history_count
+         ) %>
+      <div id="main-wrapper">
+
+        <!-- Sidebar -->
+        <div id="sidebar">
+          <div class="campaign-sidebar__content">
+            <div id="campaign-tree" data-tree-url="<%= tree_campaign_path(@campaign) %>"></div>
+            <details id="gm-panel" class="gm-panel">
+              <summary>
+                <%= render "player_displays/gm_panel_header", player_display: @campaign.player_display %>
+              </summary>
+              <%= render "player_displays/gm_status",
+                         player_display: @campaign.player_display,
+                         recent_events: recent_events %>
+            </details>
+          </div>
+          <script>
+            (() => {
+              function syncGmPanelState() {
+                const gmPanel = document.getElementById("gm-panel")
+                if (!gmPanel || gmPanel.dataset.stateBound === "true") return
+
+                gmPanel.open = sessionStorage.getItem("gm-panel-open") === "true"
+                gmPanel.addEventListener("toggle", () => {
+                  sessionStorage.setItem("gm-panel-open", gmPanel.open ? "true" : "false")
+                })
+                gmPanel.dataset.stateBound = "true"
+              }
+
+              document.addEventListener("turbo:load", syncGmPanelState)
+              document.addEventListener("DOMContentLoaded", syncGmPanelState)
+              syncGmPanelState()
+            })()
+          </script>
+        </div>
+
+        <!-- Main content -->
+        <div id="main-content"
+             data-controller="content-panel"
+             data-action="turbo:frame-load->content-panel#syncBreadcrumbs">
+          <div id="breadcrumbs" data-content-panel-target="breadcrumbs">
+            <%= render "shared/breadcrumbs", breadcrumbs: breadcrumbs %>
+          </div>
+          <% if turbo_frame_request? %>
+            <%= yield %>
+          <% else %>
+            <%= turbo_frame_tag "content-body", **content_body_frame_options do %>
+              <%= yield %>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+
+  </body>
+</html>

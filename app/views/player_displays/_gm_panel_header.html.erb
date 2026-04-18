@@ -1,0 +1,6 @@
+<%= turbo_frame_tag "gm-panel-header" do %>
+  <span class="gm-panel__summary">
+    <span class="gm-panel__label">GM Controls</span>
+    <span class="<%= class_names("gm-status-dot", { "is-active": player_display&.current_image.present? }) %>"></span>
+  </span>
+<% end %>
