@@ -1,4 +1,26 @@
 class Users::RegistrationsController < Devise::RegistrationsController
+  before_action :configure_sign_up_params, only: :create
+
+  def create
+    @invite_token = params.dig(resource_name, :invite_token).to_s.strip
+    invite_code = InviteCode.unused.find_by(token: @invite_token)
+
+    unless invite_code
+      build_resource(sign_up_params.except(:invite_token))
+      clean_up_passwords(resource)
+      set_minimum_password_length
+      flash.now[:alert] = "Invite code is invalid or has already been used."
+      render :new, status: :unprocessable_entity
+      return
+    end
+
+    strip_invite_token!
+
+    super do |resource|
+      invite_code.use!(resource) if resource.persisted?
+    end
+  end
+
   def edit
     redirect_to edit_settings_path(settings_navigation_params), status: Devise.responder.redirect_status
   end
@@ -23,11 +45,19 @@ class Users::RegistrationsController < Devise::RegistrationsController
 
   protected
 
+  def configure_sign_up_params
+    devise_parameter_sanitizer.permit(:sign_up, keys: [ :invite_token ])
+  end
+
   def after_update_path_for(_resource)
     edit_settings_path(settings_navigation_params)
   end
 
   private
+
+  def strip_invite_token!
+    params[resource_name]&.delete(:invite_token)
+  end
 
   def prepare_settings_page(account_user = current_user)
     @preferences_user = resource_class.find(current_user.id)
