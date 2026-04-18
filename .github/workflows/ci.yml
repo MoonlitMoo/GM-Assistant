@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  scan_ruby:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Scan for Rails security vulnerabilities (Brakeman)
+        run: bin/brakeman --no-pager
+
+      - name: Scan for vulnerable gems (bundler-audit)
+        run: bin/bundler-audit --update
+
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      RUBOCOP_CACHE_ROOT: tmp/rubocop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Cache RuboCop results
+        uses: actions/cache@v4
+        env:
+          DEPS: ${{ hashFiles('.ruby-version', '**/.rubocop.yml', '**/.rubocop_todo.yml', 'Gemfile.lock') }}
+        with:
+          path: ${{ env.RUBOCOP_CACHE_ROOT }}
+          key: rubocop-${{ runner.os }}-${{ env.DEPS }}-${{ github.ref_name == github.event.repository.default_branch && github.run_id || 'default' }}
+          restore-keys: rubocop-${{ runner.os }}-${{ env.DEPS }}-
+
+      - name: Lint Ruby (RuboCop)
+        run: bin/rubocop -f github
+
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Build Vite assets
+        run: bundle exec vite build
+
+      - name: Prepare test database
+        run: bin/rails db:test:prepare
+
+      - name: Run unit + integration tests
+        run: bin/rails test
+
+  system_test:
+    runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Build Vite assets
+        run: bundle exec vite build
+
+      # Cuprite drives Chrome/Brave directly — install Chrome for CI
+      - name: Install Chrome
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Prepare test database
+        run: bin/rails db:test:prepare
+
+      - name: Run system tests
+        env:
+          BROWSER_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: bin/rails test:system
+
+      - name: Upload screenshots from failed tests
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: screenshots
+          path: ${{ github.workspace }}/tmp/screenshots
+          if-no-files-found: ignore

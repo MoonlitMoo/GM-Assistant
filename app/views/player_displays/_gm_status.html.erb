@@ -1,0 +1,93 @@
+<%= turbo_frame_tag "gm-status" do %>
+  <% current_image = player_display&.current_image %>
+
+  <% if current_image.present? %>
+    <div class="gm-status-card">
+      <div class="gm-status-card__thumb">
+        <% if current_image.file.attached? && current_image.file.representable? %>
+          <%= image_tag current_image.file.representation(resize_to_fill: [ 96, 96 ]),
+                        alt: current_image.title,
+                        class: "gm-status-card__image" %>
+        <% else %>
+          <div class="gm-status-card__placeholder">No preview</div>
+        <% end %>
+      </div>
+
+      <div class="gm-status-card__copy">
+        <p class="gm-status-card__kicker card-kicker">Now showing</p>
+        <p class="gm-status-card__title"><%= current_image.title %></p>
+
+        <% if gm_panel_breadcrumb(current_image).present? %>
+          <p class="gm-status-card__breadcrumb"><%= gm_panel_breadcrumb(current_image) %></p>
+        <% end %>
+      </div>
+
+      <div class="gm-status-card__actions">
+        <%= link_to "Jump to image",
+                    image_path(current_image),
+                    class: "fantasy-button",
+                    data: { turbo_frame: "content-body" } %>
+        <%= link_to "Clear display",
+                    clear_campaign_player_display_path(current_image.campaign),
+                    class: "fantasy-button fantasy-button--danger",
+                    data: { turbo_method: :patch } %>
+      </div>
+
+      <div class="gm-status-card__controls">
+        <%= button_to(player_display.show_title ? "Title on" : "Title off",
+                      toggle_title_campaign_player_display_path(player_display.campaign),
+                      method: :patch,
+                      class: "fantasy-button fantasy-button--secondary gm-status-card__secondary-action",
+                      form: { data: { turbo_frame: "_top" } }) %>
+
+        <%= form_with url: update_transition_campaign_player_display_path(player_display.campaign),
+                      method: :patch,
+                      class: "gm-status-card__transition-form",
+                      data: { controller: "auto-submit", turbo_frame: "_top" } do |form| %>
+          <%= form.label :transition_type, "Transition", class: "gm-status-card__transition-label" %>
+          <%= form.select :transition_type,
+                          options_for_select(
+                            [
+                              [ "Crossfade", "crossfade" ],
+                              [ "Instant", "instant" ]
+                            ],
+                            player_display.transition_type
+                          ),
+                          {},
+                          class: "resource-form__input gm-status-card__transition-select",
+                          data: { action: "change->auto-submit#submit" } %>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <div class="gm-status-placeholder">
+      <p>Nothing is currently being shown to players.</p>
+    </div>
+  <% end %>
+
+  <section class="gm-recent">
+    <p class="gm-status-card__kicker card-kicker">Recently shown</p>
+
+    <% if recent_events.any? %>
+      <ul class="gm-recent-list">
+        <% recent_events.each do |event| %>
+          <li class="gm-recent-item">
+            <p class="gm-recent-item__title"><%= event.image_title %></p>
+
+            <% if event.image.present? %>
+              <%= button_to "Present again",
+                            present_campaign_player_display_path(event.campaign),
+                            method: :patch,
+                            params: { current_image_id: event.image_id },
+                            class: "fantasy-button fantasy-button--primary gm-recent-item__action" %>
+            <% else %>
+              <p class="gm-recent-item__missing">Image no longer available.</p>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="gm-recent__empty">Nothing has been shown recently.</p>
+    <% end %>
+  </section>
+<% end %>

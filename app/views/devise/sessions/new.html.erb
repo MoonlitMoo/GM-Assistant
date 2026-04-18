@@ -1,0 +1,54 @@
+<% provide :title, "Sign In — GM Assistant" %>
+<% provide :topbar_title, "Sign in" %>
+
+<section class="record-shell form-shell auth-shell">
+  <%= render "shared/flash" %>
+
+  <div class="record-panel form-panel">
+    <div class="form-panel__header">
+      <p class="record-kicker">Welcome Back</p>
+      <h1 class="record-title">Sign in</h1>
+      <p class="record-description auth-description">Pick up where you left off and continue guiding the table.</p>
+    </div>
+
+    <%= form_for(resource, as: resource_name, url: user_session_path, html: { class: "resource-form" }) do |f| %>
+      <%= render "devise/shared/error_messages", resource: resource %>
+
+      <div class="resource-form__field">
+        <%= f.label :email_address, "Email address" %>
+        <%= f.email_field :email_address,
+                          required: true,
+                          autofocus: true,
+                          autocomplete: "username",
+                          placeholder: "Enter your email address",
+                          value: resource.email_address.presence || params.dig(resource_name, :email_address),
+                          class: "resource-form__input" %>
+      </div>
+
+      <div class="resource-form__field">
+        <%= f.label :password, "Password" %>
+        <%= f.password_field :password,
+                             required: true,
+                             autocomplete: "current-password",
+                             placeholder: "Enter your password",
+                             maxlength: 72,
+                             class: "resource-form__input" %>
+      </div>
+
+      <% if devise_mapping.rememberable? %>
+        <div class="resource-form__field resource-form__field--checkbox">
+          <label class="resource-form__checkbox">
+            <%= f.check_box :remember_me, class: "resource-form__checkbox-input" %>
+            <span>Keep me signed in on this device</span>
+          </label>
+        </div>
+      <% end %>
+
+      <div class="resource-form__actions">
+        <%= f.submit "Sign in", class: "fantasy-button fantasy-button--primary" %>
+      </div>
+    <% end %>
+
+    <%= render "devise/shared/links" %>
+  </div>
+</section>

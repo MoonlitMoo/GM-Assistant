@@ -1,0 +1,67 @@
+# syntax=docker/dockerfile:1
+
+ARG RUBY_VERSION=3.4.9
+
+FROM ruby:${RUBY_VERSION}-slim AS builder
+
+WORKDIR /rails
+
+ENV RAILS_ENV=production \
+    BUNDLE_WITHOUT=development:test \
+    BUNDLE_DEPLOYMENT=1 \
+    BUNDLE_PATH=/usr/local/bundle
+
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+      build-essential \
+      ca-certificates \
+      curl \
+      git \
+      libsqlite3-dev \
+      pkg-config && \
+    curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
+    apt-get install --no-install-recommends -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY Gemfile Gemfile.lock ./
+
+RUN bundle install --without development test && \
+    rm -rf ~/.bundle "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+
+RUN bin/vite build
+
+FROM ruby:${RUBY_VERSION}-slim AS runtime
+
+WORKDIR /rails
+
+ENV RAILS_ENV=production \
+    BUNDLE_WITHOUT=development:test \
+    BUNDLE_DEPLOYMENT=1 \
+    BUNDLE_PATH=/usr/local/bundle
+
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+      libsqlite3-0 \
+      libvips42 && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --system rails && \
+    useradd --system --create-home --gid rails --shell /bin/bash rails
+
+COPY . .
+RUN rm -rf /rails/public/vite /rails/public/vite-dev /rails/public/vite-test
+COPY --from=builder /usr/local/bundle /usr/local/bundle
+COPY --from=builder /rails/public/vite /rails/public/vite
+
+RUN chown -R rails:rails /rails /usr/local/bundle
+
+USER rails
+
+EXPOSE 3000
+
+ENTRYPOINT ["bin/docker-entrypoint"]
+CMD ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
