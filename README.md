@@ -63,10 +63,22 @@ Development and test SQLite databases live under `storage/`. Uploaded files also
 
 Production uses the prebuilt image defined in `compose.yml`, currently `ghcr.io/moonlitmoo/gm-assistant:latest`. The following example setup uses the `compose.yml` in the repository.
 
-1. Create a `.env` file for Compose and add any production values you need.
+1. Create a `.env` file for Compose and add the required production values.
 
    ```bash
    touch .env
+   ```
+
+   At minimum, set `SECRET_KEY_BASE` so Rails can boot in production.
+
+   ```env
+   SECRET_KEY_BASE=replace-with-a-long-random-string
+   ```
+
+   If you use encrypted Rails credentials, also set:
+
+   ```env
+   RAILS_MASTER_KEY=replace-with-your-master-key
    ```
 
 2. Add this site block to the existing Caddyfile, then reload Caddy. Caddy will handle HTTPS automatically, and `reverse_proxy` supports Action Cable WebSocket upgrades for `/cable`.
