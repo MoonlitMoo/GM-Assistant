@@ -1,0 +1,58 @@
+<%= content_body_frame do %>
+  <% presenting_this_image = @presenting_image_id == @image.id %>
+
+  <section class="image-show"
+           data-controller="player-display"
+           data-player-display-campaign-id-value="<%= @campaign.id %>"
+           data-player-display-present-url-value="<%= present_campaign_player_display_path(@campaign) %>"
+           data-player-display-clear-url-value="<%= clear_campaign_player_display_path(@campaign) %>"
+           data-player-display-presenting-image-id-value="<%= @presenting_image_id %>">
+    <% if @image.file.attached? %>
+      <%= image_tag @image.file.representation(resize_to_limit: [ 1800, 1800 ]),
+                    alt: @image.title,
+                    class: "image-show__asset" %>
+    <% else %>
+      <div class="image-show__empty">
+        <p>No image file is attached to this record yet.</p>
+      </div>
+    <% end %>
+
+    <div class="image-show-copy">
+      <p class="record-kicker">Image</p>
+      <h1 class="record-title"><%= @image.title %></h1>
+
+      <% if @image.notes.present? %>
+        <div class="record-description record-description--rich">
+          <%= simple_format(@image.notes) %>
+        </div>
+      <% else %>
+        <p class="record-description record-description--empty">No description recorded for this image yet.</p>
+      <% end %>
+    </div>
+
+    <div class="record-actions image-show-actions">
+      <%= button_tag(presenting_this_image ? "Presenting" : "Present",
+                     type: "button",
+                     class: class_names("fantasy-button fantasy-button--primary", { "fantasy-button--active": presenting_this_image }),
+                     data: {
+                       action: "click->player-display#present",
+                       player_display_image_id: @image.id,
+                       player_display_active_label: "Presenting",
+                       player_display_inactive_label: "Present"
+                     }) %>
+      <%= button_tag "Clear display",
+                     type: "button",
+                     class: "fantasy-button",
+                     disabled: @presenting_image_id.zero?,
+                     data: { action: "click->player-display#clear", player_display_clear: true } %>
+      <%= link_to "Edit image", edit_image_path(@image, form_navigation_params), class: "fantasy-button" %>
+      <%= link_to "Delete image",
+                  image_path(@image),
+                  class: "fantasy-button fantasy-button--danger",
+                  data: {
+                    turbo_method: :delete,
+                    turbo_confirm: "Delete this image?"
+                  } %>
+    </div>
+  </section>
+<% end %>

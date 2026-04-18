@@ -1,0 +1,72 @@
+<%= content_body_frame do %>
+  <section class="record-shell">
+    <div class="record-panel">
+      <div class="record-header">
+        <div class="record-copy">
+          <p class="record-kicker"><%= @folder.is_root? ? "Campaign Library" : "Folder" %></p>
+          <h1 class="record-title"><%= @folder.name %></h1>
+
+          <% if @folder.description.present? %>
+            <p class="record-description"><%= @folder.description %></p>
+          <% end %>
+
+          <p class="record-description">
+            <%= pluralize(@child_folders.size, "child folder") %> and
+            <%= pluralize(@albums.size, "album") %> within this chapter of the archive.
+          </p>
+        </div>
+
+        <div class="record-actions">
+          <%= link_to "New Folder", new_folder_folder_path(@folder, form_navigation_params), class: "fantasy-button fantasy-button--primary" %>
+          <%= link_to "New Album", new_folder_album_path(@folder, form_navigation_params), class: "fantasy-button fantasy-button--primary" %>
+          <%= link_to "Edit folder", edit_folder_path(@folder, form_navigation_params), class: "fantasy-button" %>
+          <% unless @folder.is_root? %>
+            <%= link_to "Delete folder",
+                        folder_path(@folder),
+                        class: "fantasy-button fantasy-button--danger",
+                        data: {
+                          turbo_method: :delete,
+                          turbo_confirm: "Delete this folder and everything inside it?"
+                        } %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Folders</h2>
+        <span><%= pluralize(@child_folders.size, "folder") %></span>
+      </div>
+
+      <% if @child_folders.any? %>
+        <div class="library-grid">
+          <%= render partial: "shared/folder_card", collection: @child_folders, as: :folder %>
+        </div>
+      <% else %>
+        <div class="album-empty-state">
+          <p>No child folders here yet.</p>
+          <%= link_to "New Folder", new_folder_folder_path(@folder, form_navigation_params), class: "fantasy-button fantasy-button--primary" %>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Albums</h2>
+        <span><%= pluralize(@albums.size, "album") %></span>
+      </div>
+
+      <% if @albums.any? %>
+        <div class="library-grid">
+          <%= render partial: "shared/album_card", collection: @albums, as: :album %>
+        </div>
+      <% else %>
+        <div class="album-empty-state">
+          <p>No albums in this folder yet.</p>
+          <%= link_to "New Album", new_folder_album_path(@folder, form_navigation_params), class: "fantasy-button fantasy-button--primary" %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+<% end %>

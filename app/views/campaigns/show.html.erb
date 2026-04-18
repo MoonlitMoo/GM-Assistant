@@ -1,0 +1,107 @@
+<%= content_body_frame do %>
+  <% root_folder = @campaign.root_folder %>
+  <section class="record-shell campaign-dashboard">
+    <div class="record-panel">
+      <div class="record-header">
+        <div class="record-copy">
+          <p class="record-kicker">Campaign</p>
+          <h1 class="record-title"><%= @campaign.name %></h1>
+
+          <% if @campaign.description.present? %>
+            <p class="record-description"><%= @campaign.description %></p>
+          <% end %>
+        </div>
+
+        <div class="record-actions">
+          <%= link_to "Edit campaign", edit_campaign_path(@campaign, form_navigation_params), class: "fantasy-button" %>
+          <%= link_to "Back to campaigns", campaigns_path, class: "fantasy-button", data: { turbo_frame: "_top" } %>
+        </div>
+      </div>
+    </div>
+
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Overview</h2>
+        <span>Campaign totals</span>
+      </div>
+
+      <div class="stats-grid">
+        <article class="stat-card">
+          <p class="stat-card__label">Total albums</p>
+          <p class="stat-card__value"><%= @album_count %></p>
+        </article>
+
+        <article class="stat-card">
+          <p class="stat-card__label">Total images</p>
+          <p class="stat-card__value"><%= @image_count %></p>
+        </article>
+      </div>
+    </div>
+
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Recently Added</h2>
+        <span>Recent images</span>
+      </div>
+
+      <% if @recent_images.any? %>
+        <div class="recent-list">
+          <% @recent_images.each do |image| %>
+            <article class="recent-item">
+              <h3 class="recent-item__title"><%= link_to image.title, image_path(image), class: "card-title-link" %></h3>
+              <p class="recent-item__subtitle"><%= image.album.name %></p>
+            </article>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="album-empty-state">
+          <p>No images have been added to this campaign yet.</p>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Folders</h2>
+        <div class="section-heading__meta">
+          <span><%= pluralize(@child_folders.size, "folder") %></span>
+          <%= link_to "+ New Folder",
+                      new_folder_folder_path(root_folder, form_navigation_params),
+                      class: "section-heading__action" %>
+        </div>
+      </div>
+
+      <% if @child_folders.any? %>
+        <div class="library-grid">
+          <%= render partial: "shared/folder_card", collection: @child_folders, as: :folder %>
+        </div>
+      <% else %>
+        <div class="album-empty-state">
+          <p>No folders at the top level yet.</p>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="record-panel">
+      <div class="section-heading">
+        <h2>Albums</h2>
+        <div class="section-heading__meta">
+          <span><%= pluralize(@root_albums.size, "album") %></span>
+          <%= link_to "+ New Album",
+                      new_folder_album_path(root_folder, form_navigation_params),
+                      class: "section-heading__action" %>
+        </div>
+      </div>
+
+      <% if @root_albums.any? %>
+        <div class="library-grid">
+          <%= render partial: "shared/album_card", collection: @root_albums, as: :album %>
+        </div>
+      <% else %>
+        <div class="album-empty-state">
+          <p>No albums at the top level yet.</p>
+        </div>
+      <% end %>
+    </div>
+  </section>
+<% end %>

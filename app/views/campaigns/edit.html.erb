@@ -1,0 +1,8 @@
+<% provide :standalone_campaign_layout, "1" %>
+<% provide :topbar_title, @campaign.name %>
+
+<%= content_body_frame do %>
+  <%= render "form",
+             form_url: campaign_path(@campaign.id),
+             cancel_path: form_cancel_path(campaign_path(@campaign.id)) %>
+<% end %>
