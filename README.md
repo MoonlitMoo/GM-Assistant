@@ -1,24 +1,103 @@
-# README
+# GM Assistant
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+GM Assistant is a Rails app for running image-driven tabletop sessions. It lets a GM organise campaign media into folders and albums, then present images to a player-facing screen in real time.
 
-Things you may want to cover:
+## Features
 
-* Ruby version
+- Campaign library with nested folders, albums, and uploaded images
+- Player display view for showing the current image to the table
+- Real-time presentation updates over Action Cable
+- User accounts and per-user display preferences
 
-* System dependencies
+## Stack
 
-* Configuration
+- Ruby 3.4.9
+- Rails 8.1
+- Vite with React
+- SQLite for app, queue, cable, and cache databases
+- Active Storage for uploaded files
 
-* Database creation
+## Development
 
-* Database initialization
+Local development runs from source on your machine. The prebuilt GHCR image in `compose.yml` is for deployment, not day-to-day development.
 
-* How to run the test suite
+Prerequisites:
 
-* Services (job queues, cache servers, search engines, etc.)
+- Ruby 3.4.9
+- Node.js 24 and npm
+- SQLite 3
 
-* Deployment instructions
+Initial setup:
 
-* ...
+```bash
+bundle install
+npm ci
+bin/setup
+```
+
+Run the app:
+
+```bash
+bin/dev
+```
+
+The app will be available at `http://localhost:3000`.
+
+Vite is configured to autobuild in development. If you want to run the Vite dev server for live asset rebuilds in a second terminal, use:
+
+```bash
+bin/vite dev
+```
+
+Useful commands:
+
+- `bin/rails console`
+- `bin/rails test`
+- `bin/rails test:system`
+- `bin/rubocop`
+- `bin/brakeman`
+
+Development and test SQLite databases live under `storage/`. Uploaded files also use local storage in development.
+
+## Deployment
+
+Production uses the prebuilt image defined in `compose.yml`, currently `ghcr.io/moonlitmoo/gm-assistant:latest`. The following example setup uses the `compose.yml` in the repository.
+
+1. Create a `.env` file for Compose and add any production values you need.
+
+   ```bash
+   touch .env
+   ```
+
+2. Add this site block to the existing Caddyfile, then reload Caddy. Caddy will handle HTTPS automatically, and `reverse_proxy` supports Action Cable WebSocket upgrades for `/cable`.
+
+   ```caddyfile
+   codex.moonlitmoo.com {
+   	reverse_proxy localhost:3000
+   }
+   ```
+
+   ```bash
+   sudo systemctl reload caddy
+   ```
+
+3. Pull the latest image and start the app.
+
+   ```bash
+   docker compose pull
+   docker compose up -d
+   ```
+
+4. To update the app later:
+
+   ```bash
+   docker compose pull && docker compose up -d
+   ```
+
+5. To open a Rails console in the running container:
+
+   ```bash
+   docker compose exec web bin/rails console
+   ```
+
+SQLite database files and Active Storage uploads persist in the `sqlite_data` Docker volume mounted at `/rails/storage`.
