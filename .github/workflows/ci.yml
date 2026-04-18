@@ -103,7 +103,7 @@ jobs:
       # Cuprite drives Chrome/Brave directly — install Chrome for CI
       - name: Install Chrome
         id: setup-chrome
-        uses: browser-actions/setup-chrome@v1
+        uses: browser-actions/setup-chrome@v2
 
       - name: Prepare test database
         run: bin/rails db:test:prepare
