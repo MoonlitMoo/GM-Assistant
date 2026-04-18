@@ -1,0 +1,13 @@
+services:
+  web:
+    image: ghcr.io/moonlitmoo/gm-assistant:latest
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - sqlite_data:/rails/storage
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:
