@@ -34,7 +34,8 @@ RUN npm ci
 
 COPY . .
 
-RUN bin/vite build
+RUN SECRET_KEY_BASE=dummy bin/vite build && \
+    SECRET_KEY_BASE=dummy bin/rails assets:precompile
 
 FROM ruby:${RUBY_VERSION}-slim AS runtime
 
@@ -54,10 +55,8 @@ RUN apt-get update -qq && \
     groupadd --system rails && \
     useradd --system --create-home --gid rails --shell /bin/bash rails
 
-COPY . .
-RUN rm -rf /rails/public/vite /rails/public/vite-dev /rails/public/vite-test
+COPY --from=builder /rails /rails
 COPY --from=builder /usr/local/bundle /usr/local/bundle
-COPY --from=builder /rails/public/vite /rails/public/vite
 
 RUN chown -R rails:rails /rails /usr/local/bundle
 
