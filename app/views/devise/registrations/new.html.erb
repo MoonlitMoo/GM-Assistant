@@ -48,8 +48,19 @@
                              class: "resource-form__input" %>
       </div>
 
+      <div class="resource-form__field">
+        <%= label_tag "#{resource_name}_invite_token", "Invite code" %>
+        <%= text_field_tag "#{resource_name}[invite_token]",
+                           @invite_token.presence || params.dig(resource_name, :invite_token),
+                           required: true,
+                           autocomplete: "one-time-code",
+                           placeholder: "Enter your invite code",
+                           class: "resource-form__input",
+                           id: "#{resource_name}_invite_token" %>
+      </div>
+
       <div class="resource-form__actions">
-        <%= f.submit "Create account", class: "fantasy-button fantasy-button--primary" %>
+        <%= f.submit "Create Account", class: "fantasy-button fantasy-button--primary" %>
       </div>
     <% end %>
 
