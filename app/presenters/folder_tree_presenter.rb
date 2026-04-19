@@ -1,4 +1,4 @@
-class FolderTree
+class FolderTreePresenter
   include Rails.application.routes.url_helpers
 
   def initialize(campaign)

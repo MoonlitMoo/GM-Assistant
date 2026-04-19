@@ -50,7 +50,7 @@ class CampaignsController < ApplicationController
   end
 
   def tree
-    render json: FolderTree.new(@campaign).as_json
+    render json: FolderTreePresenter.new(@campaign).as_json
   end
 
   private

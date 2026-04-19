@@ -7,8 +7,8 @@ import PlayerScreen from "../components/PlayerScreen"
 
 const roots = new WeakMap()
 
-function mountCampaignTree() {
-  const element = document.getElementById("campaign-tree")
+function mountRoot(id, render) {
+  const element = document.getElementById(id)
   if (!element) return
 
   let root = roots.get(element)
@@ -17,20 +17,15 @@ function mountCampaignTree() {
     roots.set(element, root)
   }
 
-  root.render(<CampaignTree treeUrl={element.dataset.treeUrl} />)
+  root.render(render(element))
+}
+
+function mountCampaignTree() {
+  mountRoot("campaign-tree", (element) => <CampaignTree treeUrl={element.dataset.treeUrl} />)
 }
 
 function mountPlayerScreen() {
-  const element = document.getElementById("player-screen")
-  if (!element) return
-
-  let root = roots.get(element)
-  if (!root) {
-    root = createRoot(element)
-    roots.set(element, root)
-  }
-
-  root.render(
+  mountRoot("player-screen", (element) => (
     <PlayerScreen
       campaignId={element.dataset.campaignId}
       initialImageUrl={element.dataset.initialImage || element.dataset.imageUrl || null}
@@ -40,7 +35,7 @@ function mountPlayerScreen() {
       initialCrossfadeDuration={element.dataset.crossfadeDuration || "400"}
       initialImageFit={element.dataset.imageFit || "contain"}
     />
-  )
+  ))
 }
 
 function parseAlbumImagePayload(value) {
@@ -53,16 +48,7 @@ function parseAlbumImagePayload(value) {
 }
 
 function mountAlbumImageGrid() {
-  const element = document.getElementById("album-image-grid")
-  if (!element) return
-
-  let root = roots.get(element)
-  if (!root) {
-    root = createRoot(element)
-    roots.set(element, root)
-  }
-
-  root.render(
+  mountRoot("album-image-grid", (element) => (
     <AlbumImageGrid
       campaignId={Number(element.dataset.campaignId || 0)}
       presentUrl={element.dataset.presentUrl || ""}
@@ -70,7 +56,7 @@ function mountAlbumImageGrid() {
       initialPresentingImageId={Number(element.dataset.initialPresentingImageId || 0)}
       initialImages={parseAlbumImagePayload(element.dataset.imagesPayload)}
     />
-  )
+  ))
 }
 
 document.addEventListener("turbo:load", mountCampaignTree)
