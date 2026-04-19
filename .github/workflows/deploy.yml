@@ -1,9 +1,7 @@
-name: Deploy Image
+name: Rebuild Image
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,7 +18,14 @@ jobs:
         id: vars
         run: |
           echo "image_name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "source_url=https://github.com/${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
           echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Read package description
+        id: package
+        run: |
+          description="$(awk 'NF && $0 !~ /^#/ { print; exit }' README.md)"
+          printf 'description=%s\n' "$description" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -32,14 +37,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.vars.outputs.image_name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=sha-${{ steps.vars.outputs.short_sha }}
+          labels: |
+            org.opencontainers.image.title=GM Assistant
+            org.opencontainers.image.description=${{ steps.package.outputs.description }}
+            org.opencontainers.image.source=${{ steps.vars.outputs.source_url }}
+            org.opencontainers.image.url=${{ steps.vars.outputs.source_url }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64
           push: true
-          tags: |
-            ${{ steps.vars.outputs.image_name }}:latest
-            ${{ steps.vars.outputs.image_name }}:${{ steps.vars.outputs.short_sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
