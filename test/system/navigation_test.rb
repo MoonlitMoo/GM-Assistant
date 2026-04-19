@@ -116,6 +116,19 @@ class NavigationTest < ApplicationSystemTestCase
     end
   end
 
+  test "navigates from breadcrumbs without remounting the sidebar tree" do
+    visit album_path(@album)
+
+    page.execute_script("document.getElementById('campaign-tree').dataset.persistMarker = 'kept'")
+
+    within "#breadcrumbs" do
+      click_link @folder.name
+    end
+
+    assert_current_path folder_path(@folder)
+    assert_equal "kept", page.evaluate_script("document.getElementById('campaign-tree').dataset.persistMarker")
+  end
+
   test "expands the sidebar tree to the current nested folder" do
     nested_folder = create(:folder, campaign: @campaign, parent: @folder, name: "Signal Fires")
     nested_album = create(:album, campaign: @campaign, folder: nested_folder, name: "Watch Posts")

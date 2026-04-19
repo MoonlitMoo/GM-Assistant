@@ -3,7 +3,7 @@
   <nav aria-label="Breadcrumbs">
     <% crumbs.each_with_index do |(label, url), i| %>
       <% if i < crumbs.length - 1 %>
-        <%= link_to label, url %> &rsaquo;
+        <%= link_to label, url, data: { turbo_frame: "content-body" } %> &rsaquo;
       <% else %>
         <span><%= label %></span>
       <% end %>
