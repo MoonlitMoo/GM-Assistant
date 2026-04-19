@@ -186,6 +186,49 @@ class NavigationTest < ApplicationSystemTestCase
     assert_text "New Folder"
   end
 
+  test "sidebar root library context menu can navigate to a new root album form" do
+    visit folder_path(@root_folder)
+
+    tree_surface = find("#campaign-tree .tree-surface")
+    page.execute_script(<<~JS, tree_surface)
+      const rect = arguments[0].getBoundingClientRect()
+      arguments[0].dispatchEvent(new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.left + 24,
+        clientY: rect.bottom - 24
+      }))
+    JS
+
+    within ".tree-context-menu" do
+      assert_button "New Folder"
+      assert_button "New Album"
+      click_button "New Album"
+    end
+
+    assert_current_path new_folder_album_path(@root_folder)
+    assert_text "New Album"
+  end
+
+  test "sidebar root library surface fills the tree area above gm controls" do
+    visit folder_path(@root_folder)
+
+    dimensions = page.evaluate_script(<<~JS)
+      (() => {
+        const tree = document.getElementById("campaign-tree")?.getBoundingClientRect()
+        const surface = document.querySelector("#campaign-tree .tree-surface")?.getBoundingClientRect()
+
+        return {
+          treeHeight: tree?.height || 0,
+          surfaceHeight: surface?.height || 0
+        }
+      })()
+    JS
+
+    assert_operator dimensions["treeHeight"], :>, 0
+    assert_operator dimensions["surfaceHeight"], :>=, dimensions["treeHeight"] - 1
+  end
+
   test "sidebar context menu can rename a folder inline and refresh the tree" do
     nested_folder = create(:folder, campaign: @campaign, parent: @folder, name: "Signal Fires")
 

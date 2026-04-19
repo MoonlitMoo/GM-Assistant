@@ -180,6 +180,7 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, payload["album_count"]
     assert_equal 1, payload["image_count"]
     assert_equal new_folder_folder_path(root_folder), payload["new_root_folder_url"]
+    assert_equal new_folder_album_path(root_folder), payload["new_root_album_url"]
 
     root_album_payload = payload.fetch("albums").find { |album| album["id"] == root_album.id }
     assert_equal root_album.name, root_album_payload["name"]

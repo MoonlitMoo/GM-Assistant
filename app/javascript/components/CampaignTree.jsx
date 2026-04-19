@@ -172,6 +172,7 @@ export default function CampaignTree({ treeUrl }) {
           y={contextMenu.y}
           node={contextMenu.node}
           newRootFolderUrl={treeData?.new_root_folder_url ?? null}
+          newRootAlbumUrl={treeData?.new_root_album_url ?? null}
           onClose={() => setContextMenu(null)}
           onRename={handleContextMenuRename}
           onDelete={handleContextMenuDelete}

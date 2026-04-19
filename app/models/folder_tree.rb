@@ -10,7 +10,8 @@ class FolderTree
     return {} unless root
 
     build_node(root).merge(
-      new_root_folder_url: new_folder_folder_path(root)
+      new_root_folder_url: new_folder_folder_path(root),
+      new_root_album_url: new_folder_album_path(root)
     )
   end
 

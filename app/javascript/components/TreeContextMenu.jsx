@@ -16,7 +16,7 @@ function visitInContentFrame(url) {
   window.location.assign(url)
 }
 
-export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelete, newRootFolderUrl }) {
+export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelete, newRootFolderUrl, newRootAlbumUrl }) {
   const menuRef = useRef(null)
   const [position, setPosition] = useState({ x, y })
 
@@ -56,7 +56,7 @@ export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelet
 
       return nextPosition
     })
-  }, [x, y, node, newRootFolderUrl])
+  }, [x, y, node, newRootFolderUrl, newRootAlbumUrl])
 
   function handleVisit(url) {
     onClose()
@@ -82,6 +82,11 @@ export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelet
         label: "New Folder",
         onSelect: () => handleVisit(newRootFolderUrl),
         disabled: !newRootFolderUrl
+      },
+      {
+        label: "New Album",
+        onSelect: () => handleVisit(newRootAlbumUrl),
+        disabled: !newRootAlbumUrl
       }
     ]
   } else if (nodeType === "folder") {
@@ -110,7 +115,7 @@ export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelet
       className="tree-context-menu"
       role="menu"
       tabIndex={-1}
-      aria-label={node ? `${node.name} menu` : "Campaign tree menu"}
+      aria-label={node ? `${node.name} menu` : "Campaign library menu"}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`
