@@ -93,6 +93,30 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Fresh notes", image.notes
   end
 
+  test "updates an image via json" do
+    image = create(:image, campaign: create(:campaign, user: @user), title: "Old Title", show_title: false)
+
+    patch image_path(image), params: {
+      image: {
+        title: "New Title",
+        show_title: true
+      }
+    }, as: :json
+
+    assert_response :ok
+    assert_equal "application/json", response.media_type
+    image.reload
+
+    payload = JSON.parse(response.body)
+    assert_equal image.id, payload["id"]
+    assert_equal "New Title", payload["title"]
+    assert_equal true, payload["show_title"]
+    assert_equal image_path(image), payload["url"]
+    assert_equal edit_image_path(image), payload["edit_url"]
+    assert_equal image_path(image), payload["delete_url"]
+    assert_match(%r{rails/active_storage/representations}, payload["preview_url"])
+  end
+
   test "re-renders the edit image form when the update is invalid" do
     image = create(:image, campaign: create(:campaign, user: @user))
 
@@ -105,6 +129,20 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_includes response.body, "Edit Image"
     assert_includes html_response_body, "Title can't be blank"
+  end
+
+  test "returns json errors when an image update is invalid" do
+    image = create(:image, campaign: create(:campaign, user: @user))
+
+    patch image_path(image), params: {
+      image: {
+        title: nil
+      }
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "application/json", response.media_type
+    assert_equal [ "Title can't be blank" ], JSON.parse(response.body)["errors"]
   end
 
   test "shows the current attachment filename when editing an image" do

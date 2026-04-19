@@ -29,6 +29,8 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_match(%r{href="#{image_path(first_image)}"}, response.body)
     assert_match(%r{href="#{image_path(second_image)}"}, response.body)
     assert_match(%r{data-controller="player-display"}, response.body)
+    assert_match(%r{id="album-image-grid"}, response.body)
+    assert_match(%r{data-images-payload=}, response.body)
     assert_match(%r{#{present_campaign_player_display_path(campaign)}}, response.body)
     assert_match(%r{data-player-display-image-id="#{first_image.id}"}, response.body)
     assert_match(%r{data-player-display-image-id="#{second_image.id}"}, response.body)

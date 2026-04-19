@@ -1,6 +1,7 @@
 import React from "react"
 import { createRoot } from "react-dom/client"
 
+import AlbumImageGrid from "../components/AlbumImageGrid"
 import CampaignTree from "../components/CampaignTree"
 import PlayerScreen from "../components/PlayerScreen"
 
@@ -42,7 +43,39 @@ function mountPlayerScreen() {
   )
 }
 
+function parseAlbumImagePayload(value) {
+  try {
+    const payload = JSON.parse(value || "[]")
+    return Array.isArray(payload) ? payload : []
+  } catch {
+    return []
+  }
+}
+
+function mountAlbumImageGrid() {
+  const element = document.getElementById("album-image-grid")
+  if (!element) return
+
+  let root = roots.get(element)
+  if (!root) {
+    root = createRoot(element)
+    roots.set(element, root)
+  }
+
+  root.render(
+    <AlbumImageGrid
+      campaignId={Number(element.dataset.campaignId || 0)}
+      presentUrl={element.dataset.presentUrl || ""}
+      uploadUrl={element.dataset.uploadUrl || ""}
+      initialPresentingImageId={Number(element.dataset.initialPresentingImageId || 0)}
+      initialImages={parseAlbumImagePayload(element.dataset.imagesPayload)}
+    />
+  )
+}
+
 document.addEventListener("turbo:load", mountCampaignTree)
+document.addEventListener("turbo:load", mountAlbumImageGrid)
 document.addEventListener("turbo:load", mountPlayerScreen)
 mountCampaignTree()
+mountAlbumImageGrid()
 mountPlayerScreen()

@@ -13,6 +13,7 @@ class AlbumsController < ApplicationController
   def show
     @images = @album.images.with_attached_file
     @presenting_image_id = @campaign.player_display&.current_image_id.to_i
+    @album_image_grid_payload = @images.map { |image| album_image_card_payload(image) }
   end
 
   def new
@@ -77,6 +78,24 @@ class AlbumsController < ApplicationController
       description: album.description,
       url: album_path(album)
     }
+  end
+
+  def album_image_card_payload(image)
+    {
+      id: image.id,
+      title: image.title,
+      show_title: image.show_title,
+      url: image_path(image),
+      edit_url: edit_image_path(image),
+      delete_url: image_path(image),
+      preview_url: image_preview_url(image)
+    }
+  end
+
+  def image_preview_url(image)
+    return nil unless image.file.attached? && image.file.representable?
+
+    url_for(image.file.representation(resize_to_fill: [ 480, 360 ]))
   end
 
   def album_destroy_redirect_target(album)

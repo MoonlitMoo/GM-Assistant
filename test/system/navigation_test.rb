@@ -444,4 +444,62 @@ class NavigationTest < ApplicationSystemTestCase
     assert_current_path album_path(@album)
     assert_nil Image.find_by(id: @image.id)
   end
+
+  test "album image context menu can rename an image inline" do
+    visit album_path(@album)
+
+    card = find(".image-card", text: @image.title)
+    card.right_click
+
+    within ".tree-context-menu" do
+      click_button "Rename"
+    end
+
+    within card do
+      input = find(".image-card__rename-input")
+      input.set("Beacon Fire Revised")
+      input.send_keys(:enter)
+    end
+
+    assert_current_path album_path(@album)
+    assert_selector ".image-card__title", text: "Beacon Fire Revised"
+    within card do
+      assert_selector ".image-card__preview"
+    end
+    assert_equal "Beacon Fire Revised", @image.reload.title
+  end
+
+  test "album image context menu toggles title visibility" do
+    visit album_path(@album)
+
+    card = find(".image-card", text: @image.title)
+    card.right_click
+
+    within ".tree-context-menu" do
+      click_button "Show Title"
+    end
+
+    assert_selector ".image-card__meta", text: /title visible on player screen/i
+    assert_equal true, @image.reload.show_title
+  end
+
+  test "album image context menu deletes an image without leaving the album page" do
+    visit album_path(@album)
+
+    find(".image-card", text: @image.title).right_click
+
+    within ".tree-context-menu" do
+      click_button "Delete"
+    end
+
+    within ".tree-delete-modal" do
+      assert_text "Delete Image"
+      assert_text @image.title
+      click_button "Delete"
+    end
+
+    assert_current_path album_path(@album)
+    assert_no_selector ".image-card__title", text: @image.title
+    assert_nil Image.find_by(id: @image.id)
+  end
 end

@@ -39,42 +39,49 @@
       </div>
 
       <% if @images.any? %>
-        <div class="album-grid">
-          <% @images.each do |image| %>
-            <% presenting_this_image = @presenting_image_id == image.id %>
-            <article class="image-card">
-              <div class="image-card__thumb-shell">
-                <%= link_to image_path(image), class: "image-card__thumb-link" do %>
-                  <div class="image-card__thumbnail">
-                    <% if image.file.attached? && image.file.representable? %>
-                      <%= image_tag image.file.representation(resize_to_fill: [ 480, 360 ]),
-                                    alt: image.title,
-                                    class: "image-card__preview",
-                                    loading: "lazy",
-                                    decoding: "async" %>
-                    <% else %>
-                      <div class="image-card__placeholder">No preview available</div>
-                    <% end %>
-                  </div>
-                <% end %>
+        <div id="album-image-grid"
+             data-campaign-id="<%= @campaign.id %>"
+             data-present-url="<%= present_campaign_player_display_path(@campaign) %>"
+             data-initial-presenting-image-id="<%= @presenting_image_id %>"
+             data-upload-url="<%= new_album_image_path(@album, form_navigation_params) %>"
+             data-images-payload="<%= json_escape(@album_image_grid_payload.to_json) %>">
+          <div class="album-grid">
+            <% @images.each do |image| %>
+              <% presenting_this_image = @presenting_image_id == image.id %>
+              <article class="image-card">
+                <div class="image-card__thumb-shell">
+                  <%= link_to image_path(image), class: "image-card__thumb-link" do %>
+                    <div class="image-card__thumbnail">
+                      <% if image.file.attached? && image.file.representable? %>
+                        <%= image_tag image.file.representation(resize_to_fill: [ 480, 360 ]),
+                                      alt: image.title,
+                                      class: "image-card__preview",
+                                      loading: "lazy",
+                                      decoding: "async" %>
+                      <% else %>
+                        <div class="image-card__placeholder">No preview available</div>
+                      <% end %>
+                    </div>
+                  <% end %>
 
-                <%= button_tag(presenting_this_image ? "Presenting" : "Present",
-                               type: "button",
-                               class: class_names("fantasy-button fantasy-button--primary image-card__present-button", { "fantasy-button--active is-active": presenting_this_image }),
-                               aria: { label: "Present #{image.title}" },
-                               data: {
-                                 action: "click->player-display#present",
-                                 player_display_image_id: image.id,
-                                 player_display_active_label: "Presenting",
-                                 player_display_inactive_label: "Present"
-                               }) %>
-              </div>
+                  <%= button_tag(presenting_this_image ? "Presenting" : "Present",
+                                 type: "button",
+                                 class: class_names("fantasy-button fantasy-button--primary image-card__present-button", { "fantasy-button--active is-active": presenting_this_image }),
+                                 aria: { label: "Present #{image.title}" },
+                                 data: {
+                                   action: "click->player-display#present",
+                                   player_display_image_id: image.id,
+                                   player_display_active_label: "Presenting",
+                                   player_display_inactive_label: "Present"
+                                 }) %>
+                </div>
 
-              <h3 class="image-card__title">
-                <%= link_to image.title, image_path(image), class: "card-title-link" %>
-              </h3>
-            </article>
-          <% end %>
+                <h3 class="image-card__title">
+                  <%= link_to image.title, image_path(image), class: "card-title-link" %>
+                </h3>
+              </article>
+            <% end %>
+          </div>
         </div>
       <% else %>
         <div class="album-empty-state">
