@@ -1,0 +1,12 @@
+<button
+  type="button"
+  class="fantasy-button fantasy-button--danger"
+  data-action="record-delete-modal#openFromButton"
+  data-record-delete-title="<%= title %>"
+  data-record-delete-name="<%= name %>"
+  data-record-delete-description-lines="<%= json_escape(Array(description_lines).to_json) %>"
+  data-record-delete-url="<%= delete_path %>"
+  data-record-delete-success-mode="<%= local_assigns.fetch(:success_mode, "redirect") %>"
+>
+  <%= trigger_label %>
+</button>

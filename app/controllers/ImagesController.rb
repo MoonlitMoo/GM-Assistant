@@ -44,7 +44,11 @@ class ImagesController < ApplicationController
   def destroy
     album = @image.album
     @image.destroy
-    redirect_to album, notice: "Image deleted successfully"
+
+    respond_to do |format|
+      format.html { redirect_to album, notice: "Image deleted successfully" }
+      format.json { render json: { redirect_url: album_path(album) } }
+    end
   end
 
   private

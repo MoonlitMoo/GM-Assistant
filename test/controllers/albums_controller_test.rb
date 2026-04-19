@@ -223,13 +223,41 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "destroys an album and returns to its folder" do
-    album = create(:album, campaign: create(:campaign, user: @user))
+    campaign = create(:campaign, user: @user)
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Harbour")
+    album = create(:album, campaign: campaign, folder: folder, name: "Storm Sketches")
 
     assert_difference("Album.count", -1) do
       delete album_path(album)
     end
 
-    assert_redirected_to folder_path(album.folder)
+    assert_redirected_to folder_path(folder)
+    assert_nil Album.find_by(id: album.id)
+  end
+
+  test "destroys a top-level album and returns to the campaign" do
+    campaign = create(:campaign, user: @user)
+    album = create(:album, campaign: campaign, folder: campaign.root_folder, name: "Storm Sketches")
+
+    assert_difference("Album.count", -1) do
+      delete album_path(album)
+    end
+
+    assert_redirected_to campaign_path(campaign)
+    assert_nil Album.find_by(id: album.id)
+  end
+
+  test "destroys a top-level album via json and returns a redirect url for the campaign" do
+    campaign = create(:campaign, user: @user)
+    album = create(:album, campaign: campaign, folder: campaign.root_folder, name: "Storm Sketches")
+
+    assert_difference("Album.count", -1) do
+      delete album_path(album), as: :json
+    end
+
+    assert_response :ok
+    assert_equal "application/json", response.media_type
+    assert_equal campaign_path(campaign), JSON.parse(response.body)["redirect_url"]
     assert_nil Album.find_by(id: album.id)
   end
 end

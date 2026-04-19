@@ -243,4 +243,30 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to folder_path(parent)
     assert_nil Folder.find_by(id: folder.id)
   end
+
+  test "destroys a top-level folder and returns to the campaign" do
+    campaign = create(:campaign, user: @user)
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Districts")
+
+    assert_difference("Folder.count", -1) do
+      delete folder_path(folder)
+    end
+
+    assert_redirected_to campaign_path(campaign)
+    assert_nil Folder.find_by(id: folder.id)
+  end
+
+  test "destroys a top-level folder via json and returns a redirect url for the campaign" do
+    campaign = create(:campaign, user: @user)
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Districts")
+
+    assert_difference("Folder.count", -1) do
+      delete folder_path(folder), as: :json
+    end
+
+    assert_response :ok
+    assert_equal "application/json", response.media_type
+    assert_equal campaign_path(campaign), JSON.parse(response.body)["redirect_url"]
+    assert_nil Folder.find_by(id: folder.id)
+  end
 end

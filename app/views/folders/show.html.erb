@@ -21,13 +21,17 @@
           <%= link_to "New Album", new_folder_album_path(@folder, form_navigation_params), class: "fantasy-button fantasy-button--primary" %>
           <%= link_to "Edit folder", edit_folder_path(@folder, form_navigation_params), class: "fantasy-button" %>
           <% unless @folder.is_root? %>
-            <%= link_to "Delete folder",
-                        folder_path(@folder),
-                        class: "fantasy-button fantasy-button--danger",
-                        data: {
-                          turbo_method: :delete,
-                          turbo_confirm: "Delete this folder and everything inside it?"
-                        } %>
+            <%= render "shared/record_delete_button",
+                       trigger_label: "Delete folder",
+                       title: "Delete Folder",
+                       name: @folder.name,
+                       description_lines: [
+                         pluralize(@child_folders.size, "subfolder"),
+                         pluralize(@albums.size, "album"),
+                         pluralize(@direct_image_count, "image"),
+                         "This cannot be undone."
+                       ],
+                       delete_path: folder_path(@folder) %>
           <% end %>
         </div>
       </div>

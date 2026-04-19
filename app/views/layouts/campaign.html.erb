@@ -32,7 +32,7 @@
            excluding_image: @campaign.player_display&.current_image,
            limit: current_user.gm_history_count
          ) %>
-      <div id="main-wrapper">
+      <div id="main-wrapper" data-controller="record-delete-modal">
 
         <!-- Sidebar -->
         <div id="sidebar">
@@ -82,6 +82,8 @@
             <% end %>
           <% end %>
         </div>
+
+        <%= render "shared/record_delete_modal" %>
       </div>
     <% end %>
 

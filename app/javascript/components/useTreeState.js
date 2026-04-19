@@ -13,13 +13,13 @@ import {
 
 export default function useTreeState(treeUrl) {
   const suppressRenameBlurRef = useRef(false)
+  const pendingDeleteRef = useRef(null)
   const [treeData, setTreeData] = useState(null)
   const [expanded, setExpanded] = useState({})
   const [currentContext, setCurrentContext] = useState(currentTreeContext)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [loadError, setLoadError] = useState(false)
   const [contextMenu, setContextMenu] = useState(null)
-  const [deletingNode, setDeletingNode] = useState(null)
   const [renamingNodeId, setRenamingNodeId] = useState(null)
   const [renamingNodeType, setRenamingNodeType] = useState(null)
   const [renameValue, setRenameValue] = useState("")
@@ -132,6 +132,30 @@ export default function useTreeState(treeUrl) {
     document.dispatchEvent(new CustomEvent("tree:refresh"))
   }
 
+  function deleteRequestId() {
+    if (window.crypto?.randomUUID) {
+      return window.crypto.randomUUID()
+    }
+
+    return `delete-${Date.now()}-${Math.round(Math.random() * 1e6)}`
+  }
+
+  function deleteDescription(node, nodeType) {
+    if (nodeType === "folder") {
+      return [
+        `${Number(node?.child_folder_count || 0)} subfolder${Number(node?.child_folder_count || 0) === 1 ? "" : "s"}`,
+        `${Number(node?.album_count || 0)} album${Number(node?.album_count || 0) === 1 ? "" : "s"}`,
+        `${Number(node?.image_count || 0)} image${Number(node?.image_count || 0) === 1 ? "" : "s"}`,
+        "This cannot be undone."
+      ]
+    }
+
+    return [
+      `${Number(node?.image_count || 0)} image${Number(node?.image_count || 0) === 1 ? "" : "s"} will be deleted.`,
+      "This cannot be undone."
+    ]
+  }
+
   function pageDependsOnNode(node) {
     if (!node?.url) return false
 
@@ -146,6 +170,15 @@ export default function useTreeState(treeUrl) {
       : (currentContext.fullPath || currentContext.path)
 
     window.Turbo.visit(refreshUrl, { frame: "content-body" })
+  }
+
+  function redirectCurrentViewForDeletedNode(node, responseBody) {
+    if (!pageDependsOnNode(node)) return
+
+    const redirectUrl = responseBody?.redirect_url
+    if (!redirectUrl) return
+
+    window.Turbo.visit(redirectUrl, { frame: "content-body" })
   }
 
   function beginRename(node, nodeType) {
@@ -242,9 +275,49 @@ export default function useTreeState(treeUrl) {
   }
 
   function handleContextMenuDelete(node) {
-    setDeletingNode(node)
+    const nodeType = inferredNodeType(node)
+    const requestId = deleteRequestId()
+
+    pendingDeleteRef.current = { requestId, node }
     setContextMenu(null)
+
+    document.dispatchEvent(new CustomEvent("record-delete:open", {
+      detail: {
+        requestId,
+        title: nodeType === "folder" ? "Delete Folder" : "Delete Album",
+        name: node.name,
+        descriptionLines: deleteDescription(node, nodeType),
+        deleteUrl: node.url,
+        successMode: "event"
+      }
+    }))
   }
+
+  useEffect(() => {
+    function handleDeleteSuccess(event) {
+      const pendingDelete = pendingDeleteRef.current
+      if (!pendingDelete) return
+      if (event.detail?.requestId !== pendingDelete.requestId) return
+
+      pendingDeleteRef.current = null
+      dispatchTreeRefresh()
+      redirectCurrentViewForDeletedNode(pendingDelete.node, event.detail?.responseBody)
+    }
+
+    function handleDeleteClosed(event) {
+      if (event.detail?.requestId !== pendingDeleteRef.current?.requestId) return
+
+      pendingDeleteRef.current = null
+    }
+
+    document.addEventListener("record-delete:success", handleDeleteSuccess)
+    document.addEventListener("record-delete:closed", handleDeleteClosed)
+
+    return () => {
+      document.removeEventListener("record-delete:success", handleDeleteSuccess)
+      document.removeEventListener("record-delete:closed", handleDeleteClosed)
+    }
+  }, [currentContext])
 
   return {
     suppressRenameBlurRef,
@@ -254,18 +327,15 @@ export default function useTreeState(treeUrl) {
     hasLoaded,
     loadError,
     contextMenu,
-    deletingNode,
     renamingNodeId,
     renamingNodeType,
     renameValue,
     renameError,
     isRenamingSubmitting,
     setContextMenu,
-    setDeletingNode,
     setRenameValue,
     toggleFolder,
     navigateTo,
-    dispatchTreeRefresh,
     beginRename,
     submitRename,
     cancelRename,

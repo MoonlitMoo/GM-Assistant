@@ -13,6 +13,7 @@ class FoldersController < ApplicationController
   def show
     @child_folders = NaturalNameSort.sort(@folder.child_folders)
     @albums = NaturalNameSort.sort(@folder.albums)
+    @direct_image_count = Image.joins(:album).where(albums: { folder_id: @folder.id }).count
   end
 
   def new
@@ -49,12 +50,12 @@ class FoldersController < ApplicationController
   end
 
   def destroy
-    parent = @folder.parent || @folder.campaign
+    redirect_target = folder_destroy_redirect_target(@folder)
     @folder.destroy
 
     respond_to do |format|
-      format.html { redirect_to parent, notice: "Folder destroyed successfully", flash: { tree_refresh: true } }
-      format.json { head :ok }
+      format.html { redirect_to redirect_target, notice: "Folder destroyed successfully", flash: { tree_refresh: true } }
+      format.json { render json: { redirect_url: polymorphic_path(redirect_target) } }
     end
   end
 
@@ -79,6 +80,13 @@ class FoldersController < ApplicationController
       description: folder.description,
       url: folder_path(folder)
     }
+  end
+
+  def folder_destroy_redirect_target(folder)
+    parent = folder.parent
+    return folder.campaign if parent.nil? || parent.is_root?
+
+    parent
   end
 
   def folder_params

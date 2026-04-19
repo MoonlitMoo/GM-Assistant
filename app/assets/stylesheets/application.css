@@ -447,13 +447,28 @@ body {
   color: var(--accent);
 }
 
-.tree-delete-modal {
+dialog.tree-delete-modal {
+  display: none;
   position: fixed;
   inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 1.5rem;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
   z-index: 40;
+}
+
+dialog.tree-delete-modal[open] {
   display: grid;
   place-items: center;
-  padding: 1.5rem;
+}
+
+dialog.tree-delete-modal::backdrop {
   background: rgba(44, 31, 14, 0.52);
   backdrop-filter: blur(2px);
 }

@@ -137,6 +137,32 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_nil Image.find_by(id: image.id)
   end
 
+  test "destroys an image in a root album and still returns to its album" do
+    campaign = create(:campaign, user: @user)
+    album = create(:album, campaign: campaign, folder: campaign.root_folder, name: "Weathered Maps")
+    image = create(:image, campaign: campaign, album: album, title: "Beacon Cliffs")
+
+    assert_difference("Image.count", -1) do
+      delete image_path(image)
+    end
+
+    assert_redirected_to album_path(album)
+    assert_nil Image.find_by(id: image.id)
+  end
+
+  test "destroys an image via json and returns a redirect url for its album" do
+    image = create(:image, campaign: create(:campaign, user: @user))
+
+    assert_difference("Image.count", -1) do
+      delete image_path(image), as: :json
+    end
+
+    assert_response :ok
+    assert_equal "application/json", response.media_type
+    assert_equal album_path(image.album), JSON.parse(response.body)["redirect_url"]
+    assert_nil Image.find_by(id: image.id)
+  end
+
   private
 
   # Keep the upload setup tidy across the request examples.

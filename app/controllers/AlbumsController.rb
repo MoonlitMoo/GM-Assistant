@@ -47,12 +47,12 @@ class AlbumsController < ApplicationController
   end
 
   def destroy
-    parent = @album.folder
+    redirect_target = album_destroy_redirect_target(@album)
     @album.destroy
 
     respond_to do |format|
-      format.html { redirect_to parent, notice: "Album destroyed successfully", flash: { tree_refresh: true } }
-      format.json { head :ok }
+      format.html { redirect_to redirect_target, notice: "Album destroyed successfully", flash: { tree_refresh: true } }
+      format.json { render json: { redirect_url: polymorphic_path(redirect_target) } }
     end
   end
 
@@ -77,6 +77,12 @@ class AlbumsController < ApplicationController
       description: album.description,
       url: album_path(album)
     }
+  end
+
+  def album_destroy_redirect_target(album)
+    return album.campaign if album.folder.is_root?
+
+    album.folder
   end
 
   def album_params

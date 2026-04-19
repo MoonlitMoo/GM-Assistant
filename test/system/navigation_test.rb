@@ -233,6 +233,9 @@ class NavigationTest < ApplicationSystemTestCase
   test "sidebar root library surface fills the tree area above gm controls" do
     visit folder_path(@root_folder)
 
+    assert_selector "#campaign-tree .tree-surface"
+    assert_selector "#sidebar .tree-folder .tree-label", text: @folder.name
+
     dimensions = page.evaluate_script(<<~JS)
       (() => {
         const tree = document.getElementById("campaign-tree")?.getBoundingClientRect()
@@ -345,5 +348,100 @@ class NavigationTest < ApplicationSystemTestCase
     within "#sidebar" do
       assert_no_selector ".tree-folder .tree-label", text: nested_folder.name, wait: 10
     end
+  end
+
+  test "sidebar delete redirects a selected top-level folder to the campaign page" do
+    visit folder_path(@folder)
+
+    within "#sidebar" do
+      find(".tree-folder .tree-label", text: @folder.name).right_click
+    end
+
+    within ".tree-context-menu" do
+      click_button "Delete"
+    end
+
+    within ".tree-delete-modal" do
+      click_button "Delete"
+    end
+
+    assert_current_path campaign_path(@campaign)
+    assert_no_selector ".record-title", text: @folder.name
+  end
+
+  test "folder show delete button uses the modal" do
+    visit folder_path(@folder)
+
+    click_button "Delete folder"
+
+    within ".tree-delete-modal" do
+      assert_text "Delete Folder"
+      assert_text @folder.name
+      assert_text "0 subfolders"
+      assert_text "1 album"
+      assert_text "1 image"
+      click_button "Cancel"
+    end
+
+    assert_no_selector ".tree-delete-modal"
+    assert_current_path folder_path(@folder)
+  end
+
+  test "tree and page deletes share the same modal instance" do
+    visit folder_path(@folder)
+
+    assert_equal 1, page.evaluate_script("document.querySelectorAll('[data-record-delete-modal-target=\"modal\"]').length")
+
+    click_button "Delete folder"
+
+    within ".tree-delete-modal" do
+      click_button "Cancel"
+    end
+
+    within "#sidebar" do
+      find(".tree-folder .tree-label", text: @folder.name).right_click
+    end
+
+    within ".tree-context-menu" do
+      click_button "Delete"
+    end
+
+    assert_equal 1, page.evaluate_script("document.querySelectorAll('[data-record-delete-modal-target=\"modal\"]').length")
+
+    within ".tree-delete-modal" do
+      click_button "Cancel"
+    end
+  end
+
+  test "album show delete button uses the modal and deletes the album" do
+    visit album_path(@album)
+
+    click_button "Delete album"
+
+    within ".tree-delete-modal" do
+      assert_text "Delete Album"
+      assert_text @album.name
+      assert_text "1 image will be deleted."
+      click_button "Delete"
+    end
+
+    assert_current_path folder_path(@folder)
+    assert_nil Album.find_by(id: @album.id)
+  end
+
+  test "image show delete button uses the modal and deletes the image" do
+    visit route_helpers.image_path(@image)
+
+    click_button "Delete image"
+
+    within ".tree-delete-modal" do
+      assert_text "Delete Image"
+      assert_text @image.title
+      assert_text "This image will be removed from the archive."
+      click_button "Delete"
+    end
+
+    assert_current_path album_path(@album)
+    assert_nil Image.find_by(id: @image.id)
   end
 end

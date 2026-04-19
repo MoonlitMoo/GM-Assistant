@@ -19,13 +19,15 @@
         <div class="record-actions">
           <%= link_to "Upload image", new_album_image_path(@album, form_navigation_params), class: "fantasy-button fantasy-button--primary" %>
           <%= link_to "Edit album", edit_album_path(@album, form_navigation_params), class: "fantasy-button" %>
-          <%= link_to "Delete album",
-                      album_path(@album),
-                      class: "fantasy-button fantasy-button--danger",
-                      data: {
-                        turbo_method: :delete,
-                        turbo_confirm: "Delete this album and all images in it?"
-                      } %>
+          <%= render "shared/record_delete_button",
+                     trigger_label: "Delete album",
+                     title: "Delete Album",
+                     name: @album.name,
+                     description_lines: [
+                       "#{pluralize(@images.size, "image")} will be deleted.",
+                       "This cannot be undone."
+                     ],
+                     delete_path: album_path(@album) %>
         </div>
       </div>
     </div>

@@ -46,13 +46,15 @@
                      disabled: @presenting_image_id.zero?,
                      data: { action: "click->player-display#clear", player_display_clear: true } %>
       <%= link_to "Edit image", edit_image_path(@image, form_navigation_params), class: "fantasy-button" %>
-      <%= link_to "Delete image",
-                  image_path(@image),
-                  class: "fantasy-button fantasy-button--danger",
-                  data: {
-                    turbo_method: :delete,
-                    turbo_confirm: "Delete this image?"
-                  } %>
+      <%= render "shared/record_delete_button",
+                 trigger_label: "Delete image",
+                 title: "Delete Image",
+                 name: @image.title,
+                 description_lines: [
+                   "This image will be removed from the archive.",
+                   "This cannot be undone."
+                 ],
+                 delete_path: image_path(@image) %>
     </div>
   </section>
 <% end %>
