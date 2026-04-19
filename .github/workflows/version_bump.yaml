@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   issues: write
+  packages: write
   pull-requests: write
 
 concurrency:
@@ -30,15 +31,83 @@ jobs:
         with:
           node-version: lts/*
 
-      - name: Install semantic-release and plugins
-        run: |
-          npm install --save-dev \
-            semantic-release \
-            @semantic-release/changelog \
-            @semantic-release/git \
-            @semantic-release/github
-
       - name: Run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+        run: |
+          npx --yes \
+            --package semantic-release \
+            --package @semantic-release/changelog \
+            --package @semantic-release/git \
+            --package @semantic-release/github \
+            semantic-release
+
+      - name: Capture release metadata
+        id: release
+        run: |
+          release_tag="$(git tag --points-at HEAD | grep '^v' | sort -V | tail -n 1 || true)"
+
+          if [ -z "$release_tag" ]; then
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "published=true" >> "$GITHUB_OUTPUT"
+          echo "tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "version=${release_tag#v}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set image variables
+        if: steps.release.outputs.published == 'true'
+        id: vars
+        run: |
+          echo "image_name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+          echo "source_url=https://github.com/${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
+
+      - name: Read package description
+        if: steps.release.outputs.published == 'true'
+        id: package
+        run: |
+          description="$(awk 'NF && $0 !~ /^#/ { print; exit }' README.md)"
+          printf 'description=%s\n' "$description" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        if: steps.release.outputs.published == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: steps.release.outputs.published == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image metadata
+        if: steps.release.outputs.published == 'true'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          context: git
+          images: ${{ steps.vars.outputs.image_name }}
+          tags: |
+            type=raw,value=${{ steps.release.outputs.version }}
+            type=raw,value=latest
+            type=raw,value=sha-${{ steps.release.outputs.short_sha }}
+          labels: |
+            org.opencontainers.image.title=GM Assistant
+            org.opencontainers.image.description=${{ steps.package.outputs.description }}
+            org.opencontainers.image.source=${{ steps.vars.outputs.source_url }}
+            org.opencontainers.image.url=${{ steps.vars.outputs.source_url }}
+
+      - name: Build and push Docker image
+        if: steps.release.outputs.published == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

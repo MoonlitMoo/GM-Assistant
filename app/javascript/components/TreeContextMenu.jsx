@@ -16,7 +16,17 @@ function visitInContentFrame(url) {
   window.location.assign(url)
 }
 
-export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelete, newRootFolderUrl }) {
+function workflowUrl(url) {
+  if (!url) return url
+
+  const returnTo = `${window.location.pathname}${window.location.search}`
+  const target = new URL(url, window.location.origin)
+  target.searchParams.set("return_to", returnTo)
+
+  return `${target.pathname}${target.search}${target.hash}`
+}
+
+export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelete, newRootFolderUrl, newRootAlbumUrl }) {
   const menuRef = useRef(null)
   const [position, setPosition] = useState({ x, y })
 
@@ -56,7 +66,7 @@ export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelet
 
       return nextPosition
     })
-  }, [x, y, node, newRootFolderUrl])
+  }, [x, y, node, newRootFolderUrl, newRootAlbumUrl])
 
   function handleVisit(url) {
     onClose()
@@ -80,14 +90,19 @@ export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelet
     items = [
       {
         label: "New Folder",
-        onSelect: () => handleVisit(newRootFolderUrl),
+        onSelect: () => handleVisit(workflowUrl(newRootFolderUrl)),
         disabled: !newRootFolderUrl
+      },
+      {
+        label: "New Album",
+        onSelect: () => handleVisit(workflowUrl(newRootAlbumUrl)),
+        disabled: !newRootAlbumUrl
       }
     ]
   } else if (nodeType === "folder") {
     items = [
-      { label: "New Subfolder", onSelect: () => handleVisit(node.new_subfolder_url) },
-      { label: "New Album", onSelect: () => handleVisit(node.new_album_url) },
+      { label: "New Subfolder", onSelect: () => handleVisit(workflowUrl(node.new_subfolder_url)) },
+      { label: "New Album", onSelect: () => handleVisit(workflowUrl(node.new_album_url)) },
       { label: "Rename", onSelect: handleRename },
       { label: "Edit", onSelect: () => handleVisit(node.edit_url) },
       { label: "Delete", onSelect: handleDelete, danger: true }
@@ -110,7 +125,7 @@ export default function TreeContextMenu({ x, y, node, onClose, onRename, onDelet
       className="tree-context-menu"
       role="menu"
       tabIndex={-1}
-      aria-label={node ? `${node.name} menu` : "Campaign tree menu"}
+      aria-label={node ? `${node.name} menu` : "Campaign library menu"}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`

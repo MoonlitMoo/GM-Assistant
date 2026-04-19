@@ -62,6 +62,25 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, new_folder_album_path(root_folder, return_to: campaign_path(campaign))
   end
 
+  test "shows top-level folders and albums in natural numeric order" do
+    campaign = create(:campaign, user: @user, name: "North Reach")
+    root_folder = campaign.root_folder
+    create(:folder, campaign: campaign, parent: root_folder, name: "Session 10")
+    create(:folder, campaign: campaign, parent: root_folder, name: "Session 2")
+    create(:folder, campaign: campaign, parent: root_folder, name: "Session 1")
+    create(:album, campaign: campaign, folder: root_folder, name: "Map 10")
+    create(:album, campaign: campaign, folder: root_folder, name: "Map 2")
+    create(:album, campaign: campaign, folder: root_folder, name: "Map 1")
+
+    get campaign_path(campaign)
+
+    assert_response :success
+    assert_operator response.body.index("Session 1"), :<, response.body.index("Session 2")
+    assert_operator response.body.index("Session 2"), :<, response.body.index("Session 10")
+    assert_operator response.body.index("Map 1"), :<, response.body.index("Map 2")
+    assert_operator response.body.index("Map 2"), :<, response.body.index("Map 10")
+  end
+
   test "shows the campaign index" do
     first_campaign = create(:campaign, user: @user, name: "North Reach")
     second_campaign = create(:campaign, user: @user, name: "Southern Isles")
@@ -161,6 +180,7 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, payload["album_count"]
     assert_equal 1, payload["image_count"]
     assert_equal new_folder_folder_path(root_folder), payload["new_root_folder_url"]
+    assert_equal new_folder_album_path(root_folder), payload["new_root_album_url"]
 
     root_album_payload = payload.fetch("albums").find { |album| album["id"] == root_album.id }
     assert_equal root_album.name, root_album_payload["name"]
@@ -190,6 +210,25 @@ class CampaignsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, nested_payload["child_folder_count"]
     assert_equal 1, nested_payload["album_count"]
     assert_equal 1, nested_payload["image_count"]
+  end
+
+  test "returns the campaign tree in natural numeric order" do
+    campaign = create(:campaign, user: @user, name: "North Reach")
+    root_folder = campaign.root_folder
+    create(:folder, campaign: campaign, parent: root_folder, name: "Session 10")
+    create(:folder, campaign: campaign, parent: root_folder, name: "Session 2")
+    create(:folder, campaign: campaign, parent: root_folder, name: "Session 1")
+    create(:album, campaign: campaign, folder: root_folder, name: "Map 10")
+    create(:album, campaign: campaign, folder: root_folder, name: "Map 2")
+    create(:album, campaign: campaign, folder: root_folder, name: "Map 1")
+
+    get tree_campaign_path(campaign)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+
+    assert_equal [ "Session 1", "Session 2", "Session 10" ], payload.fetch("folders").map { |folder| folder.fetch("name") }
+    assert_equal [ "Map 1", "Map 2", "Map 10" ], payload.fetch("albums").map { |album| album.fetch("name") }
   end
 
   test "re-renders the new campaign form when creation is invalid" do

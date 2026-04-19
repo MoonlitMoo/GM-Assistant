@@ -1,5 +1,4 @@
 import React from "react"
-import DeleteConfirmModal from "./DeleteConfirmModal"
 import TreeContextMenu from "./TreeContextMenu"
 import { statusMessage, treeIsEmpty } from "./treeUtils"
 import useTreeState from "./useTreeState"
@@ -13,18 +12,15 @@ export default function CampaignTree({ treeUrl }) {
     hasLoaded,
     loadError,
     contextMenu,
-    deletingNode,
     renamingNodeId,
     renamingNodeType,
     renameValue,
     renameError,
     isRenamingSubmitting,
     setContextMenu,
-    setDeletingNode,
     setRenameValue,
     toggleFolder,
     navigateTo,
-    dispatchTreeRefresh,
     beginRename,
     submitRename,
     cancelRename,
@@ -172,20 +168,10 @@ export default function CampaignTree({ treeUrl }) {
           y={contextMenu.y}
           node={contextMenu.node}
           newRootFolderUrl={treeData?.new_root_folder_url ?? null}
+          newRootAlbumUrl={treeData?.new_root_album_url ?? null}
           onClose={() => setContextMenu(null)}
           onRename={handleContextMenuRename}
           onDelete={handleContextMenuDelete}
-        />
-      )}
-
-      {deletingNode && (
-        <DeleteConfirmModal
-          node={deletingNode}
-          onClose={() => setDeletingNode(null)}
-          onDeleted={() => {
-            dispatchTreeRefresh()
-            setDeletingNode(null)
-          }}
         />
       )}
     </>

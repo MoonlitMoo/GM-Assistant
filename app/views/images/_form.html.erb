@@ -1,54 +1,34 @@
-<section class="record-shell form-shell">
-  <div class="record-panel form-panel">
-    <div class="form-panel__header">
-      <p class="record-kicker">Image</p>
-      <h1 class="record-title"><%= @image.persisted? ? "Edit Image" : "New Image" %></h1>
-    </div>
-
-    <%= form_with model: form_model, class: "resource-form" do |form| %>
-      <%= form_return_to_field %>
-
-      <% if @image.errors.any? %>
-        <div class="form-errors">
-          <h2><%= pluralize(@image.errors.count, "error") %> prevented this image from being saved:</h2>
-          <ul>
-            <% @image.errors.full_messages.each do |message| %>
-              <li><%= message %></li>
-            <% end %>
-          </ul>
-        </div>
-      <% end %>
-
-      <div class="resource-form__field">
-        <%= form.label :title %>
-        <%= form.text_field :title, class: "resource-form__input", autofocus: true %>
-      </div>
-
-      <div class="resource-form__field">
-        <%= form.label :notes, "Description" %>
-        <%= form.text_area :notes, class: "resource-form__input resource-form__textarea", rows: 6 %>
-      </div>
-
-      <div class="resource-form__field">
-        <%= form.label :file, "Image File" %>
-        <% if @image.persisted? && @image.file.attached? %>
-          <p class="resource-form__hint">Current file: <%= @image.file.filename.to_s %></p>
-        <% end %>
-        <%= form.file_field :file, class: "resource-form__input resource-form__file", accept: "image/*" %>
-      </div>
-
-      <div class="resource-form__field resource-form__field--checkbox">
-        <label class="resource-form__checkbox">
-          <%= form.check_box :show_title, class: "resource-form__checkbox-input" %>
-          <span>Show title on player screen by default</span>
-        </label>
-      </div>
-
-      <div class="resource-form__actions">
-        <%= form.submit(@image.persisted? ? "Save Image" : "Create Image",
-                        class: "fantasy-button fantasy-button--primary") %>
-        <%= link_to "Cancel", cancel_path, class: "resource-form__cancel" %>
-      </div>
-    <% end %>
+<%= resource_form(
+      record: @image,
+      form_model: form_model,
+      kicker: "Image",
+      title: @image.persisted? ? "Edit Image" : "New Image",
+      cancel_path: cancel_path
+    ) do |form| %>
+  <div class="resource-form__field">
+    <%= form.label :title %>
+    <%= form.text_field :title, class: "resource-form__input", autofocus: true %>
   </div>
-</section>
+
+  <div class="resource-form__field">
+    <%= form.label :notes, "Description" %>
+    <%= form.text_area :notes, class: "resource-form__input resource-form__textarea", rows: 6 %>
+  </div>
+
+  <div class="resource-form__field">
+    <%= form.label :file, "Image File" %>
+    <% if @image.persisted? && @image.file.attached? %>
+      <p class="resource-form__hint">Current file: <%= @image.file.filename.to_s %></p>
+    <% end %>
+    <%= form.file_field :file, class: "resource-form__input resource-form__file", accept: "image/*" %>
+  </div>
+
+  <div class="resource-form__field resource-form__field--checkbox">
+    <label class="resource-form__checkbox">
+      <%= form.check_box :show_title, class: "resource-form__checkbox-input" %>
+      <span>Show title on player screen by default</span>
+    </label>
+  </div>
+
+  <%= resource_form_actions(form, record: @image, noun: "Image", cancel_path: cancel_path) %>
+<% end %>

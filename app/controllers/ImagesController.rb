@@ -35,16 +35,26 @@ class ImagesController < ApplicationController
 
   def update
     if @image.update(image_params)
-      redirect_to @image, notice: "Image updated successfully"
+      respond_to do |format|
+        format.html { redirect_to @image, notice: "Image updated successfully" }
+        format.json { render json: image_json_payload(@image) }
+      end
     else
-      render :edit, status: :unprocessable_entity
+      respond_to do |format|
+        format.html { render :edit, status: :unprocessable_entity }
+        format.json { render json: { errors: @image.errors.full_messages }, status: :unprocessable_entity }
+      end
     end
   end
 
   def destroy
     album = @image.album
     @image.destroy
-    redirect_to album, notice: "Image deleted successfully"
+
+    respond_to do |format|
+      format.html { redirect_to album, notice: "Image deleted successfully" }
+      format.json { render json: { redirect_url: album_path(album) } }
+    end
   end
 
   private
@@ -59,6 +69,25 @@ class ImagesController < ApplicationController
 
   def image_params
     params.expect(image: [ :title, :notes, :file, :show_title ])
+  end
+
+  def image_json_payload(image)
+    {
+      id: image.id,
+      title: image.title,
+      notes: image.notes,
+      show_title: image.show_title,
+      url: image_path(image),
+      edit_url: edit_image_path(image),
+      delete_url: image_path(image),
+      preview_url: image_preview_url(image)
+    }
+  end
+
+  def image_preview_url(image)
+    return nil unless image.file.attached? && image.file.representable?
+
+    url_for(image.file.representation(resize_to_fill: [ 480, 360 ]))
   end
 
   def set_campaign

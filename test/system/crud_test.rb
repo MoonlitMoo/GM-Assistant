@@ -29,7 +29,25 @@ class CrudTest < ApplicationSystemTestCase
     assert_link campaign_name
   end
 
-  test "creates a folder beneath the root folder and shows it in the folder list" do
+  test "submits a campaign form with ctrl enter" do
+    campaign_name = "Kauri Coast Chronicle"
+
+    visit new_campaign_path
+
+    fill_in "Name", with: campaign_name
+    description = find_field("Description")
+    description.set("Notes from a windswept headland.")
+
+    trigger_ctrl_enter(description)
+
+    assert_selector ".record-title", text: campaign_name
+    campaign = Campaign.find_by!(name: campaign_name)
+
+    assert_current_path campaign_path(campaign)
+    assert_text campaign_name
+  end
+
+  test "creates a folder beneath the root folder and opens the new folder" do
     campaign = create(:campaign, user: @user, name: "South Coast Survey")
     root_folder = campaign.root_folder
     folder_name = "Wharf Sketches"
@@ -50,13 +68,13 @@ class CrudTest < ApplicationSystemTestCase
 
     folder = Folder.find_by!(name: folder_name, parent: root_folder)
 
-    assert_current_path folder_path(root_folder)
-    assert_link folder.name
+    assert_current_path folder_path(folder)
+    assert_selector ".record-title", text: folder.name
     assert_selector "#sidebar .tree-label", text: folder.name
     assert_equal description, folder.description
   end
 
-  test "creates a top-level folder from the campaign dashboard and returns to the dashboard" do
+  test "creates a top-level folder from the campaign dashboard and opens the new folder" do
     campaign = create(:campaign, user: @user, name: "South Coast Survey")
     root_folder = campaign.root_folder
     folder_name = "Wharf Sketches"
@@ -72,8 +90,8 @@ class CrudTest < ApplicationSystemTestCase
 
     folder = Folder.find_by!(name: folder_name, parent: root_folder)
 
-    assert_current_path campaign_path(campaign)
-    assert_link folder.name
+    assert_current_path folder_path(folder)
+    assert_selector ".record-title", text: folder.name
     assert_selector "#sidebar .tree-label", text: folder.name
   end
 
@@ -161,5 +179,16 @@ class CrudTest < ApplicationSystemTestCase
 
   def test_image_path
     Rails.root.join("test/fixtures/files/test_image.jpg").to_s
+  end
+
+  def trigger_ctrl_enter(element)
+    page.execute_script(<<~JS, element)
+      arguments[0].dispatchEvent(new KeyboardEvent("keydown", {
+        key: "Enter",
+        code: "Enter",
+        ctrlKey: true,
+        bubbles: true
+      }))
+    JS
   end
 end

@@ -61,6 +61,25 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_operator response.body.index(campaign.name), :<, response.body.index(other_campaign.name)
   end
 
+  test "shows child folders and albums in natural numeric order" do
+    campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Sessions")
+    create(:folder, campaign: campaign, parent: folder, name: "Session 10")
+    create(:folder, campaign: campaign, parent: folder, name: "Session 2")
+    create(:folder, campaign: campaign, parent: folder, name: "Session 1")
+    create(:album, campaign: campaign, folder: folder, name: "Handout 10")
+    create(:album, campaign: campaign, folder: folder, name: "Handout 2")
+    create(:album, campaign: campaign, folder: folder, name: "Handout 1")
+
+    get folder_path(folder)
+
+    assert_response :success
+    assert_operator response.body.index("Session 1"), :<, response.body.index("Session 2")
+    assert_operator response.body.index("Session 2"), :<, response.body.index("Session 10")
+    assert_operator response.body.index("Handout 1"), :<, response.body.index("Handout 2")
+    assert_operator response.body.index("Handout 2"), :<, response.body.index("Handout 10")
+  end
+
   test "shows the new folder form" do
     campaign = create(:campaign, user: @user)
     parent = campaign.root_folder
@@ -102,7 +121,7 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_includes html_response_body, "Name can't be blank"
   end
 
-  test "creates a folder and redirects to return_to when supplied" do
+  test "creates a folder and redirects to the created folder even when return_to is supplied" do
     campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
     parent = campaign.root_folder
 
@@ -115,7 +134,27 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    assert_redirected_to campaign_path(campaign)
+    folder = Folder.find_by!(name: "Villagers", parent: parent)
+    assert_redirected_to folder_path(folder)
+  end
+
+  test "re-renders the new folder form when creation is invalid and preserves return_to" do
+    campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
+    parent = campaign.root_folder
+
+    assert_no_difference("Folder.count") do
+      post folder_folders_path(parent), params: {
+        folder: {
+          name: nil
+        },
+        return_to: campaign_path(campaign)
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "New Folder"
+    assert_match(%r{href="#{campaign_path(campaign)}"[^>]*>Cancel<}, response.body)
+    assert_match(%r{name="return_to"[^>]*value="#{campaign_path(campaign)}"}, response.body)
   end
 
   test "shows the edit folder form" do
@@ -202,6 +241,32 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to folder_path(parent)
+    assert_nil Folder.find_by(id: folder.id)
+  end
+
+  test "destroys a top-level folder and returns to the campaign" do
+    campaign = create(:campaign, user: @user)
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Districts")
+
+    assert_difference("Folder.count", -1) do
+      delete folder_path(folder)
+    end
+
+    assert_redirected_to campaign_path(campaign)
+    assert_nil Folder.find_by(id: folder.id)
+  end
+
+  test "destroys a top-level folder via json and returns a redirect url for the campaign" do
+    campaign = create(:campaign, user: @user)
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Districts")
+
+    assert_difference("Folder.count", -1) do
+      delete folder_path(folder), as: :json
+    end
+
+    assert_response :ok
+    assert_equal "application/json", response.media_type
+    assert_equal campaign_path(campaign), JSON.parse(response.body)["redirect_url"]
     assert_nil Folder.find_by(id: folder.id)
   end
 end

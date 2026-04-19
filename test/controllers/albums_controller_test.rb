@@ -29,6 +29,8 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_match(%r{href="#{image_path(first_image)}"}, response.body)
     assert_match(%r{href="#{image_path(second_image)}"}, response.body)
     assert_match(%r{data-controller="player-display"}, response.body)
+    assert_match(%r{id="album-image-grid"}, response.body)
+    assert_match(%r{data-images-payload=}, response.body)
     assert_match(%r{#{present_campaign_player_display_path(campaign)}}, response.body)
     assert_match(%r{data-player-display-image-id="#{first_image.id}"}, response.body)
     assert_match(%r{data-player-display-image-id="#{second_image.id}"}, response.body)
@@ -88,6 +90,42 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_includes response.body, "New Album"
     assert_includes html_response_body, "Name can't be blank"
+  end
+
+  test "creates an album and redirects to the created album even when return_to is supplied" do
+    campaign = create(:campaign, user: @user, name: "Shattered Coast")
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Harbour")
+
+    assert_difference("Album.count", 1) do
+      post folder_albums_path(folder), params: {
+        album: {
+          name: "Storm Sketches"
+        },
+        return_to: campaign_path(campaign)
+      }
+    end
+
+    album = Album.find_by!(name: "Storm Sketches", folder: folder)
+    assert_redirected_to album_path(album)
+  end
+
+  test "re-renders the new album form when creation is invalid and preserves return_to" do
+    campaign = create(:campaign, user: @user, name: "Shattered Coast")
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Harbour")
+
+    assert_no_difference("Album.count") do
+      post folder_albums_path(folder), params: {
+        album: {
+          name: nil
+        },
+        return_to: campaign_path(campaign)
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "New Album"
+    assert_match(%r{href="#{campaign_path(campaign)}"[^>]*>Cancel<}, response.body)
+    assert_match(%r{name="return_to"[^>]*value="#{campaign_path(campaign)}"}, response.body)
   end
 
   test "shows the edit album form" do
@@ -187,13 +225,41 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "destroys an album and returns to its folder" do
-    album = create(:album, campaign: create(:campaign, user: @user))
+    campaign = create(:campaign, user: @user)
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Harbour")
+    album = create(:album, campaign: campaign, folder: folder, name: "Storm Sketches")
 
     assert_difference("Album.count", -1) do
       delete album_path(album)
     end
 
-    assert_redirected_to folder_path(album.folder)
+    assert_redirected_to folder_path(folder)
+    assert_nil Album.find_by(id: album.id)
+  end
+
+  test "destroys a top-level album and returns to the campaign" do
+    campaign = create(:campaign, user: @user)
+    album = create(:album, campaign: campaign, folder: campaign.root_folder, name: "Storm Sketches")
+
+    assert_difference("Album.count", -1) do
+      delete album_path(album)
+    end
+
+    assert_redirected_to campaign_path(campaign)
+    assert_nil Album.find_by(id: album.id)
+  end
+
+  test "destroys a top-level album via json and returns a redirect url for the campaign" do
+    campaign = create(:campaign, user: @user)
+    album = create(:album, campaign: campaign, folder: campaign.root_folder, name: "Storm Sketches")
+
+    assert_difference("Album.count", -1) do
+      delete album_path(album), as: :json
+    end
+
+    assert_response :ok
+    assert_equal "application/json", response.media_type
+    assert_equal campaign_path(campaign), JSON.parse(response.body)["redirect_url"]
     assert_nil Album.find_by(id: album.id)
   end
 end

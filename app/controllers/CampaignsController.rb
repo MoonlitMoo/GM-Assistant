@@ -13,8 +13,8 @@ class CampaignsController < ApplicationController
 
   def show
     @root_folder = @campaign.root_folder
-    @child_folders = @root_folder ? @root_folder.child_folders.order(:name) : []
-    @root_albums = @root_folder ? @root_folder.albums.order(:name) : []
+    @child_folders = @root_folder ? NaturalNameSort.sort(@root_folder.child_folders) : []
+    @root_albums = @root_folder ? NaturalNameSort.sort(@root_folder.albums) : []
     @recent_images = @campaign.images.includes(:album).order(created_at: :desc).limit(current_user.dashboard_recent_count)
     @album_count = @campaign.albums.count
     @image_count = @campaign.images.count
@@ -50,7 +50,7 @@ class CampaignsController < ApplicationController
   end
 
   def tree
-    render json: FolderTree.new(@campaign).as_json
+    render json: FolderTreePresenter.new(@campaign).as_json
   end
 
   private

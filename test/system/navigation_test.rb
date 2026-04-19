@@ -116,6 +116,19 @@ class NavigationTest < ApplicationSystemTestCase
     end
   end
 
+  test "navigates from breadcrumbs without remounting the sidebar tree" do
+    visit album_path(@album)
+
+    page.execute_script("document.getElementById('campaign-tree').dataset.persistMarker = 'kept'")
+
+    within "#breadcrumbs" do
+      click_link @folder.name
+    end
+
+    assert_current_path folder_path(@folder)
+    assert_equal "kept", page.evaluate_script("document.getElementById('campaign-tree').dataset.persistMarker")
+  end
+
   test "expands the sidebar tree to the current nested folder" do
     nested_folder = create(:folder, campaign: @campaign, parent: @folder, name: "Signal Fires")
     nested_album = create(:album, campaign: @campaign, folder: nested_folder, name: "Watch Posts")
@@ -169,8 +182,74 @@ class NavigationTest < ApplicationSystemTestCase
       click_button "New Subfolder"
     end
 
-    assert_current_path new_folder_folder_path(@folder)
+    assert_current_path new_folder_folder_path(@folder, return_to: folder_path(@root_folder))
     assert_text "New Folder"
+  end
+
+  test "sidebar root library context menu can navigate to a new root album form" do
+    visit folder_path(@root_folder)
+
+    tree_surface = find("#campaign-tree .tree-surface")
+    page.execute_script(<<~JS, tree_surface)
+      const rect = arguments[0].getBoundingClientRect()
+      arguments[0].dispatchEvent(new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.left + 24,
+        clientY: rect.bottom - 24
+      }))
+    JS
+
+    within ".tree-context-menu" do
+      assert_button "New Folder"
+      assert_button "New Album"
+      click_button "New Album"
+    end
+
+    assert_current_path new_folder_album_path(@root_folder, return_to: folder_path(@root_folder))
+    assert_text "New Album"
+  end
+
+  test "invalid subfolder creation from the sidebar can cancel back to the originating page" do
+    visit folder_path(@root_folder)
+
+    find("#sidebar .tree-folder .tree-label", text: @folder.name).right_click
+
+    within ".tree-context-menu" do
+      click_button "New Subfolder"
+    end
+
+    assert_current_path new_folder_folder_path(@folder, return_to: folder_path(@root_folder))
+
+    click_button "Create Folder"
+
+    assert_selector ".form-errors", text: "Name can't be blank"
+
+    click_link "Cancel"
+
+    assert_current_path folder_path(@root_folder)
+  end
+
+  test "sidebar root library surface fills the tree area above gm controls" do
+    visit folder_path(@root_folder)
+
+    assert_selector "#campaign-tree .tree-surface"
+    assert_selector "#sidebar .tree-folder .tree-label", text: @folder.name
+
+    dimensions = page.evaluate_script(<<~JS)
+      (() => {
+        const tree = document.getElementById("campaign-tree")?.getBoundingClientRect()
+        const surface = document.querySelector("#campaign-tree .tree-surface")?.getBoundingClientRect()
+
+        return {
+          treeHeight: tree?.height || 0,
+          surfaceHeight: surface?.height || 0
+        }
+      })()
+    JS
+
+    assert_operator dimensions["treeHeight"], :>, 0
+    assert_operator dimensions["surfaceHeight"], :>=, dimensions["treeHeight"] - 1
   end
 
   test "sidebar context menu can rename a folder inline and refresh the tree" do
@@ -269,5 +348,158 @@ class NavigationTest < ApplicationSystemTestCase
     within "#sidebar" do
       assert_no_selector ".tree-folder .tree-label", text: nested_folder.name, wait: 10
     end
+  end
+
+  test "sidebar delete redirects a selected top-level folder to the campaign page" do
+    visit folder_path(@folder)
+
+    within "#sidebar" do
+      find(".tree-folder .tree-label", text: @folder.name).right_click
+    end
+
+    within ".tree-context-menu" do
+      click_button "Delete"
+    end
+
+    within ".tree-delete-modal" do
+      click_button "Delete"
+    end
+
+    assert_current_path campaign_path(@campaign)
+    assert_no_selector ".record-title", text: @folder.name
+  end
+
+  test "folder show delete button uses the modal" do
+    visit folder_path(@folder)
+
+    click_button "Delete folder"
+
+    within ".tree-delete-modal" do
+      assert_text "Delete Folder"
+      assert_text @folder.name
+      assert_text "0 subfolders"
+      assert_text "1 album"
+      assert_text "1 image"
+      click_button "Cancel"
+    end
+
+    assert_no_selector ".tree-delete-modal"
+    assert_current_path folder_path(@folder)
+  end
+
+  test "tree and page deletes share the same modal instance" do
+    visit folder_path(@folder)
+
+    assert_equal 1, page.evaluate_script("document.querySelectorAll('[data-record-delete-modal-target=\"modal\"]').length")
+
+    click_button "Delete folder"
+
+    within ".tree-delete-modal" do
+      click_button "Cancel"
+    end
+
+    within "#sidebar" do
+      find(".tree-folder .tree-label", text: @folder.name).right_click
+    end
+
+    within ".tree-context-menu" do
+      click_button "Delete"
+    end
+
+    assert_equal 1, page.evaluate_script("document.querySelectorAll('[data-record-delete-modal-target=\"modal\"]').length")
+
+    within ".tree-delete-modal" do
+      click_button "Cancel"
+    end
+  end
+
+  test "album show delete button uses the modal and deletes the album" do
+    visit album_path(@album)
+
+    click_button "Delete album"
+
+    within ".tree-delete-modal" do
+      assert_text "Delete Album"
+      assert_text @album.name
+      assert_text "1 image will be deleted."
+      click_button "Delete"
+    end
+
+    assert_current_path folder_path(@folder)
+    assert_nil Album.find_by(id: @album.id)
+  end
+
+  test "image show delete button uses the modal and deletes the image" do
+    visit route_helpers.image_path(@image)
+
+    click_button "Delete image"
+
+    within ".tree-delete-modal" do
+      assert_text "Delete Image"
+      assert_text @image.title
+      assert_text "This image will be removed from the archive."
+      click_button "Delete"
+    end
+
+    assert_current_path album_path(@album)
+    assert_nil Image.find_by(id: @image.id)
+  end
+
+  test "album image context menu can rename an image inline" do
+    visit album_path(@album)
+
+    card = find(".image-card", text: @image.title)
+    card.right_click
+
+    within ".tree-context-menu" do
+      click_button "Rename"
+    end
+
+    within card do
+      input = find(".image-card__rename-input")
+      input.set("Beacon Fire Revised")
+      input.send_keys(:enter)
+    end
+
+    assert_current_path album_path(@album)
+    assert_selector ".image-card__title", text: "Beacon Fire Revised"
+    within card do
+      assert_selector ".image-card__preview"
+    end
+    assert_equal "Beacon Fire Revised", @image.reload.title
+  end
+
+  test "album image context menu toggles title visibility" do
+    visit album_path(@album)
+
+    card = find(".image-card", text: @image.title)
+    card.right_click
+
+    within ".tree-context-menu" do
+      click_button "Show Title"
+    end
+
+    assert_selector ".image-card__meta", text: /title visible on player screen/i
+    assert_equal true, @image.reload.show_title
+  end
+
+  test "album image context menu deletes an image without leaving the album page" do
+    visit album_path(@album)
+
+    find(".image-card", text: @image.title).right_click
+
+    within ".tree-context-menu" do
+      click_button "Delete"
+    end
+
+    within ".tree-delete-modal" do
+      assert_text "Delete Image"
+      assert_text @image.title
+      click_button "Delete"
+    end
+
+    assert_current_path album_path(@album)
+    assert_no_selector ".image-card__title", text: @image.title
+    assert_nil Image.find_by(id: @image.id)
   end
 end

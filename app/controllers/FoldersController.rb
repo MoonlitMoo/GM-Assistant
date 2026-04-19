@@ -11,8 +11,9 @@ class FoldersController < ApplicationController
   after_action :touch_campaign_activity, only: [ :show, :edit, :new, :create, :update, :destroy ]
 
   def show
-    @child_folders = @folder.child_folders.order(:name)
-    @albums = @folder.albums.order(:name)
+    @child_folders = NaturalNameSort.sort(@folder.child_folders)
+    @albums = NaturalNameSort.sort(@folder.albums)
+    @direct_image_count = Image.joins(:album).where(albums: { folder_id: @folder.id }).count
   end
 
   def new
@@ -25,7 +26,7 @@ class FoldersController < ApplicationController
     @folder.campaign = @parent.campaign
 
     if @folder.save
-      redirect_to create_redirect_target, notice: "Folder created successfully", flash: { tree_refresh: true }
+      redirect_to @folder, notice: "Folder created successfully", flash: { tree_refresh: true }
     else
       render :new, status: :unprocessable_entity
     end
@@ -49,12 +50,12 @@ class FoldersController < ApplicationController
   end
 
   def destroy
-    parent = @folder.parent || @folder.campaign
+    redirect_target = folder_destroy_redirect_target(@folder)
     @folder.destroy
 
     respond_to do |format|
-      format.html { redirect_to parent, notice: "Folder destroyed successfully", flash: { tree_refresh: true } }
-      format.json { head :ok }
+      format.html { redirect_to redirect_target, notice: "Folder destroyed successfully", flash: { tree_refresh: true } }
+      format.json { render json: { redirect_url: polymorphic_path(redirect_target) } }
     end
   end
 
@@ -72,10 +73,6 @@ class FoldersController < ApplicationController
     @parent = Folder.joins(:campaign).merge(current_user.campaigns).find(params[:folder_id])
   end
 
-  def create_redirect_target
-    safe_return_to_path(params[:return_to]) || @parent
-  end
-
   def folder_json_payload(folder)
     {
       id: folder.id,
@@ -85,14 +82,11 @@ class FoldersController < ApplicationController
     }
   end
 
-  def safe_return_to_path(path)
-    value = path.to_s
-    return if value.blank?
-    return if value.start_with?("//")
-    return unless value.start_with?("/")
-    return if value.match?(/[\r\n]/)
+  def folder_destroy_redirect_target(folder)
+    parent = folder.parent
+    return folder.campaign if parent.nil? || parent.is_root?
 
-    value
+    parent
   end
 
   def folder_params

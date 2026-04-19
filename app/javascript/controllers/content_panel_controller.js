@@ -24,6 +24,7 @@ export default class extends Controller {
         const link = document.createElement("a")
         link.href = url
         link.textContent = label
+        link.dataset.turboFrame = "content-body"
         nav.appendChild(link)
         nav.appendChild(document.createTextNode(" › "))
       } else {

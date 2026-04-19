@@ -1,4 +1,4 @@
-class FolderTree
+class FolderTreePresenter
   include Rails.application.routes.url_helpers
 
   def initialize(campaign)
@@ -10,7 +10,8 @@ class FolderTree
     return {} unless root
 
     build_node(root).merge(
-      new_root_folder_url: new_folder_folder_path(root)
+      new_root_folder_url: new_folder_folder_path(root),
+      new_root_album_url: new_folder_album_path(root)
     )
   end
 
@@ -25,16 +26,16 @@ class FolderTree
   end
 
   def all_folders
-    @all_folders ||= @campaign.folders.order(:name).to_a
+    @all_folders ||= NaturalNameSort.sort(@campaign.folders)
   end
 
   def all_albums
-    @all_albums ||= @campaign.albums
-      .left_outer_joins(:images)
-      .select("albums.*, COUNT(images.id) AS image_count")
-      .group("albums.id")
-      .order(:name)
-      .to_a
+    @all_albums ||= NaturalNameSort.sort(
+      @campaign.albums
+        .left_outer_joins(:images)
+        .select("albums.*, COUNT(images.id) AS image_count")
+        .group("albums.id")
+    )
   end
 
   def build_node(folder)
