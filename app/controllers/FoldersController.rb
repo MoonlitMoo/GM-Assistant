@@ -11,8 +11,8 @@ class FoldersController < ApplicationController
   after_action :touch_campaign_activity, only: [ :show, :edit, :new, :create, :update, :destroy ]
 
   def show
-    @child_folders = @folder.child_folders.order(:name)
-    @albums = @folder.albums.order(:name)
+    @child_folders = NaturalNameSort.sort(@folder.child_folders)
+    @albums = NaturalNameSort.sort(@folder.albums)
   end
 
   def new

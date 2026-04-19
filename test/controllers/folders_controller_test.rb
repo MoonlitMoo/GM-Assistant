@@ -61,6 +61,25 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_operator response.body.index(campaign.name), :<, response.body.index(other_campaign.name)
   end
 
+  test "shows child folders and albums in natural numeric order" do
+    campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Sessions")
+    create(:folder, campaign: campaign, parent: folder, name: "Session 10")
+    create(:folder, campaign: campaign, parent: folder, name: "Session 2")
+    create(:folder, campaign: campaign, parent: folder, name: "Session 1")
+    create(:album, campaign: campaign, folder: folder, name: "Handout 10")
+    create(:album, campaign: campaign, folder: folder, name: "Handout 2")
+    create(:album, campaign: campaign, folder: folder, name: "Handout 1")
+
+    get folder_path(folder)
+
+    assert_response :success
+    assert_operator response.body.index("Session 1"), :<, response.body.index("Session 2")
+    assert_operator response.body.index("Session 2"), :<, response.body.index("Session 10")
+    assert_operator response.body.index("Handout 1"), :<, response.body.index("Handout 2")
+    assert_operator response.body.index("Handout 2"), :<, response.body.index("Handout 10")
+  end
+
   test "shows the new folder form" do
     campaign = create(:campaign, user: @user)
     parent = campaign.root_folder
