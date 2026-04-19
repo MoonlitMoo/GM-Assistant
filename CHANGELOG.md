@@ -1,3 +1,20 @@
+# [2.1.0](https://github.com/MoonlitMoo/GM-Assistant/compare/v2.0.1...v2.1.0) (2026-04-19)
+
+
+### Bug Fixes
+
+* Breadcrumb links target turbo frame ([c35cf47](https://github.com/MoonlitMoo/GM-Assistant/commit/c35cf47a1ee9f4cd2ede034129fbdd2376c80b15))
+* Sort campaigns / folders / albums by NaturalNameSort ([7123c23](https://github.com/MoonlitMoo/GM-Assistant/commit/7123c23fed996f01abb23e734a200bf27f7b46c6))
+* Unify delete modal between tree and delete button ([8b57759](https://github.com/MoonlitMoo/GM-Assistant/commit/8b57759ac36ecf1838d33577fffe0107f7032c7b))
+* Unify redirect methodology on folder and album creation ([c58b400](https://github.com/MoonlitMoo/GM-Assistant/commit/c58b400e1670126b3ddc0496e53480b3948021a5))
+
+
+### Features
+
+* Added context menu for images in album show page ([56f3941](https://github.com/MoonlitMoo/GM-Assistant/commit/56f3941afbd2f4abeb4f682d181b00a43c6964be))
+* Added context menu to add folders to campaign root ([915aa3d](https://github.com/MoonlitMoo/GM-Assistant/commit/915aa3d085c95d89a589c6cb57545a427818b41c))
+* Allow submission of form by Ctrl + Enter shortcut ([6bf5b76](https://github.com/MoonlitMoo/GM-Assistant/commit/6bf5b7601da96e5716a3d87fc4bdbcce342b1854))
+
 ## [2.0.1](https://github.com/MoonlitMoo/GM-Assistant/compare/v2.0.0...v2.0.1) (2026-04-18)
 
 
