@@ -182,7 +182,7 @@ class NavigationTest < ApplicationSystemTestCase
       click_button "New Subfolder"
     end
 
-    assert_current_path new_folder_folder_path(@folder)
+    assert_current_path new_folder_folder_path(@folder, return_to: folder_path(@root_folder))
     assert_text "New Folder"
   end
 
@@ -206,8 +206,28 @@ class NavigationTest < ApplicationSystemTestCase
       click_button "New Album"
     end
 
-    assert_current_path new_folder_album_path(@root_folder)
+    assert_current_path new_folder_album_path(@root_folder, return_to: folder_path(@root_folder))
     assert_text "New Album"
+  end
+
+  test "invalid subfolder creation from the sidebar can cancel back to the originating page" do
+    visit folder_path(@root_folder)
+
+    find("#sidebar .tree-folder .tree-label", text: @folder.name).right_click
+
+    within ".tree-context-menu" do
+      click_button "New Subfolder"
+    end
+
+    assert_current_path new_folder_folder_path(@folder, return_to: folder_path(@root_folder))
+
+    click_button "Create Folder"
+
+    assert_selector ".form-errors", text: "Name can't be blank"
+
+    click_link "Cancel"
+
+    assert_current_path folder_path(@root_folder)
   end
 
   test "sidebar root library surface fills the tree area above gm controls" do

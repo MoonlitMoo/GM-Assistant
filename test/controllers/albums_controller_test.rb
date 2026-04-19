@@ -90,6 +90,42 @@ class AlbumsControllerTest < ActionDispatch::IntegrationTest
     assert_includes html_response_body, "Name can't be blank"
   end
 
+  test "creates an album and redirects to the created album even when return_to is supplied" do
+    campaign = create(:campaign, user: @user, name: "Shattered Coast")
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Harbour")
+
+    assert_difference("Album.count", 1) do
+      post folder_albums_path(folder), params: {
+        album: {
+          name: "Storm Sketches"
+        },
+        return_to: campaign_path(campaign)
+      }
+    end
+
+    album = Album.find_by!(name: "Storm Sketches", folder: folder)
+    assert_redirected_to album_path(album)
+  end
+
+  test "re-renders the new album form when creation is invalid and preserves return_to" do
+    campaign = create(:campaign, user: @user, name: "Shattered Coast")
+    folder = create(:folder, campaign: campaign, parent: campaign.root_folder, name: "Harbour")
+
+    assert_no_difference("Album.count") do
+      post folder_albums_path(folder), params: {
+        album: {
+          name: nil
+        },
+        return_to: campaign_path(campaign)
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "New Album"
+    assert_match(%r{href="#{campaign_path(campaign)}"[^>]*>Cancel<}, response.body)
+    assert_match(%r{name="return_to"[^>]*value="#{campaign_path(campaign)}"}, response.body)
+  end
+
   test "shows the edit album form" do
     album = create(:album, campaign: create(:campaign, user: @user), name: "Gallery")
 

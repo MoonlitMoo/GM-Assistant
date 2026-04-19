@@ -121,7 +121,7 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
     assert_includes html_response_body, "Name can't be blank"
   end
 
-  test "creates a folder and redirects to return_to when supplied" do
+  test "creates a folder and redirects to the created folder even when return_to is supplied" do
     campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
     parent = campaign.root_folder
 
@@ -134,7 +134,27 @@ class FoldersControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    assert_redirected_to campaign_path(campaign)
+    folder = Folder.find_by!(name: "Villagers", parent: parent)
+    assert_redirected_to folder_path(folder)
+  end
+
+  test "re-renders the new folder form when creation is invalid and preserves return_to" do
+    campaign = create(:campaign, user: @user, name: "Moonwake Atlas")
+    parent = campaign.root_folder
+
+    assert_no_difference("Folder.count") do
+      post folder_folders_path(parent), params: {
+        folder: {
+          name: nil
+        },
+        return_to: campaign_path(campaign)
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "New Folder"
+    assert_match(%r{href="#{campaign_path(campaign)}"[^>]*>Cancel<}, response.body)
+    assert_match(%r{name="return_to"[^>]*value="#{campaign_path(campaign)}"}, response.body)
   end
 
   test "shows the edit folder form" do

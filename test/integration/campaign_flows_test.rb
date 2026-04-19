@@ -46,7 +46,7 @@ class CampaignFlowsTest < ActionDispatch::IntegrationTest
 
     folder = Folder.order(:created_at).last
 
-    assert_redirected_to folder_path(parent)
+    assert_redirected_to folder_path(folder)
     assert_equal campaign.id, folder.campaign_id
     assert_equal parent.id, folder.parent_id
     assert_equal "NPCs", folder.name

@@ -47,7 +47,7 @@ class CrudTest < ApplicationSystemTestCase
     assert_text campaign_name
   end
 
-  test "creates a folder beneath the root folder and shows it in the folder list" do
+  test "creates a folder beneath the root folder and opens the new folder" do
     campaign = create(:campaign, user: @user, name: "South Coast Survey")
     root_folder = campaign.root_folder
     folder_name = "Wharf Sketches"
@@ -68,13 +68,13 @@ class CrudTest < ApplicationSystemTestCase
 
     folder = Folder.find_by!(name: folder_name, parent: root_folder)
 
-    assert_current_path folder_path(root_folder)
-    assert_link folder.name
+    assert_current_path folder_path(folder)
+    assert_selector ".record-title", text: folder.name
     assert_selector "#sidebar .tree-label", text: folder.name
     assert_equal description, folder.description
   end
 
-  test "creates a top-level folder from the campaign dashboard and returns to the dashboard" do
+  test "creates a top-level folder from the campaign dashboard and opens the new folder" do
     campaign = create(:campaign, user: @user, name: "South Coast Survey")
     root_folder = campaign.root_folder
     folder_name = "Wharf Sketches"
@@ -90,8 +90,8 @@ class CrudTest < ApplicationSystemTestCase
 
     folder = Folder.find_by!(name: folder_name, parent: root_folder)
 
-    assert_current_path campaign_path(campaign)
-    assert_link folder.name
+    assert_current_path folder_path(folder)
+    assert_selector ".record-title", text: folder.name
     assert_selector "#sidebar .tree-label", text: folder.name
   end
 
