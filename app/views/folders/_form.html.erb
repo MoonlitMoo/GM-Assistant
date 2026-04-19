@@ -5,7 +5,11 @@
       <h1 class="record-title"><%= @folder.persisted? ? "Edit Folder" : "New Folder" %></h1>
     </div>
 
-    <% form_options = { model: form_model, class: "resource-form" } %>
+    <% form_options = {
+         model: form_model,
+         class: "resource-form",
+         data: { controller: "submit-shortcut", action: "keydown->submit-shortcut#submit" }
+       } %>
     <% form_options[:url] = form_url if local_assigns[:form_url].present? %>
 
     <%= form_with(**form_options) do |form| %>

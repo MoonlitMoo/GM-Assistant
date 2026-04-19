@@ -5,7 +5,9 @@
       <h1 class="record-title"><%= @image.persisted? ? "Edit Image" : "New Image" %></h1>
     </div>
 
-    <%= form_with model: form_model, class: "resource-form" do |form| %>
+    <%= form_with model: form_model,
+                  class: "resource-form",
+                  data: { controller: "submit-shortcut", action: "keydown->submit-shortcut#submit" } do |form| %>
       <%= form_return_to_field %>
 
       <% if @image.errors.any? %>

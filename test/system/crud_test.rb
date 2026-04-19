@@ -29,6 +29,24 @@ class CrudTest < ApplicationSystemTestCase
     assert_link campaign_name
   end
 
+  test "submits a campaign form with ctrl enter" do
+    campaign_name = "Kauri Coast Chronicle"
+
+    visit new_campaign_path
+
+    fill_in "Name", with: campaign_name
+    description = find_field("Description")
+    description.set("Notes from a windswept headland.")
+
+    trigger_ctrl_enter(description)
+
+    assert_selector ".record-title", text: campaign_name
+    campaign = Campaign.find_by!(name: campaign_name)
+
+    assert_current_path campaign_path(campaign)
+    assert_text campaign_name
+  end
+
   test "creates a folder beneath the root folder and shows it in the folder list" do
     campaign = create(:campaign, user: @user, name: "South Coast Survey")
     root_folder = campaign.root_folder
@@ -161,5 +179,16 @@ class CrudTest < ApplicationSystemTestCase
 
   def test_image_path
     Rails.root.join("test/fixtures/files/test_image.jpg").to_s
+  end
+
+  def trigger_ctrl_enter(element)
+    page.execute_script(<<~JS, element)
+      arguments[0].dispatchEvent(new KeyboardEvent("keydown", {
+        key: "Enter",
+        code: "Enter",
+        ctrlKey: true,
+        bubbles: true
+      }))
+    JS
   end
 end
