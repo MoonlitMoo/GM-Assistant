@@ -86,7 +86,7 @@ jobs:
       - name: Generate image metadata
         if: steps.release.outputs.published == 'true'
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           context: git
           images: ${{ steps.vars.outputs.image_name }}
